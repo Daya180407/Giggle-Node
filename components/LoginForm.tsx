@@ -20,7 +20,7 @@ export default function LoginForm({ next }: { next: string }) {
           type="email"
           autoComplete="email"
           required
-          placeholder="aapka@email.com"
+          placeholder="you@email.com"
           className="field"
         />
       </div>
@@ -47,10 +47,10 @@ export default function LoginForm({ next }: { next: string }) {
 
       <div className="flex items-center justify-between text-xs">
         <Link href="/forgot-password" className="text-brand hover:underline">
-          Password bhool gaye?
+          Forgot password?
         </Link>
         <Link href={`/signup?next=${encodeURIComponent(next)}`} className="font-semibold text-brand hover:underline">
-          Naya account banaiye
+          Create an account
         </Link>
       </div>
     </form>

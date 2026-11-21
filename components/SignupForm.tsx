@@ -12,9 +12,9 @@ export default function SignupForm({ next }: { next: string }) {
       <input type="hidden" name="next" value={next} />
       <div>
         <label className="label" htmlFor="signup-name">
-          Naam
+          Name
         </label>
-        <input id="signup-name" name="name" required autoComplete="name" placeholder="Aapka naam" className="field" />
+        <input id="signup-name" name="name" required autoComplete="name" placeholder="Your name" className="field" />
       </div>
       <div>
         <label className="label" htmlFor="signup-email">
@@ -26,13 +26,13 @@ export default function SignupForm({ next }: { next: string }) {
           type="email"
           required
           autoComplete="email"
-          placeholder="aapka@email.com"
+          placeholder="you@email.com"
           className="field"
         />
       </div>
       <div>
         <label className="label" htmlFor="signup-password">
-          Password (kam se kam 8 characters)
+          Password (at least 8 characters)
         </label>
         <input
           id="signup-password"
@@ -46,7 +46,7 @@ export default function SignupForm({ next }: { next: string }) {
       </div>
       <div>
         <label className="label" htmlFor="signup-confirm">
-          Password dobara
+          Confirm password
         </label>
         <input
           id="signup-confirm"
@@ -62,13 +62,13 @@ export default function SignupForm({ next }: { next: string }) {
       {state.error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{state.error}</p> : null}
 
       <button className="btn btn-primary w-full" disabled={pending}>
-        {pending ? "Account ban raha hai…" : "Sign up"}
+        {pending ? "Creating your account…" : "Create account"}
       </button>
 
       <p className="text-center text-xs text-muted">
-        Pehle se account hai?{" "}
+        Already have an account?{" "}
         <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-semibold text-brand hover:underline">
-          Login kijiye
+          Log in
         </Link>
       </p>
     </form>

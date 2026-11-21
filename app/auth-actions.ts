@@ -48,14 +48,14 @@ export async function loginAction(_prev: AuthState, formData: FormData): Promise
   const next = safeNext(String(formData.get("next") ?? "/"));
 
   if (!EMAIL_RE.test(email) || password.length === 0) {
-    return { ok: false, error: "Email aur password dono daaliye." };
+    return { ok: false, error: "Enter both your email and password." };
   }
 
   const ip = await requestIp();
   // Another isolate may have created this account; verify against the latest document.
   const db = await refreshDb();
   if (countEvents(db, "login", ip, LOGIN_WINDOW_MS) >= LOGIN_MAX_ATTEMPTS) {
-    return { ok: false, error: "Bahut zyada login attempts. 15 minute baad try kijiye." };
+    return { ok: false, error: "Too many login attempts. Please try again in 15 minutes." };
   }
 
   const user = await verifyCredentials(db, email, password);
@@ -64,7 +64,7 @@ export async function loginAction(_prev: AuthState, formData: FormData): Promise
       d.authEvents.push({ ip, at: new Date().toISOString(), kind: "login" });
       pruneAuthEvents(d);
     });
-    return { ok: false, error: "Email ya password galat hai." };
+    return { ok: false, error: "Incorrect email or password." };
   }
 
   await startSession(user.id);
@@ -81,16 +81,16 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
   const confirm = String(formData.get("confirm") ?? "");
   const next = safeNext(String(formData.get("next") ?? "/profile"));
 
-  if (name.length < 2) return { ok: false, error: "Apna naam likhiye (2 letters se zyada)." };
-  if (!EMAIL_RE.test(email)) return { ok: false, error: "Valid email daaliye." };
+  if (name.length < 2) return { ok: false, error: "Please enter your name (at least 2 characters)." };
+  if (!EMAIL_RE.test(email)) return { ok: false, error: "Please enter a valid email address." };
   if (password.length < MIN_PASSWORD) {
-    return { ok: false, error: `Password kam se kam ${MIN_PASSWORD} characters ka hona chahiye.` };
+    return { ok: false, error: `Password must be at least ${MIN_PASSWORD} characters long.` };
   }
-  if (password !== confirm) return { ok: false, error: "Dono passwords match nahi kar rahe." };
+  if (password !== confirm) return { ok: false, error: "The passwords do not match." };
 
   const db = await refreshDb();
   if (db.users.some((u) => u.email.toLowerCase() === email)) {
-    return { ok: false, error: "Ye email pehle se registered hai. Login kijiye." };
+    return { ok: false, error: "This email is already registered. Please log in." };
   }
 
   const ip = await requestIp();
@@ -125,12 +125,12 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
 
 export async function forgotPasswordAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = normalizeEmail(String(formData.get("email") ?? ""));
-  if (!EMAIL_RE.test(email)) return { ok: false, error: "Valid email daaliye." };
+  if (!EMAIL_RE.test(email)) return { ok: false, error: "Please enter a valid email address." };
 
   const ip = await requestIp();
   const db = await refreshDb();
   if (countEvents(db, "reset", ip, RESET_WINDOW_MS) >= RESET_MAX_REQUESTS) {
-    return { ok: false, error: "Bahut zyada reset requests. Ek ghante baad try kijiye." };
+    return { ok: false, error: "Too many reset requests. Please try again in an hour." };
   }
 
   const user = db.users.find((u) => u.email.toLowerCase() === email);
@@ -160,7 +160,7 @@ export async function forgotPasswordAction(_prev: AuthState, formData: FormData)
 
   return {
     ok: true,
-    message: "Agar ye email registered hai, to reset link generate ho gaya hai (1 ghante ke liye valid).",
+    message: "If this email is registered, a reset link has been generated (valid for one hour).",
     resetLink,
   };
 }
@@ -173,16 +173,16 @@ export async function resetPasswordAction(_prev: AuthState, formData: FormData):
   const confirm = String(formData.get("confirm") ?? "");
 
   if (password.length < MIN_PASSWORD) {
-    return { ok: false, error: `Password kam se kam ${MIN_PASSWORD} characters ka hona chahiye.` };
+    return { ok: false, error: `Password must be at least ${MIN_PASSWORD} characters long.` };
   }
-  if (password !== confirm) return { ok: false, error: "Dono passwords match nahi kar rahe." };
+  if (password !== confirm) return { ok: false, error: "The passwords do not match." };
 
   const tokenHash = await sha256Hex(token);
   const user = (await refreshDb()).users.find(
     (u) => u.resetTokenHash === tokenHash && u.resetTokenExpiresAt && +new Date(u.resetTokenExpiresAt) > Date.now(),
   );
   if (!user) {
-    return { ok: false, error: "Ye reset link invalid ya expire ho gaya hai. Naya link request kijiye." };
+    return { ok: false, error: "This reset link is invalid or has expired. Please request a new one." };
   }
 
   const passwordHash = await hashPassword(password);

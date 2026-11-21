@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Login",
-  description: "Login karke AI ko rate kijiye, bookmark kijiye aur apni ratings manage kijiye.",
+  description: "Log in to rate AI tools, save favorites and manage your ratings.",
+  alternates: { canonical: "/login" },
+  robots: { index: false, follow: true },
 };
 
 export default async function LoginPage({
@@ -21,16 +23,17 @@ export default async function LoginPage({
   if (user) redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <div className="card p-6">
-        <h1 className="text-xl font-extrabold">Login kijiye</h1>
-        <p className="mt-1 text-sm text-muted">
-          Rating dene, bookmark karne aur follow karne ke liye login zaroori hai.
+    <div className="mx-auto max-w-md px-4 py-12 sm:py-16">
+      <div className="card p-6 sm:p-7">
+        <span className="eyebrow">Account</span>
+        <h1 className="display mt-1.5 text-2xl text-ink">Welcome back</h1>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+          Log in to rate tools, build your list and follow the AI you care about.
         </p>
 
         {reset === "1" ? (
-          <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-            Password update ho gaya. Ab naye password se login kijiye.
+          <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            Your password has been updated. Log in with the new password.
           </p>
         ) : null}
 
@@ -38,13 +41,13 @@ export default async function LoginPage({
           <LoginForm next={next} />
         </div>
 
-        <div className="mt-5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+        <div className="mt-5 rounded-xl border border-line bg-slate-50/80 p-3.5 text-xs text-slate-600">
           <p className="font-semibold text-slate-700">Demo account</p>
           <p className="mt-1">
             Email: <code>demo@giglenode.com</code> · Password: <code>demo12345</code>
           </p>
           <p className="mt-1 text-muted">
-            Apna account banane ke liye sign up kijiye — rating aur bookmarks tab aapke naam se save honge.
+            Create your own account to keep ratings and saved tools under your name.
           </p>
         </div>
 

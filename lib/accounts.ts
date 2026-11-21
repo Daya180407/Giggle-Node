@@ -1,4 +1,6 @@
+import { applyCatalogue } from "./catalogue/apply";
 import { DEMO_ACCOUNTS } from "./demo-accounts";
+import { localizeContentToEnglish } from "./localize-en";
 import type { DB } from "./types";
 
 /**
@@ -24,6 +26,9 @@ export async function migrateDb(db: DB): Promise<boolean> {
       changed = true;
     }
   }
+
+  if (applyCatalogue(db)) changed = true;
+  if (localizeContentToEnglish(db)) changed = true;
 
   return changed;
 }

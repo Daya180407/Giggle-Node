@@ -15,8 +15,6 @@ export type CostOption = {
   score: number;
 };
 
-const USD_TO_INR = 85;
-
 export default function CostCalculator({
   categoryLabel,
   unitLabel,
@@ -32,8 +30,8 @@ export default function CostCalculator({
 
   const rows = options
     .map((o) => {
-      const monthlyUsd = o.priceType === "free" ? 0 : o.planPrice + qty * o.unitCost;
-      return { ...o, monthly: Math.round(monthlyUsd * USD_TO_INR) };
+      const monthly = o.priceType === "free" ? 0 : o.planPrice + qty * o.unitCost;
+      return { ...o, monthly: Math.round(monthly * 100) / 100 };
     })
     .sort((a, b) => a.monthly - b.monthly || b.score - a.score)
     .slice(0, 4);
@@ -42,14 +40,14 @@ export default function CostCalculator({
     <div className="card p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-base font-bold">Cost Calculator</h3>
-          <p className="text-xs text-muted">{categoryLabel} AI ka mahine ka kharcha estimate kijiye.</p>
+          <h3 className="display text-base text-ink">Cost calculator</h3>
+          <p className="text-xs text-muted">Estimate your monthly {categoryLabel.toLowerCase()} AI spend.</p>
         </div>
-        <span className="chip bg-slate-100 text-slate-600">₹ INR</span>
+        <span className="chip bg-slate-100 text-slate-600">USD</span>
       </div>
 
       <label className="label mt-4" htmlFor="qty">
-        Kitna chahiye? ({unitLabel})
+How much do you need? ({unitLabel})
       </label>
       <div className="flex items-center gap-3">
         <input
@@ -73,24 +71,26 @@ export default function CostCalculator({
             key={row.slug}
             className={`flex items-center gap-2 rounded-xl border p-2 ${i === 0 ? "border-green-200 bg-green-50/60" : "border-line"}`}
           >
-            <AiLogo logo={row.logo} color={row.color} size={30} />
+            <AiLogo slug={row.slug} logo={row.logo} color={row.color} size={32} rounded="rounded-lg" />
             <div className="min-w-0 flex-1">
               <Link href={`/ai/${row.slug}`} className="block truncate text-sm font-medium hover:text-brand">
                 {row.name}
               </Link>
               <span className="text-xs text-muted">
-                {row.priceType === "free" ? "Free plan" : `₹${row.planPrice * USD_TO_INR}/mo plan + usage`}
+                {row.priceType === "free" ? "Free plan" : `$${row.planPrice}/mo plan + usage`}
               </span>
             </div>
             <div className="text-right">
-              <span className="block text-sm font-bold">{row.monthly === 0 ? "₹0" : `₹${row.monthly}`}</span>
-              {i === 0 ? <span className="text-[10px] font-semibold uppercase text-green-600">Sasta</span> : null}
+              <span className="block text-sm font-bold">
+                {row.monthly === 0 ? "$0" : `$${row.monthly.toFixed(row.monthly < 100 ? 2 : 0)}`}
+              </span>
+              {i === 0 ? <span className="text-[10px] font-semibold uppercase text-green-600">Lowest</span> : null}
             </div>
           </div>
         ))}
       </div>
       <p className="mt-3 text-xs text-muted">
-        Ye estimate hai — actual bill tool ke plan, taxes aur usage limits pe depend karta hai.
+        This is an estimate — your real bill depends on the plan, taxes and usage limits.
       </p>
     </div>
   );

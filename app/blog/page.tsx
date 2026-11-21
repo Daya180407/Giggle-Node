@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "AI Blog — News, Comparison, Top 10 Lists & Tutorials",
-  description: "AI tools ke honest reviews, comparisons aur step-by-step tutorials — Hindi me, real rating ke saath.",
+  description: "Honest AI reviews, comparisons and step-by-step tutorials — backed by real user ratings.",
   alternates: { canonical: "/blog" },
 };
 
@@ -36,10 +36,11 @@ export default async function BlogPage({
         <span className="text-slate-600">Blog</span>
       </nav>
 
-      <h1 className="mt-2 text-2xl font-extrabold sm:text-3xl">GigleNode Blog</h1>
-      <p className="mt-2 max-w-2xl text-sm text-slate-600">
-        News, comparison, top 10 lists aur tutorials — sab practical, Hindi me. Har post me live ranking aur related AI
-        cards automatically jude hote hain.
+      <span className="eyebrow">GigleNode editorial</span>
+      <h1 className="display mt-1.5 text-3xl text-ink sm:text-4xl">Guides, news &amp; comparisons</h1>
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
+        Practical tutorials, honest comparisons and top lists. Every post is linked to the live ranking and the AI
+        tools it mentions.
       </p>
 
       <div className="no-scrollbar mt-4 flex gap-1.5 overflow-x-auto pb-1">
@@ -51,13 +52,13 @@ export default async function BlogPage({
               type === t ? "bg-brand text-white" : "border border-line bg-white text-slate-600 hover:text-brand"
             }`}
           >
-            {t === "all" ? "Saare" : POST_TYPE_LABEL[t]}
+            {t === "all" ? "All" : POST_TYPE_LABEL[t]}
           </Link>
         ))}
       </div>
 
       {posts.length === 0 ? (
-        <p className="card mt-6 p-8 text-center text-sm text-muted">Is category me abhi koi post nahi hai.</p>
+        <p className="card mt-6 p-8 text-center text-sm text-muted">No posts in this category yet.</p>
       ) : (
         <>
           <div className="mt-5">{featured ? <PostCard post={featured} featured /> : null}</div>

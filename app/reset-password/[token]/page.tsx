@@ -7,7 +7,7 @@ import { readDb } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Naya password set kijiye",
+  title: "Set a new password",
   robots: { index: false, follow: false },
 };
 
@@ -19,13 +19,14 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
   );
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <div className="card p-6">
+    <div className="mx-auto max-w-md px-4 py-12 sm:py-16">
+      <div className="card p-6 sm:p-7">
         {user ? (
           <>
-            <h1 className="text-xl font-extrabold">Naya password set kijiye</h1>
-            <p className="mt-1 text-sm text-muted">
-              <strong>{user.email}</strong> ke liye naya password chuniye (kam se kam 8 characters).
+            <span className="eyebrow">Account recovery</span>
+            <h1 className="display mt-1.5 text-2xl text-ink">Set a new password</h1>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted">
+              Choose a new password for <strong>{user.email}</strong> (at least 8 characters).
             </p>
             <div className="mt-5">
               <ResetPasswordForm token={token} />
@@ -33,12 +34,13 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
           </>
         ) : (
           <>
-            <h1 className="text-xl font-extrabold">Link invalid ya expire ho gaya</h1>
-            <p className="mt-2 text-sm text-muted">
-              Reset link 1 ghante ke liye valid hota hai aur ek hi baar chal sakta hai. Naya link request kijiye.
+            <span className="eyebrow">Account recovery</span>
+            <h1 className="display mt-1.5 text-2xl text-ink">This link is invalid or expired</h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Reset links are valid for one hour and can only be used once. Request a fresh one below.
             </p>
             <Link href="/forgot-password" className="btn btn-primary mt-4">
-              Naya reset link banaiye
+              Request a new reset link
             </Link>
           </>
         )}

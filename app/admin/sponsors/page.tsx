@@ -56,7 +56,7 @@ function SponsorRow({
   const { ai } = stat;
   return (
     <div className="flex flex-wrap items-center gap-2 py-2.5">
-      <AiLogo logo={ai.logo} color={ai.color} size={32} />
+      <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={34} rounded="rounded-lg" />
       <div className="min-w-0 flex-1">
         <Link href={`/admin/ai/${ai.slug}`} className="truncate text-sm font-medium hover:text-brand">
           {ai.name}

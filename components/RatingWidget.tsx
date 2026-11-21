@@ -7,7 +7,7 @@ import { Stars } from "@/components/ui";
 import { timeAgo } from "@/lib/rank";
 import type { Rating } from "@/lib/types";
 
-const LABELS = ["", "Bilkul nahi", "Thoda", "Theek", "Achha", "Zabardast"];
+const LABELS = ["", "Not for me", "Could be better", "Decent", "Good", "Excellent"];
 
 export default function RatingWidget({
   modelId,
@@ -45,12 +45,12 @@ export default function RatingWidget({
   if (!isLoggedIn) {
     return (
       <div className="card p-5">
-        <h3 className="text-base font-bold">Is Model Ko Rate Kijiye</h3>
-        <p className="mt-1 text-sm text-muted">
-          Rating dene ke liye login karna zaroori hai. Ek user ek model ko ek hi baar rate kar sakta hai.
+        <h3 className="display text-base text-ink">Rate this model</h3>
+        <p className="mt-1 text-sm leading-relaxed text-muted">
+          You need an account to rate. One verified user, one rating per model.
         </p>
         <Link href={`/login?next=${encodeURIComponent(loginNext)}`} className="btn btn-primary mt-3">
-          Login karke rate kijiye
+          Log in to rate
         </Link>
       </div>
     );
@@ -60,11 +60,11 @@ export default function RatingWidget({
     <div className="card p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-base font-bold">Is Model Ko Rate Kijiye</h3>
-          <p className="mt-1 text-xs text-muted">Aapka review 600 characters tak ho sakta hai. Ek user, ek rating.</p>
+          <h3 className="display text-base text-ink">Rate this model</h3>
+          <p className="mt-1 text-xs text-muted">Reviews can be up to 600 characters. One rating per user.</p>
         </div>
         {existing && !editing ? (
-          <span className="chip bg-indigo-50 text-indigo-700">Aapne {existing.stars} ★ diya hai</span>
+          <span className="chip chip-brand">You rated {existing.stars} ★</span>
         ) : null}
       </div>
 
@@ -72,19 +72,19 @@ export default function RatingWidget({
         <div className="mt-3">
           <div className="flex items-center gap-2">
             <Stars value={existing.stars} size={18} />
-            <span className="text-sm font-semibold">{existing.stars}.0 / 5</span>
+            <span className="text-sm font-semibold text-ink">{existing.stars}.0 / 5</span>
           </div>
-          {existing.review ? <p className="mt-2 text-sm text-slate-600">“{existing.review}”</p> : null}
+          {existing.review ? <p className="mt-2 text-sm leading-relaxed text-slate-600">“{existing.review}”</p> : null}
           <p className="mt-2 text-xs text-muted">
-            Last updated: {timeAgo(existing.lastEditedAt ?? existing.updatedAt)}
+            Last updated {timeAgo(existing.lastEditedAt ?? existing.updatedAt)}
           </p>
           {locked ? (
             <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              24 ghante me ek hi baar edit allowed hai. Thodi der baad try kijiye.
+              You can edit once every 24 hours. Please try again later.
             </p>
           ) : (
             <button type="button" onClick={() => setEditing(true)} className="btn btn-ghost mt-3">
-              ✏️ Edit Rating
+              Edit rating
             </button>
           )}
         </div>
@@ -98,7 +98,7 @@ export default function RatingWidget({
                 <button
                   key={n}
                   type="button"
-                  aria-label={`${n} star`}
+                  aria-label={`${n} star${n === 1 ? "" : "s"}`}
                   onMouseEnter={() => setHover(n)}
                   onClick={() => setStars(n)}
                   className={`text-2xl leading-none transition ${
@@ -109,7 +109,7 @@ export default function RatingWidget({
                 </button>
               ))}
             </div>
-            <span className="text-sm text-muted">{LABELS[hover || stars] || "Star chuniye"}</span>
+            <span className="text-sm text-muted">{LABELS[hover || stars] || "Pick a star rating"}</span>
           </div>
 
           <textarea
@@ -118,13 +118,13 @@ export default function RatingWidget({
             onChange={(e) => setReview(e.target.value)}
             rows={3}
             maxLength={600}
-            placeholder="Chhota review likhiye (optional) — kis kaam me fayda hua?"
+            placeholder="Add a short review (optional) — what did it help you with?"
             className="field resize-none"
           />
 
           <div className="flex flex-wrap items-center gap-2">
             <button type="submit" disabled={pending || stars === 0} className="btn btn-primary disabled:opacity-50">
-              {pending ? "Saving…" : existing ? "Update Rating" : "Submit Rating"}
+              {pending ? "Saving…" : existing ? "Update rating" : "Submit rating"}
             </button>
             {existing ? (
               <button
@@ -139,16 +139,14 @@ export default function RatingWidget({
                 Cancel
               </button>
             ) : null}
-            {existing ? (
-              <span className="text-xs text-muted">Edit karne par purani rating update hogi.</span>
-            ) : null}
+            {existing ? <span className="text-xs text-muted">Editing updates your existing rating.</span> : null}
           </div>
 
           {state.error ? (
             <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{state.error}</p>
           ) : null}
           {state.ok && state.message ? (
-            <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{state.message}</p>
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{state.message}</p>
           ) : null}
         </form>
       )}

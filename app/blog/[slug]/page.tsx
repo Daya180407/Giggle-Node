@@ -59,7 +59,13 @@ export default async function PostPage({ params }: Props) {
     datePublished: post.createdAt,
     dateModified: post.updatedAt,
     author: { "@type": "Person", name: post.author },
-    publisher: { "@type": "Organization", name: "GigleNode" },
+    publisher: {
+      "@type": "Organization",
+      name: "GigleNode",
+      logo: { "@type": "ImageObject", url: "https://giglenode.com/brand/logo.png" },
+    },
+    image: "https://giglenode.com/og.png",
+    mainEntityOfPage: { "@type": "WebPage", "@id": `https://giglenode.com/blog/${post.slug}` },
   };
 
   return (
@@ -112,13 +118,13 @@ export default async function PostPage({ params }: Props) {
         <section className="card mt-8 p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="text-base font-bold">Live Top 5 — {category ? categoryName(category) : "AI"}</h2>
+              <h2 className="display text-lg text-ink">Live top 5 — {category ? categoryName(category) : "AI"}</h2>
               <p className="text-xs text-muted">
-                Ye ranking post ke publish hone ke baad bhi update hoti rehti hai (real user votes se).
+                This ranking keeps updating after publication, straight from real user votes.
               </p>
             </div>
             <Link href={`/category/${category}`} className="text-xs font-semibold text-brand">
-              Poori list →
+              Full list →
             </Link>
           </div>
           <ol className="mt-3 divide-y divide-line">
@@ -127,7 +133,7 @@ export default async function PostPage({ params }: Props) {
                 <span className="grid h-6 w-6 place-items-center rounded-md bg-slate-100 text-xs font-bold text-slate-600">
                   {i + 1}
                 </span>
-                <AiLogo logo={s.ai.logo} color={s.ai.color} size={32} />
+                <AiLogo slug={s.ai.slug} logo={s.ai.logo} color={s.ai.color} size={34} rounded="rounded-lg" />
                 <div className="min-w-0 flex-1">
                   <Link href={`/ai/${s.ai.slug}`} className="truncate text-sm font-semibold hover:text-brand">
                     {s.ai.name}
@@ -154,7 +160,7 @@ export default async function PostPage({ params }: Props) {
 
       {related.length ? (
         <section className="mt-8">
-          <h2 className="mb-3 text-lg font-bold">Is Post Me Mention AI</h2>
+          <h2 className="display mb-3 text-xl text-ink">AI tools mentioned in this post</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {related.slice(0, 4).map((s) => (
               <AiCard key={s.ai.id} stat={s} saved={saved.has(s.ai.id)} back={`/blog/${post.slug}`} />

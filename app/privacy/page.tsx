@@ -1,48 +1,81 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "GigleNode kaise data collect karta hai, ratings kahan store hoti hain aur aapke rights kya hain.",
+  description: "What GigleNode collects, what stays public, where data is stored and your rights.",
   alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="text-3xl font-extrabold">Privacy Policy</h1>
-      <p className="mt-2 text-xs text-muted">Last updated: November 2026</p>
+    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+      <header className="page-hero">
+        <span className="chip chip-brand">Legal</span>
+        <h1 className="display mt-3 text-3xl text-ink sm:text-4xl">Privacy Policy</h1>
+        <p className="mt-2 text-xs text-muted">Last updated: November 2026</p>
+      </header>
 
-      <h2 className="mt-6 text-lg font-bold">Hum kya collect karte hain</h2>
-      <ul className="mt-2 space-y-1.5 text-sm text-slate-600">
-        <li>• Account: naam aur email (login ke liye).</li>
-        <li>• Ratings: aapka star, review aur timestamp — public dikhte hain.</li>
-        <li>• Bookmarks aur follows — sirf aapke account me.</li>
-        <li>• Abuse rokne ke liye IP address, sirf 24 ghante ke rate-limit ke liye.</li>
-      </ul>
+      <div className="mt-8 space-y-6 text-sm leading-relaxed text-slate-600">
+        <section>
+          <h2 className="display text-lg text-ink">What we collect</h2>
+          <ul className="mt-2 space-y-2">
+            <li>• <strong>Account:</strong> your name and email address, used for sign-in.</li>
+            <li>• <strong>Ratings:</strong> your star rating, review and timestamp — these are public.</li>
+            <li>• <strong>Saved tools and follows</strong> — visible only inside your account.</li>
+            <li>• <strong>Abuse prevention:</strong> your IP address, retained for 24-hour rate limiting only.</li>
+          </ul>
+        </section>
 
-      <h2 className="mt-6 text-lg font-bold">Kya public hota hai</h2>
-      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        Aapka naam, avatar initial, rating aur review AI aur model pages pe public dikhte hain. Email kabhi public nahi
-        hota.
-      </p>
+        <section>
+          <h2 className="display text-lg text-ink">What is public</h2>
+          <p className="mt-2">
+            Your display name, avatar initial, ratings and reviews appear on AI and model pages. Your email address is
+            never shown publicly.
+          </p>
+        </section>
 
-      <h2 className="mt-6 text-lg font-bold">Data kahan store hota hai</h2>
-      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        Production me data Supabase (Postgres + Auth) me store hota hai aur frontend Vercel pe chalta hai. Images
-        Supabase Storage / Cloudinary par. Email notifications Resend se jate hain — sirf un AI ke liye jinhe aap
-        follow karte hain.
-      </p>
+        <section>
+          <h2 className="display text-lg text-ink">Where data is stored</h2>
+          <p className="mt-2">
+            The current deployment stores its database in a private object store on the hosting platform and uses signed
+            session cookies. In the production setup described for this project, data lives in Supabase (Postgres and
+            Auth). Images are served from the application or the configured storage provider, and notification emails
+            are sent through the configured email provider.
+          </p>
+        </section>
 
-      <h2 className="mt-6 text-lg font-bold">Aapke rights</h2>
-      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        Apni rating kabhi bhi edit kar sakte hain (24 ghante ke lock ke saath). Account ya reviews delete karwane ke
-        liye privacy@giglenode.com pe likhiye.
-      </p>
+        <section>
+          <h2 className="display text-lg text-ink">Your rights</h2>
+          <p className="mt-2">
+            You can edit your own rating at any time, subject to the 24-hour edit lock. To delete your account or your
+            reviews, email{" "}
+            <a href="mailto:privacy@giglenode.com" className="font-semibold text-brand hover:underline">
+              privacy@giglenode.com
+            </a>{" "}
+            and we will action the request.
+          </p>
+        </section>
 
-      <h2 className="mt-6 text-lg font-bold">Cookies</h2>
-      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        Sirf session cookie use hoti hai — login state yaad rakhne ke liye. Koi third-party tracking cookie nahi.
-      </p>
+        <section>
+          <h2 className="display text-lg text-ink">Cookies</h2>
+          <p className="mt-2">
+            We use a single session cookie to keep you signed in. There are no third-party advertising or tracking
+            cookies.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="display text-lg text-ink">Contact</h2>
+          <p className="mt-2">
+            Questions about this policy? Reach us at{" "}
+            <a href="mailto:privacy@giglenode.com" className="font-semibold text-brand hover:underline">
+              privacy@giglenode.com
+            </a>{" "}
+            or through the <Link href="/contact" className="font-semibold text-brand hover:underline">contact page</Link>.
+          </p>
+        </section>
+      </div>
     </div>
   );
 }

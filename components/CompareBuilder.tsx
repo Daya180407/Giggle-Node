@@ -24,14 +24,14 @@ export default function CompareBuilder({ options }: { options: CompareOption[] }
   return (
     <div className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-bold">Compare karne ke liye 2–3 AI chuniye</h2>
+        <h2 className="display text-lg text-ink">Pick 2–3 AI tools to compare</h2>
         <span className="text-xs text-muted">{selected.length}/3 selected</span>
       </div>
 
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="AI ka naam likhiye…"
+        placeholder="Search by name…"
         className="field mt-3"
         aria-label="Filter AI list"
       />
@@ -47,7 +47,7 @@ export default function CompareBuilder({ options }: { options: CompareOption[] }
                 active ? "border-brand bg-brand-soft" : "border-line hover:border-indigo-200"
               }`}
             >
-              <AiLogo logo={o.logo} color={o.color} size={30} />
+              <AiLogo slug={o.slug} logo={o.logo} color={o.color} size={32} rounded="rounded-lg" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{o.name}</span>
                 <span className="block text-xs capitalize text-muted">{o.category}</span>
@@ -58,7 +58,7 @@ export default function CompareBuilder({ options }: { options: CompareOption[] }
             </button>
           );
         })}
-        {filtered.length === 0 ? <p className="col-span-full py-4 text-center text-sm text-muted">Kuch nahi mila.</p> : null}
+        {filtered.length === 0 ? <p className="col-span-full py-4 text-center text-sm text-muted">No tools found.</p> : null}
       </div>
 
       <button
@@ -66,10 +66,10 @@ export default function CompareBuilder({ options }: { options: CompareOption[] }
         disabled={selected.length < 2}
         className="btn btn-primary mt-4 w-full disabled:opacity-40"
       >
-        Compare kijiye →
+        Compare →
       </button>
       <p className="mt-2 text-center text-xs text-muted">
-        Har comparison ka apna shareable URL banta hai, jaise /compare/chatgpt-vs-gemini
+        Every comparison gets its own shareable URL, like /compare/chatgpt-vs-gemini
       </p>
     </div>
   );

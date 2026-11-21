@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Sign up",
-  description: "Naya GigleNode account banaiye — AI rate kijiye, bookmark kijiye aur apni ratings track kijiye.",
+  description: "Create a GigleNode account — rate AI tools, save your shortlist and track your ratings.",
 };
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
@@ -17,11 +17,12 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   if (user) redirect("/profile");
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <div className="card p-6">
-        <h1 className="text-xl font-extrabold">Naya account banaiye</h1>
-        <p className="mt-1 text-sm text-muted">
-          Ek account se aap AI rate kar sakte hain, bookmark rakh sakte hain aur apni ratings edit kar sakte hain.
+    <div className="mx-auto max-w-md px-4 py-12 sm:py-16">
+      <div className="card p-6 sm:p-7">
+        <span className="eyebrow">Get started</span>
+        <h1 className="display mt-1.5 text-2xl text-ink">Create your account</h1>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+          One account lets you rate tools, build a shortlist and edit your ratings later.
         </p>
         <div className="mt-5">
           <SignupForm next={next} />

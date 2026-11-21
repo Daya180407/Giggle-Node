@@ -31,15 +31,15 @@ function uniqueSlug(base: string, taken: string[]) {
 
 export async function rateModelAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false, error: "Rating dene ke liye login karna zaroori hai." };
+  if (!user) return { ok: false, error: "Please log in to submit a rating." };
 
   const modelId = String(formData.get("modelId") ?? "");
   const stars = Number(formData.get("stars"));
   const review = String(formData.get("review") ?? "").trim().slice(0, 600);
 
-  if (!modelId) return { ok: false, error: "Model nahi mila." };
+  if (!modelId) return { ok: false, error: "Model not found." };
   if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
-    return { ok: false, error: "1 se 5 star ke beech rating dijiye." };
+    return { ok: false, error: "Please choose a rating between 1 and 5 stars." };
   }
 
   const db = readDb();
@@ -48,12 +48,12 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
   const dayAgo = Date.now() - 86400000;
   const ipCount = db.rateEvents.filter((e) => e.ip === ip && +new Date(e.at) > dayAgo).length;
   if (ipCount >= MAX_RATINGS_PER_DAY) {
-    return { ok: false, error: `Ek IP se 24 ghante me ${MAX_RATINGS_PER_DAY} se zyada rating allowed nahi hai.` };
+    return { ok: false, error: `This network has reached the limit of ${MAX_RATINGS_PER_DAY} ratings per 24 hours.` };
   }
 
   const existing = db.ratings.find((r) => r.userId === user.id && r.modelId === modelId);
   const model = db.models.find((m) => m.id === modelId);
-  if (!model) return { ok: false, error: "Model nahi mila." };
+  if (!model) return { ok: false, error: "Model not found." };
   const parent = db.ai.find((a) => a.id === model.aiId);
   const modelPath = parent ? `/ai/${parent.slug}/${model.slug}` : "/";
   if (existing) {
@@ -61,7 +61,7 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
       const hoursLeft = Math.ceil((EDIT_LOCK_MS - (Date.now() - +new Date(existing.lastEditedAt))) / 3600000);
       return {
         ok: false,
-        error: `Aapne recently edit kiya tha. ${hoursLeft} ghante baad dobara edit kar sakte hain.`,
+        error: `You edited this recently. You can edit again in ${hoursLeft} ${hoursLeft === 1 ? "hour" : "hours"}.`,
       };
     }
     mutateDb((d) => {
@@ -74,7 +74,7 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
     });
     revalidatePath(modelPath);
     revalidatePath("/");
-    return { ok: true, message: "Aapki rating update ho gayi." };
+    return { ok: true, message: "Your rating has been updated." };
   }
 
   mutateDb((d) => {
@@ -92,7 +92,7 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
   });
   revalidatePath(modelPath);
   revalidatePath("/");
-  return { ok: true, message: "Rating save ho gayi. Shukriya!" };
+  return { ok: true, message: "Rating saved. Thank you!" };
 }
 
 /* ------------------------- bookmark / follow ------------------------- */
@@ -160,14 +160,14 @@ export async function saveAiAction(formData: FormData) {
       description: String(formData.get("description") ?? "").trim(),
       bestFor,
       pros: [
-        bestFor[0] ? `${bestFor[0]} me strong output` : "Roz ke kaam ke liye usable output",
-        "Free ya sasta plan se shuru kar sakte hain",
-        "Interface simple hai, learning curve kam",
+        bestFor[0] ? `Strong output for ${bestFor[0]}` : "Usable output for everyday tasks",
+        "You can start on a free or low-cost plan",
+        "Simple interface with a short learning curve",
       ],
       cons: [
-        "Har task me 100% accurate nahi hota",
-        "Advanced features paid plan me hain",
-        "Output review karna zaroori hai",
+        "Not 100% accurate on every task",
+        "Advanced features sit behind a paid plan",
+        "Output still needs a human review",
       ],
       planPrice: Number(formData.get("planPrice") ?? 0) || 0,
       unitCost: Number(formData.get("unitCost") ?? 0) || 0,

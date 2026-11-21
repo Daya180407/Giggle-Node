@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AiLogo, PriceBadge, Stars } from "@/components/ui";
+import type { PriceType } from "@/lib/types";
 
 export type FinderOption = {
   slug: string;
@@ -10,7 +11,7 @@ export type FinderOption = {
   logo: string;
   color: string;
   category: string;
-  priceType: "free" | "freemium" | "paid";
+  priceType: PriceType;
   planPrice: number;
   score: number;
   votes: number;
@@ -27,10 +28,10 @@ const WORK = [
 ];
 
 const BUDGET = [
-  { key: "free", label: "Free", note: "₹0 — free tier hi chahiye" },
-  { key: "500", label: "₹500 tak", note: "mahine ka chhota budget" },
-  { key: "1000", label: "₹1000 tak", note: "serious creator budget" },
-  { key: "any", label: "Koi limit nahi", note: "best quality matter karti hai" },
+  { key: "free", label: "Free", note: "I only want a free tier" },
+  { key: "10", label: "Under $10 / month", note: "A small monthly budget" },
+  { key: "25", label: "Under $25 / month", note: "A serious creator budget" },
+  { key: "any", label: "No limit", note: "Best quality is what matters" },
 ];
 
 const LEVEL = [
@@ -38,8 +39,6 @@ const LEVEL = [
   { key: "intermediate", label: "Intermediate", emoji: "🚀" },
   { key: "pro", label: "Pro", emoji: "🎯" },
 ];
-
-const USD_TO_INR = 85;
 
 export default function FinderQuiz({ options }: { options: FinderOption[] }) {
   const [step, setStep] = useState(0);
@@ -52,10 +51,9 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
     const inCategory = options.filter((o) => o.category === work);
     const pool = inCategory.length ? inCategory : options;
     const affordable = (o: FinderOption) => {
-      const monthlyInr = o.planPrice * USD_TO_INR;
       if (budget === "free") return o.priceType !== "paid" || o.planPrice === 0;
-      if (budget === "500") return monthlyInr <= 500;
-      if (budget === "1000") return monthlyInr <= 1000;
+      if (budget === "10") return o.planPrice <= 10;
+      if (budget === "25") return o.planPrice <= 25;
       return true;
     };
     let filtered = pool.filter(affordable);
@@ -81,7 +79,7 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
 
   const questions = [
     {
-      title: "Aapko kya kaam karna hai?",
+      title: "What do you need to get done?",
       options: WORK,
       value: work,
       onPick: (k: string) => {
@@ -90,7 +88,7 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
       },
     },
     {
-      title: "Budget kya hai?",
+      title: "What is your monthly budget?",
       options: BUDGET,
       value: budget,
       onPick: (k: string) => {
@@ -99,7 +97,7 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
       },
     },
     {
-      title: "Aapka level kya hai?",
+      title: "How experienced are you with AI tools?",
       options: LEVEL,
       value: level,
       onPick: (k: string) => {
@@ -112,53 +110,64 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
   if (done) {
     return (
       <div>
-        <div className="card p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="card p-5 sm:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold">Aapke liye 3 best AI</h2>
-              <p className="text-xs text-muted">
+              <span className="eyebrow">Your matches</span>
+              <h2 className="display mt-1 text-xl text-ink sm:text-2xl">Three AI tools worth trying</h2>
+              <p className="mt-1 text-xs text-muted">
                 {WORK.find((w) => w.key === work)?.label} · {BUDGET.find((b) => b.key === budget)?.label} ·{" "}
                 {LEVEL.find((l) => l.key === level)?.label}
               </p>
             </div>
-            <button onClick={reset} className="btn btn-ghost">
-              ↻ Dobara try kijiye
+            <button onClick={reset} className="btn btn-ghost !py-2 text-xs">
+              ↻ Start over
             </button>
           </div>
 
-          <ol className="mt-4 space-y-3">
+          <ol className="mt-5 space-y-3">
             {results.map((row, i) => (
-              <li key={row.slug} className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-3">
-                <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-soft text-xs font-bold text-brand">
-                  {i + 1}
-                </span>
-                <AiLogo logo={row.logo} color={row.color} size={42} />
-                <div className="min-w-0 flex-1">
-                  <Link href={`/ai/${row.slug}`} className="font-semibold hover:text-brand">
-                    {row.name}
-                  </Link>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                    <Stars value={row.score} size={12} />
-                    <span className="text-xs font-semibold">{row.score.toFixed(1)}</span>
-                    <span className="text-xs text-muted">({row.votes} votes)</span>
-                    <PriceBadge price={row.priceType} />
+              <li
+                key={row.slug}
+                className="anim-rise rounded-2xl border border-line bg-white p-3.5 transition hover:border-indigo-200 hover:shadow-sm sm:p-4"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <span
+                    className={`medal h-8 w-8 ${
+                      i === 0 ? "medal-1" : i === 1 ? "medal-2" : "medal-3"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  <AiLogo slug={row.slug} logo={row.logo} color={row.color} size={46} />
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/ai/${row.slug}`} className="font-semibold text-ink hover:text-brand">
+                      {row.name}
+                    </Link>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                      <Stars value={row.score} size={12} />
+                      <span className="text-xs font-semibold">{row.score.toFixed(1)}</span>
+                      <span className="text-xs text-muted">({row.votes.toLocaleString("en-US")} votes)</span>
+                      <PriceBadge price={row.priceType} />
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-muted">{row.bestFor}</p>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-muted">{row.bestFor}</p>
+                  <a
+                    href={row.website}
+                    target="_blank"
+                    rel="nofollow noopener noreferrer sponsored"
+                    className="btn btn-primary !py-1.5 text-xs"
+                  >
+                    Visit
+                  </a>
                 </div>
-                <a
-                  href={row.website}
-                  target="_blank"
-                  rel="nofollow noopener noreferrer sponsored"
-                  className="btn btn-primary !py-1.5 text-xs"
-                >
-                  Visit
-                </a>
               </li>
             ))}
           </ol>
         </div>
         <p className="mt-3 text-center text-xs text-muted">
-          Result live ranking se banta hai — jaise user ratings badhti hain, suggestion bhi badalta hai.
+          Results are calculated from the live ranking — as ratings change, so do the suggestions.
         </p>
       </div>
     );
@@ -169,45 +178,45 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
     <div className="card p-5 sm:p-7">
       <div className="flex items-center justify-between text-xs text-muted">
         <span>
-          Sawal {Math.min(step + 1, total)} / {total}
+          Question {Math.min(step + 1, total)} of {total}
         </span>
         <span>{answered} answered</span>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div
-          className="h-full rounded-full bg-brand transition-all"
+          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-all duration-500"
           style={{ width: `${(step / total) * 100}%` }}
         />
       </div>
 
-      <h2 className="mt-5 text-lg font-bold sm:text-xl">{q.title}</h2>
-      <div className={`mt-4 grid gap-2 ${step === 1 ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+      <h2 className="display mt-6 text-xl text-ink sm:text-2xl">{q.title}</h2>
+      <div className={`mt-5 grid gap-2 ${step === 1 ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
         {q.options.map((opt) => (
           <button
             key={opt.key}
             onClick={() => q.onPick(opt.key)}
-            className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${
-              q.value === opt.key ? "border-brand bg-brand-soft" : "border-line bg-white hover:border-indigo-200"
+            className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition ${
+              q.value === opt.key
+                ? "border-brand bg-brand-soft shadow-sm"
+                : "border-line bg-white hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-sm"
             }`}
           >
-            {"emoji" in opt ? <span className="text-xl">{opt.emoji}</span> : null}
-            <span>
-              <span className="block text-sm font-semibold">{opt.label}</span>
+            {"emoji" in opt ? (
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-50 text-lg">{opt.emoji}</span>
+            ) : null}
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-ink">{opt.label}</span>
               {"note" in opt ? <span className="block text-xs text-muted">{opt.note}</span> : null}
             </span>
           </button>
         ))}
       </div>
 
-      <div className="mt-5 flex items-center justify-between">
-        <button
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0}
-          className="btn btn-ghost disabled:opacity-40"
-        >
-          ← Peeche
+      <div className="mt-6 flex items-center justify-between">
+        <button onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} className="btn btn-ghost disabled:opacity-40">
+          ← Back
         </button>
-        <span className="text-xs text-muted">30 second me result</span>
+        <span className="text-xs text-muted">Takes about 30 seconds</span>
       </div>
     </div>
   );

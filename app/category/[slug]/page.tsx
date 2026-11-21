@@ -19,10 +19,10 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const cat = CATEGORY_MAP[slug];
-  const title = cat ? `Best ${cat.name} AI Tools (2026) — Real User Rating` : "Saare AI Tools Ki Ranking";
+  const title = cat ? `Best ${cat.name} AI Tools (2026) — Real User Ratings` : "All AI Tools Ranked";
   const description = cat
-    ? `${cat.blurb} ${cat.name} category ke best AI tools ki real user rating ke saath ranking, price aur model detail.`
-    : "GigleNode pe saare AI tools ki weighted ranking — real user ratings, price aur model wise detail ke saath.";
+    ? `${cat.blurb} Compare the best ${cat.name.toLowerCase()} AI tools by real user ratings, pricing and model-level detail.`
+    : "Every AI tool on GigleNode, ranked by a transparent weighted score built from real user ratings.";
   return { title, description, alternates: { canonical: `/category/${slug}` } };
 }
 
@@ -52,57 +52,104 @@ export default async function CategoryPage({ params }: Props) {
   }));
 
   const totalVotes = stats.reduce((sum, s) => sum + s.votes, 0);
+  const topScore = stats[0]?.score ?? 0;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <nav className="text-xs text-muted" aria-label="Breadcrumb">
-        <Link href="/" className="hover:text-brand">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <nav className="flex flex-wrap items-center gap-1.5 text-xs text-muted" aria-label="Breadcrumb">
+        <Link href="/" className="transition hover:text-brand">
           Home
         </Link>
-        <span className="mx-1.5">/</span>
-        <Link href="/category/all" className="hover:text-brand">
+        <span aria-hidden>/</span>
+        <Link href="/category/all" className="transition hover:text-brand">
           Categories
         </Link>
-        <span className="mx-1.5">/</span>
-        <span className="text-slate-600">{cat?.name ?? "All"}</span>
+        <span aria-hidden>/</span>
+        <span className="text-slate-600">{cat?.name ?? "All tools"}</span>
       </nav>
 
-      <header className="mt-3">
-        <h1 className="text-2xl font-extrabold sm:text-3xl">
-          {cat ? `Best ${cat.name} AI Tools` : "Saare AI Tools Ki Ranking"}{" "}
-          <span className="text-muted">(2026)</span>
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          {cat?.blurb ?? "GigleNode pe listed saare AI tools, weighted score ke hisab se ranked."}{" "}
-          {stats.length} tools · {totalVotes.toLocaleString("en-IN")} real votes.
-        </p>
+      <header className="page-hero mt-3">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="min-w-0 max-w-2xl">
+            <span className="chip chip-brand">
+              <span aria-hidden>{cat?.emoji ?? "🤖"}</span> {cat ? `${cat.name} AI` : "All categories"}
+            </span>
+            <h1 className="display mt-3 text-3xl leading-tight text-ink sm:text-4xl">
+              {cat ? `Best ${cat.name} AI tools` : "All AI tools ranked"}{" "}
+              <span className="text-slate-400">2026</span>
+            </h1>
+            <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
+              {cat?.blurb ?? "Every AI tool listed on GigleNode, ordered by a transparent weighted score."}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="chip border border-line bg-white/80 text-slate-600">
+                {stats.length} tools ranked
+              </span>
+              <span className="chip border border-line bg-white/80 text-slate-600">
+                {totalVotes.toLocaleString("en-US")} real votes
+              </span>
+              <span className="chip border border-line bg-white/80 text-slate-600">
+                Top score {topScore.toFixed(1)} / 5
+              </span>
+            </div>
+          </div>
+
+          <div className="no-scrollbar -mx-1 flex w-full gap-1.5 overflow-x-auto px-1 sm:w-auto sm:max-w-md sm:flex-wrap lg:max-w-xs">
+            {CATEGORIES.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/category/${c.slug}`}
+                className={`chip shrink-0 border px-2.5 py-1.5 transition ${
+                  c.slug === slug
+                    ? "border-transparent bg-ink text-white"
+                    : "border-line bg-white/80 text-slate-600 hover:border-indigo-200 hover:text-brand"
+                }`}
+              >
+                {c.name}
+              </Link>
+            ))}
+          </div>
+        </div>
       </header>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="card p-4 sm:p-5">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-bold">Top Rated Ranking</h2>
-            <span className="chip bg-brand-soft text-brand">Weighted + recency</span>
+      <div className="mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="card min-w-0 p-4 sm:p-5" aria-labelledby="category-ranking">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 id="category-ranking" className="display text-lg text-ink">
+                Live ranking
+              </h2>
+              <p className="text-xs text-muted">Updated as new ratings arrive.</p>
+            </div>
+            <span className="chip chip-brand">Weighted + recency</span>
           </div>
           <RankingTable stats={stats} />
         </section>
 
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <CostCalculator
             categoryLabel={cat?.name ?? "AI"}
             unitLabel={cat?.unit.label ?? "tasks / month"}
             defaultQty={cat?.unit.defaultQty ?? 50}
             options={calcOptions}
           />
-          <div className="card p-4">
-            <h3 className="text-sm font-bold">Category ke baare me</h3>
+          <div className="card p-5">
+            <h3 className="display text-base text-ink">About this category</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">{cat?.blurb}</p>
+            <p className="mt-2 text-xs leading-relaxed text-muted">
+              Prices are starting plans in USD. Usage-based costs are estimates — always check the official pricing
+              page before subscribing.
+            </p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {CATEGORIES.filter((c) => c.slug !== slug)
                 .slice(0, 6)
                 .map((c) => (
-                  <Link key={c.slug} href={`/category/${c.slug}`} className="chip border border-line text-slate-600">
-                    {c.emoji} {c.name}
+                  <Link
+                    key={c.slug}
+                    href={`/category/${c.slug}`}
+                    className="chip border border-line bg-white text-slate-600 transition hover:border-indigo-200 hover:text-brand"
+                  >
+                    <span aria-hidden>{c.emoji}</span> {c.name}
                   </Link>
                 ))}
             </div>
@@ -111,8 +158,8 @@ export default async function CategoryPage({ params }: Props) {
       </div>
 
       {rising.length ? (
-        <section className="mt-10">
-          <SectionHead title="New & Rising" subtitle="Naye AI, kam votes, high rating." />
+        <section className="mt-12">
+          <SectionHead eyebrow="Fresh picks" title="New & rising" subtitle="Recently launched tools with strong early ratings." />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {rising.map((s) => (
               <AiCard key={s.ai.id} stat={s} saved={saved.has(s.ai.id)} back={`/category/${slug}`} />
@@ -122,12 +169,13 @@ export default async function CategoryPage({ params }: Props) {
       ) : null}
 
       {relatedPosts.length ? (
-        <section className="mt-10">
+        <section className="mt-12">
           <SectionHead
-            title="Is Category Ke Posts"
+            eyebrow="Editorial"
+            title="Guides in this category"
             action={
-              <Link href="/blog" className="text-sm font-semibold text-brand">
-                Saare posts →
+              <Link href="/blog" className="text-sm font-semibold text-brand transition hover:text-brand-dark">
+                All guides →
               </Link>
             }
           />

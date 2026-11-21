@@ -4,31 +4,109 @@ import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 
+const SITE_URL = "https://giglenode.com";
+const TITLE = "GigleNode — Find the Best AI Tools, Rated by Real Users";
+const DESCRIPTION =
+  "Discover the best AI tools for every job. Real user ratings, model-level detail, honest comparisons, paid-plan picks and expert guides — plus AI mobile apps and desktop software.";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://giglenode.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "GigleNode — Har AI, Ek Jagah, Sahi Rating Ke Saath",
+    default: TITLE,
     template: "%s | GigleNode",
   },
-  description:
-    "Har kaam ke liye best AI dhoondhiye. Real user ratings, model-wise detail, honest comparison aur expert posts — sab ek jagah.",
-  keywords: ["AI tools", "best AI", "AI ranking", "AI comparison", "Hindi AI directory", "GigleNode"],
+  description: DESCRIPTION,
+  keywords: [
+    "AI tools",
+    "best AI tools 2026",
+    "AI tools directory",
+    "AI ranking",
+    "AI comparison",
+    "AI reviews",
+    "AI models",
+    "free AI tools",
+    "AI apps",
+    "AI desktop software",
+    "GigleNode",
+  ],
+  applicationName: "GigleNode",
+  authors: [{ name: "GigleNode Editorial", url: `${SITE_URL}/about` }],
+  creator: "GigleNode",
+  publisher: "GigleNode",
+  category: "technology",
+  alternates: { canonical: "/", languages: { "en-US": "/" } },
   openGraph: {
-    title: "GigleNode — Har AI, Ek Jagah, Sahi Rating Ke Saath",
-    description: "Real user ratings aur model-wise detail ke saath AI dhoondhne ki jagah.",
-    url: "https://giglenode.com",
+    title: TITLE,
+    description: "Real user ratings and model-level detail, so you pick the right AI the first time.",
+    url: SITE_URL,
     siteName: "GigleNode",
     type: "website",
-    locale: "en_IN",
+    locale: "en_US",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "GigleNode — find the AI that actually fits your work",
+      },
+    ],
   },
-  twitter: { card: "summary_large_image" },
-  alternates: { canonical: "/" },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: "Real user ratings, model-level comparisons and expert guides for the best AI tools.",
+    images: ["/og.png"],
+    creator: "@giglenode",
+  },
+  icons: {
+    icon: [
+      { url: "/icon.png", sizes: "64x64", type: "image/png" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: "/favicon-32.png",
+  },
+  manifest: "/manifest.webmanifest",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+  },
+};
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: "GigleNode",
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/brand/logo.png`, width: 1024, height: 1024 },
+      description: "Independent AI tools directory with weighted rankings built from real user ratings.",
+      sameAs: [],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: "GigleNode",
+      publisher: { "@id": `${SITE_URL}/#organization` },
+      inLanguage: "en-US",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en-IN">
+    <html lang="en">
       <body>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <SiteHeader />
         <main className="min-h-[60vh]">{children}</main>
         <SiteFooter />

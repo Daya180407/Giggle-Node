@@ -79,12 +79,12 @@ export default async function ModelPage({ params }: Props) {
 
       <header className="card mt-3 p-5">
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-brand-soft/70 p-3">
-          <AiLogo logo={ai.logo} color={ai.color} size={36} />
-          <p className="text-sm">
-            Ye model <strong>{ai.name}</strong> ka hissa hai.
+          <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={38} rounded="rounded-lg" />
+          <p className="text-sm text-slate-700">
+            This model is part of <strong>{ai.name}</strong>.
           </p>
           <Link href={`/ai/${ai.slug}`} className="btn btn-ghost ml-auto !py-1.5 text-xs">
-            ← {ai.name} pe jayein
+            ← Back to {ai.name}
           </Link>
         </div>
 
@@ -147,7 +147,7 @@ export default async function ModelPage({ params }: Props) {
           />
 
           <section className="card p-5">
-            <h2 className="text-base font-bold">Is Model Ke Reviews</h2>
+            <h2 className="display text-lg text-ink">Reviews for this model</h2>
             <div className="mt-3 space-y-3">
               {reviews.map(({ rating, user: reviewer }) => (
                 <div key={rating.id} className="rounded-xl border border-line p-3">
@@ -166,7 +166,7 @@ export default async function ModelPage({ params }: Props) {
                 </div>
               ))}
               {reviews.length === 0 ? (
-                <p className="text-sm text-muted">Abhi koi review nahi hai. Aap pehla review de sakte hain.</p>
+                <p className="text-sm text-muted">No reviews yet. You can write the first one.</p>
               ) : null}
             </div>
           </section>
@@ -176,7 +176,7 @@ export default async function ModelPage({ params }: Props) {
           <Distribution dist={stat.dist} votes={stat.votes} />
 
           <div className="card p-4">
-            <h3 className="text-sm font-bold">Is AI ke baaki models</h3>
+            <h3 className="display text-base text-ink">Other models from {ai.name}</h3>
             <ul className="mt-2 space-y-1.5 text-sm">
               {siblings.map((s) => (
                 <li key={s.model.id}>
@@ -191,15 +191,15 @@ export default async function ModelPage({ params }: Props) {
               ))}
             </ul>
             <Link href={`/ai/${ai.slug}`} className="btn btn-ghost mt-2 w-full text-xs">
-              Sab models dekhein
+              View all models
             </Link>
           </div>
 
           <div className="card p-4">
-            <h3 className="text-sm font-bold">Model aise rate hota hai</h3>
+            <h3 className="display text-base text-ink">How ratings work</h3>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
-              1–5 star, ek user ek hi baar. Edit karne par purani rating update hoti hai aur 24 ghante ka lock lagta
-              hai. Ranking me kam votes wale model ko neeche rakha jata hai.
+              Rate 1–5 stars — one rating per user. Editing updates your existing rating and starts a 24-hour lock.
+              Models with fewer votes are weighted down so small samples cannot game the ranking.
             </p>
           </div>
         </aside>

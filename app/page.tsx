@@ -1,14 +1,47 @@
 import Link from "next/link";
 import AiCard from "@/components/AiCard";
-import RankTabs, { type RankRow, type RankTab } from "@/components/RankTabs";
+import AnimatedStats, { type HomeStat } from "@/components/AnimatedStats";
+import AppShowcase, { type AppShowcaseItem } from "@/components/AppShowcase";
+import BrandLogo from "@/components/BrandLogo";
+import ChampionPodium, { type ChampionCategory } from "@/components/ChampionPodium";
+import FeatureRotator from "@/components/FeatureRotator";
+import HeroSearch from "@/components/HeroSearch";
+import PaidPromo, { type PromoItem } from "@/components/PaidPromo";
 import PostCard from "@/components/PostCard";
+import RankTabs, { type RankRow, type RankTab } from "@/components/RankTabs";
 import { SectionHead } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
-import { CATEGORIES } from "@/lib/categories";
-import { buildView, publishedPosts, rankedAis, risingAis, trendingAis, type AiStat } from "@/lib/rank";
+import { CATEGORIES, categoryName } from "@/lib/categories";
+import { APP_ENTRIES, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
+import {
+  buildView,
+  publishedPosts,
+  rankedAis,
+  risingAis,
+  trendingAis,
+  type AiStat,
+} from "@/lib/rank";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+
+const CATEGORY_TINTS = [
+  "#8b6cff",
+  "#3fd8e6",
+  "#f472b6",
+  "#f4c95d",
+  "#4ade80",
+  "#60a5fa",
+  "#fb923c",
+  "#a78bfa",
+  "#22d3ee",
+  "#facc15",
+  "#34d399",
+  "#f87171",
+  "#818cf8",
+  "#e879f9",
+  "#2dd4bf",
+];
 
 function toRows(stats: AiStat[]): RankRow[] {
   return stats.map((s, i) => ({
@@ -36,6 +69,46 @@ export default async function HomePage() {
   const trending = trendingAis(view, 4);
   const rising = risingAis(view, 4);
 
+  const bySlug = new Map([...view.aiStats.values()].map((s) => [s.ai.slug, s]));
+
+  const paidPicks: PromoItem[] = [...view.aiStats.values()]
+    .filter((s) => s.ai.priceType === "paid")
+    .sort((a, b) => b.score - a.score || b.votes - a.votes)
+    .slice(0, 3)
+    .map((s) => ({
+      slug: s.ai.slug,
+      name: s.ai.name,
+      logo: s.ai.logo,
+      color: s.ai.color,
+      score: s.score,
+      votes: s.votes,
+      planPrice: s.ai.planPrice,
+      category: categoryName(s.ai.category),
+      bestFor: s.ai.bestFor.join(" · "),
+      website: s.ai.website,
+    }));
+
+  const appItems = APP_ENTRIES.map((entry): AppShowcaseItem => {
+    const stat = entry.aiSlug ? bySlug.get(entry.aiSlug) : undefined;
+    return {
+      slug: entry.slug,
+      name: entry.name,
+      group: entry.group,
+      logo: stat?.ai.logo ?? entry.emoji,
+      color: stat?.ai.color ?? entry.color,
+      score: stat?.score,
+      price: stat?.ai.priceType ?? entry.price,
+      platforms: entry.platforms,
+      note: entry.note,
+      href: stat ? `/ai/${stat.ai.slug}` : entry.website,
+      external: !stat,
+      iconSrc: stat ? `/logos/${stat.ai.slug}.png` : `/app-icons/${entry.slug}.png`,
+      kind: entry.kind,
+    };
+  });
+  const mobileApps = appItems.filter((item) => item.kind === "mobile");
+  const desktopApps = appItems.filter((item) => item.kind === "desktop");
+
   const tabs: RankTab[] = [
     { slug: "all", label: "All", rows: toRows(rankedAis(view).slice(0, 5)) },
     ...CATEGORIES.map((c) => ({
@@ -45,17 +118,45 @@ export default async function HomePage() {
     })),
   ];
 
-  const stats = [
-    { label: "AI Tools", value: db.ai.length },
-    { label: "Models", value: db.models.length },
-    { label: "Real Ratings", value: db.ratings.length.toLocaleString("en-IN") },
-    { label: "Expert Posts", value: publishedPosts(db).length },
+  const champions: ChampionCategory[] = CATEGORIES.map((category) => ({
+    slug: category.slug,
+    label: category.name,
+    emoji: category.emoji,
+    rows: rankedAis(view, category.slug)
+      .slice(0, 3)
+      .map((s, i) => ({
+        rank: i + 1,
+        slug: s.ai.slug,
+        name: s.ai.name,
+        logo: s.ai.logo,
+        color: s.ai.color,
+        score: s.score,
+        votes: s.votes,
+        priceType: s.ai.priceType,
+        bestFor: s.ai.bestFor.slice(0, 2).join(" · "),
+      })),
+  })).filter((category) => category.rows.length >= 3);
+
+  const stats: HomeStat[] = [
+    { label: "AI tools", value: db.ai.length, icon: "tools", gradient: "#4f46e5", hint: "Every major category" },
+    { label: "Models compared", value: db.models.length, icon: "models", gradient: "#7c3aed", hint: "Rated one by one" },
+    {
+      label: "Real ratings",
+      value: db.ratings.length,
+      icon: "ratings",
+      gradient: "#0891b2",
+      hint: "From signed-in users",
+    },
+    { label: "Expert guides", value: publishedPosts(db).length, icon: "guides", gradient: "#059669", hint: "No hype, just tests" },
   ];
+
+  const categoryCounts = new Map<string, number>();
+  for (const ai of db.ai) categoryCounts.set(ai.category, (categoryCounts.get(ai.category) ?? 0) + 1);
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: "GigleNode Top Rated AI",
+    name: "GigleNode top-rated AI tools",
     itemListElement: rankedAis(view)
       .slice(0, 10)
       .map((s, i) => ({
@@ -66,6 +167,7 @@ export default async function HomePage() {
           name: s.ai.name,
           applicationCategory: `${s.ai.category}Application`,
           url: `https://giglenode.com/ai/${s.ai.slug}`,
+          image: `https://giglenode.com/logos/${s.ai.slug}.png`,
           aggregateRating: {
             "@type": "AggregateRating",
             ratingValue: Number(s.score.toFixed(1)),
@@ -81,63 +183,114 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       {/* Hero */}
-      <section className="border-b border-line bg-gradient-to-b from-indigo-50 via-white to-surface">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
-          <span className="chip border border-indigo-100 bg-white text-brand">✨ Real user ratings · Koi paid ranking nahi</span>
-          <h1 className="mt-3 max-w-3xl text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl">
-            Har Kaam Ke Liye <span className="text-brand">Best AI</span>, Real User Rating Ke Saath
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
-            Video, photo, coding ya writing — confusion khatam. Model wise detail, honest comparison aur expert posts,
-            sab ek jagah.
-          </p>
-
-          <form action="/search" className="mt-6 flex max-w-xl gap-2">
-            <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-              <input
-                name="q"
-                type="search"
-                placeholder='Try: "ChatGPT", "YouTube ke liye", "coding"'
-                className="field !py-3 pl-9 text-sm"
-                aria-label="Search AI"
-              />
-            </div>
-            <button className="btn btn-primary !px-5">Search</button>
-          </form>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {[
-              { label: "🎬 Video AI", href: "/category/video" },
-              { label: "🖼️ Photo AI", href: "/category/image" },
-              { label: "⌨️ Coding AI", href: "/category/coding" },
-              { label: "✍️ Writing AI", href: "/category/writing" },
-            ].map((b) => (
-              <Link key={b.href} href={b.href} className="btn btn-ghost !py-1.5 text-xs">
-                {b.label}
-              </Link>
-            ))}
+      <section className="relative px-3 pt-3 sm:px-5 sm:pt-5">
+        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[1.6rem] bg-[#07070d] sm:rounded-[2rem]">
+          <div className="hero-blobs absolute inset-0" aria-hidden>
+            <span className="hero-blob-1" />
+            <span className="hero-blob-2" />
+            <span className="hero-blob-3" />
           </div>
+          <div className="hero-grid absolute inset-0" aria-hidden />
 
-          <dl className="mt-7 flex flex-wrap gap-x-8 gap-y-3">
-            {stats.map((s) => (
-              <div key={s.label}>
-                <dt className="text-xs text-muted">{s.label}</dt>
-                <dd className="text-lg font-extrabold">{s.value}</dd>
+          <div className="relative mx-auto max-w-6xl px-4 pb-4 pt-8 sm:px-8 sm:pb-8 sm:pt-12 lg:px-10 lg:pt-14">
+            <div className="mx-auto max-w-4xl text-center">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <span className="anim-rise chip border border-white/10 bg-white/[0.06] text-slate-300 backdrop-blur">
+                  <span className="live-dot" aria-hidden /> Independent directory · updated live
+                </span>
+                <span className="anim-rise chip border border-white/10 bg-white/[0.03] text-slate-400">
+                  No paid ranking
+                </span>
               </div>
-            ))}
-          </dl>
+
+              <div className="anim-rise delay-1 mt-7 flex justify-center">
+                <span className="relative block w-fit">
+                  <span
+                    className="pointer-events-none absolute -inset-3 rounded-3xl bg-gradient-to-br from-violet-500/35 via-fuchsia-500/20 to-cyan-400/30 blur-xl"
+                    aria-hidden
+                  />
+                  <BrandLogo size={58} className="anim-float relative shadow-2xl shadow-violet-950/60" />
+                </span>
+              </div>
+
+              <h1 className="anim-rise delay-1 mt-5">
+                <span className="sr-only">GigleNode — </span>
+                <span className="display block text-[clamp(2.45rem,6.4vw,4.65rem)] leading-[1.02] tracking-[-0.045em] text-white">
+                  Find the AI that <span className="hero-gradient">actually fits</span> your work.
+                </span>
+              </h1>
+
+              <div className="anim-rise delay-2">
+                <FeatureRotator />
+              </div>
+
+              <p className="anim-rise delay-3 mx-auto mt-4 max-w-2xl text-[14px] leading-relaxed text-slate-400 sm:text-[15px]">
+                Video, images, code or writing — compare models, read honest reviews from verified users and choose with
+                confidence. Independent rankings, with paid placements always labelled.
+              </p>
+
+              <div className="anim-rise delay-3">
+                <HeroSearch />
+              </div>
+
+              <div className="anim-fade delay-4 mt-4 flex flex-wrap items-center justify-center gap-2">
+                {[
+                  { label: "🎬 Video", href: "/category/video" },
+                  { label: "🖼️ Image", href: "/category/image" },
+                  { label: "⌨️ Coding", href: "/category/coding" },
+                  { label: "✍️ Writing", href: "/category/writing" },
+                  { label: "🎙️ Voice", href: "/category/voice" },
+                ].map((b) => (
+                  <Link
+                    key={b.href}
+                    href={b.href}
+                    className="chip border border-white/10 bg-white/[0.05] px-3 py-1.5 text-slate-300 backdrop-blur transition hover:-translate-y-0.5 hover:border-violet-400/60 hover:bg-violet-400/10 hover:text-white"
+                  >
+                    {b.label}
+                  </Link>
+                ))}
+                <Link
+                  href="/finder"
+                  className="chip border border-transparent bg-[linear-gradient(100deg,#8b6cff,#3fd8e6)] px-3 py-1.5 font-semibold text-[#07070d] transition hover:-translate-y-0.5"
+                >
+                  ⚡ 30-second AI finder
+                </Link>
+              </div>
+            </div>
+
+            <AnimatedStats stats={stats} />
+          </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl space-y-12 px-4 py-10">
-        {/* Ranking */}
+      <div className="mx-auto max-w-7xl space-y-14 px-4 pb-6 pt-12 sm:px-6 sm:pt-14 lg:space-y-16">
+        {/* Category champions */}
+        <section id="champions">
+          <SectionHead
+            eyebrow="Top 3 by category"
+            title="Category champions"
+            subtitle="The three highest-rated AI tools in every category, ranked from real user votes and recency."
+            action={
+              <span className="chip border border-line bg-white text-slate-500">
+                <span className="live-dot" aria-hidden /> Live scores
+              </span>
+            }
+          />
+          <div className="card overflow-hidden p-4 sm:p-6">
+            <ChampionPodium categories={champions} />
+          </div>
+        </section>
+
+        {/* Overall ranking */}
         <section id="ranking">
           <SectionHead
-            title="Top AI Ranking"
-            subtitle="Weighted score — kam votes wala 5.0 star, zyada votes wale 4.7 star se upar nahi ja sakta."
+            eyebrow="Leaderboard"
+            title="Top AI ranking"
+            subtitle="A weighted score keeps low-vote tools honest: a 5.0 from 3 votes never outranks a 4.7 from 500."
             action={
-              <span className="chip bg-white text-slate-500 ring-1 ring-line">Roz raat 12 baje update</span>
+              <Link href="/category/all" className="text-sm font-semibold text-brand transition hover:text-brand-dark">
+                Full leaderboard →
+              </Link>
             }
           />
           <div className="card p-4 sm:p-5">
@@ -145,30 +298,57 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* Paid promotions */}
+        <section id="promotions">
+          <PaidPromo items={paidPicks} />
+        </section>
+
         {/* Trending */}
         <section>
           <SectionHead
-            title="Trending This Week"
-            subtitle="Pichle 7 din me sabse zyada visits aur nayi ratings wale AI."
+            eyebrow="This week"
+            title="Trending AI tools"
+            subtitle="The tools with the most visits and fresh ratings over the last seven days."
             action={
-              <Link href="/category/all" className="text-sm font-semibold text-brand">
-                Saare AI →
+              <Link href="/category/all" className="btn btn-ghost !py-2 text-xs">
+                Explore all AI
               </Link>
             }
           />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {trending.map((s) => (
-              <AiCard key={s.ai.id} stat={s} saved={saved.has(s.ai.id)} />
+            {trending.map((s, i) => (
+              <AiCard key={s.ai.id} stat={s} saved={saved.has(s.ai.id)} badge={`#${i + 1} Trending`} />
             ))}
           </div>
         </section>
 
-        {/* New & Rising */}
+        {/* Mobile & desktop */}
+        <section id="apps">
+          <SectionHead
+            eyebrow="Anywhere you work"
+            title="AI apps & desktop software"
+            subtitle={`${mobileApps.length} mobile apps and ${desktopApps.length} desktop tools, grouped by job — with official icons and pricing.`}
+            action={
+              <Link href="/category/all" className="text-sm font-semibold text-brand transition hover:text-brand-dark">
+                Browse all AI →
+              </Link>
+            }
+          />
+          <AppShowcase
+            mobile={mobileApps}
+            desktop={desktopApps}
+            mobileGroups={MOBILE_GROUPS}
+            desktopGroups={DESKTOP_GROUPS}
+          />
+        </section>
+
+        {/* New & rising */}
         {rising.length ? (
           <section>
             <SectionHead
-              title="New & Rising"
-              subtitle="Naye AI jinke votes kam hain par rating 4.4 se upar hai."
+              eyebrow="Fresh picks"
+              title="New & rising"
+              subtitle="Recently launched tools earning strong ratings without a big vote count yet."
             />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {rising.map((s) => (
@@ -178,14 +358,15 @@ export default async function HomePage() {
           </section>
         ) : null}
 
-        {/* Latest posts */}
+        {/* Guides */}
         <section>
           <SectionHead
-            title="Latest Posts"
-            subtitle="News, comparison, top 10 lists aur step-by-step tutorials."
+            eyebrow="Editorial"
+            title="Latest guides & comparisons"
+            subtitle="Practical walkthroughs, honest comparisons and the top lists worth your time."
             action={
-              <Link href="/blog" className="btn btn-ghost">
-                Saare Posts Dekhein
+              <Link href="/blog" className="btn btn-ghost !py-2 text-xs">
+                All guides
               </Link>
             }
           />
@@ -196,37 +377,74 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Finder banner */}
+        {/* Finder CTA */}
         <section>
-          <div className="card overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-500 p-6 text-white sm:p-10">
-            <div className="flex flex-wrap items-center justify-between gap-5">
-              <div>
-                <h2 className="text-xl font-extrabold sm:text-2xl">Confused Hain? 30 Second Me Best AI Dhoondhiye</h2>
-                <p className="mt-1 max-w-xl text-sm text-indigo-100">
-                  3 simple sawal — kaam, budget aur level. Fir aapko top 3 AI milega, rating ke saath.
+          <div className="dark-panel relative overflow-hidden rounded-3xl p-6 sm:p-10">
+            <div className="aurora opacity-40" aria-hidden />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-xl">
+                <span className="chip border border-white/15 bg-white/10 text-cyan-200">AI Finder</span>
+                <h2 className="display mt-3 text-2xl leading-tight text-white sm:text-3xl">
+                  Not sure where to start?
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                  Answer three quick questions about your task, budget and experience level. You will get the three
+                  best tools for you — with live ratings attached.
                 </p>
               </div>
-              <Link href="/finder" className="btn bg-white text-indigo-700 hover:bg-indigo-50">
-                Quiz Shuru Kijiye →
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href="/finder" className="btn bg-white text-ink hover:bg-slate-100">
+                  Take the 30-second quiz →
+                </Link>
+                <Link
+                  href="/compare"
+                  className="btn border border-white/20 bg-white/5 text-white hover:bg-white/10"
+                >
+                  Compare tools
+                </Link>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Categories grid */}
+        {/* Categories */}
         <section>
-          <SectionHead title="Categories" subtitle="Apna kaam chuniye, uske best AI dekhiye." />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-            {CATEGORIES.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/category/${c.slug}`}
-                className="card card-hover flex items-center gap-2 p-3 text-sm font-medium"
-              >
-                <span className="text-lg">{c.emoji}</span>
-                {c.name}
-              </Link>
-            ))}
+          <SectionHead
+            eyebrow="Browse"
+            title="Browse by category"
+            subtitle="Pick the job you need done — every category has a live top-three and a full leaderboard."
+          />
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+            {CATEGORIES.map((c, i) => {
+              const tint = CATEGORY_TINTS[i % CATEGORY_TINTS.length];
+              return (
+                <Link
+                  key={c.slug}
+                  href={`/category/${c.slug}`}
+                  className="card card-hover category-tile group relative flex min-h-[128px] flex-col justify-between overflow-hidden rounded-2xl p-3.5 sm:min-h-[142px] sm:p-4"
+                >
+                  <span className="category-glow" style={{ background: tint }} aria-hidden />
+                  <span className="relative flex items-start justify-between gap-2">
+                    <span
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border text-lg"
+                      style={{ borderColor: `${tint}40`, background: `${tint}14` }}
+                    >
+                      {c.emoji}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="pt-0.5 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-brand"
+                    >
+                      ↗
+                    </span>
+                  </span>
+                  <span className="relative mt-6 block min-w-0">
+                    <span className="block truncate text-[13.5px] font-bold text-ink">{c.name}</span>
+                    <span className="mt-0.5 block text-[11px] text-muted">{categoryCounts.get(c.slug) ?? 0} tools</span>
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </section>
       </div>

@@ -253,16 +253,16 @@ export function timeAgo(input: string | Date): string {
   const date = typeof input === "string" ? new Date(input) : input;
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "abhi";
-  if (mins < 60) return `${mins} min pehle`;
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} ghante pehle`;
+  if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
   const days = Math.floor(hours / 24);
-  if (days === 1) return "kal";
-  if (days < 30) return `${days} din pehle`;
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days} days ago`;
   const months = Math.floor(days / 30);
-  if (months < 12) return `${months} mahine pehle`;
-  return `${Math.floor(months / 12)} saal pehle`;
+  if (months < 12) return `${months} ${months === 1 ? "month" : "months"} ago`;
+  return `${Math.floor(months / 12)} ${Math.floor(months / 12) === 1 ? "year" : "years"} ago`;
 }
 
 export function formatDate(input: string | Date): string {

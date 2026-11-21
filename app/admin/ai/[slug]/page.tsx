@@ -28,7 +28,7 @@ export default async function AdminAiEditPage({ params }: { params: Promise<{ sl
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <AiLogo logo={ai.logo} color={ai.color} size={44} />
+          <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={44} />
           <div>
             <h2 className="text-lg font-bold">{ai.name}</h2>
             <div className="flex items-center gap-1.5">

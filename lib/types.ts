@@ -9,8 +9,13 @@ export type CategorySlug =
   | "music"
   | "design"
   | "productivity"
+  | "research"
+  | "marketing"
   | "education"
-  | "business";
+  | "social"
+  | "agents"
+  | "business"
+  | "specialized";
 
 export type Category = {
   slug: CategorySlug;
@@ -124,4 +129,5 @@ export type DB = {
   users: User[];
   rateEvents: RateEvent[];
   authEvents: AuthEvent[];
+  contentLocale?: "en";
 };

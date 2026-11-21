@@ -990,6 +990,11 @@ const CATEGORY_PRO: Record<CategorySlug, string> = {
   productivity: "Roz ke kaam ke tools ke saath seedha integrate hota hai",
   education: "Step-by-step samjhata hai, seedha jawab nahi deta",
   business: "Team workflows aur brand voice ke saath chalta hai",
+  research: "Sources aur data ke saath tez research karta hai",
+  marketing: "Content ko growth aur campaign tak jodta hai",
+  social: "Lambe content se social posts aur clips banata hai",
+  agents: "Multi-step kaam khud automate karta hai",
+  specialized: "Ek focused, high-value kaam ke liye bana hai",
 };
 
 const USER_NAMES = [

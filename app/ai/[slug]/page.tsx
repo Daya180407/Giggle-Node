@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const stat = view.aiStats.get(ai.id)!;
   return {
     title: `${ai.name} Review, Rating & Models (2026)`,
-    description: `${ai.name} — ${stat.score.toFixed(1)}/5 rating ${stat.votes} user votes se. Models, pricing, free alternative, prompts aur reviews.`,
+    description: `${ai.name} — rated ${stat.score.toFixed(1)}/5 by ${stat.votes} users. Explore models, pricing, free alternatives, prompts and reviews.`,
     alternates: { canonical: `/ai/${ai.slug}` },
     openGraph: { title: `${ai.name} — GigleNode Rating`, description: ai.description.slice(0, 160) },
   };
@@ -62,6 +62,9 @@ export default async function AiDetailPage({ params }: Props) {
     operatingSystem: "Web",
     url: `https://giglenode.com/ai/${ai.slug}`,
     description: ai.description,
+    image: `https://giglenode.com/logos/${ai.slug}.png`,
+    sameAs: ai.website,
+    mainEntityOfPage: `https://giglenode.com/ai/${ai.slug}`,
     offers: { "@type": "Offer", price: ai.priceType === "free" ? 0 : ai.planPrice, priceCurrency: "USD" },
     aggregateRating: {
       "@type": "AggregateRating",
@@ -71,9 +74,20 @@ export default async function AiDetailPage({ params }: Props) {
     },
   };
 
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://giglenode.com" },
+      { "@type": "ListItem", position: 2, name: `${categoryName(ai.category)} AI`, item: `https://giglenode.com/category/${ai.category}` },
+      { "@type": "ListItem", position: 3, name: ai.name, item: `https://giglenode.com/ai/${ai.slug}` },
+    ],
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 
       <nav className="text-xs text-muted" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-brand">
@@ -88,9 +102,9 @@ export default async function AiDetailPage({ params }: Props) {
       </nav>
 
       {/* Header */}
-      <header className="card mt-3 p-5">
+      <header className="page-hero mt-3">
         <div className="flex flex-wrap items-start gap-4">
-          <AiLogo logo={ai.logo} color={ai.color} size={72} rounded="rounded-2xl" />
+          <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={78} rounded="rounded-2xl" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-extrabold sm:text-3xl">{ai.name}</h1>
@@ -134,7 +148,7 @@ export default async function AiDetailPage({ params }: Props) {
             <input type="hidden" name="aiId" value={ai.id} />
             <input type="hidden" name="back" value={`/ai/${ai.slug}`} />
             <button className={`btn ${followed ? "bg-brand-soft text-brand border border-indigo-200" : "btn-ghost"}`}>
-              {followed ? "✓ Following" : "＋ Follow"}
+              {followed ? "✓ Following" : "+ Follow"}
             </button>
           </form>
           <ShareButton title={`${ai.name} — GigleNode rating`} />
@@ -142,22 +156,22 @@ export default async function AiDetailPage({ params }: Props) {
 
         {ai.sponsored ? (
           <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            Sponsored placement. Ranking formula par iska asar nahi hota
-            {ai.boost > 0 ? ` (admin manual boost: +${ai.boost.toFixed(2)}).` : "."}
+            Sponsored placement. This never changes the ranking formula
+            {ai.boost > 0 ? ` (manual editor boost: +${ai.boost.toFixed(2)}).` : "."}
           </p>
         ) : null}
       </header>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-6">
+      <div className="mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-6">
           {/* Models table */}
           <section className="card overflow-hidden" id="models">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line p-4">
               <div>
                 <h2 className="text-base font-bold">Models</h2>
-                <p className="text-xs text-muted">Smart Ranking se sorted — best model sabse upar.</p>
+                <p className="text-xs text-muted">Sorted by smart ranking — the strongest model comes first.</p>
               </div>
-              <span className="chip bg-brand-soft text-brand">Har model ki apni rating</span>
+              <span className="chip chip-brand">Every model rated separately</span>
             </div>
             <div className="divide-y divide-line">
               {models.map((m) => (
@@ -187,12 +201,12 @@ export default async function AiDetailPage({ params }: Props) {
 
           {/* About */}
           <section className="card p-5">
-            <h2 className="text-base font-bold">Is AI Ke Baare Me</h2>
+            <h2 className="display text-lg text-ink">About {ai.name}</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">{ai.description}</p>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              {ai.name} ke paas {models.length} models hain — {models.map((m) => m.model.name).join(", ")}. Sabse zyada
-              votes {models[0]?.model.name} ko mile hain, isliye overall rating me uska weight sabse zyada hai. Shuruaat
-              karna hai to {ai.priceType === "paid" ? "paid plan" : "free plan"} se try kijiye, phir apni rating dijiye.
+              {ai.name} offers {models.length} models — {models.map((m) => m.model.name).join(", ")}. The most votes go to{" "}
+              {models[0]?.model.name}, so it carries the most weight in the overall score. Start with the{" "}
+              {ai.priceType === "paid" ? "paid plan" : "free plan"}, then share your own rating.
             </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -223,10 +237,10 @@ export default async function AiDetailPage({ params }: Props) {
 
           {/* Free alternative */}
           <section className="card p-5">
-            <h2 className="text-base font-bold">Free Alternative</h2>
+            <h2 className="display text-lg text-ink">Free alternative</h2>
             {freeAlternative ? (
               <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-line p-3">
-                <AiLogo logo={freeAlternative.ai.logo} color={freeAlternative.ai.color} size={48} />
+                <AiLogo slug={freeAlternative.ai.slug} logo={freeAlternative.ai.logo} color={freeAlternative.ai.color} size={50} />
                 <div className="min-w-0 flex-1">
                   <Link href={`/ai/${freeAlternative.ai.slug}`} className="font-semibold hover:text-brand">
                     {freeAlternative.ai.name}
@@ -248,9 +262,8 @@ export default async function AiDetailPage({ params }: Props) {
                 </a>
               </div>
             ) : (
-              <p className="mt-2 text-sm text-slate-600">
-                {ai.name} already free use kar sakte hain — iske free plan se shuru kijiye. Paid plan ki zarurat sirf
-                zyada usage par padti hai.
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                {ai.name} already has a free way to start — begin there. You only need a paid plan once your usage grows.
               </p>
             )}
           </section>
@@ -259,8 +272,8 @@ export default async function AiDetailPage({ params }: Props) {
           <section className="card p-5" id="prompts">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h2 className="text-base font-bold">Prompt Library</h2>
-                <p className="text-xs text-muted">{ai.name} ke liye ready-made prompts — copy karke paste kijiye.</p>
+                <h2 className="display text-lg text-ink">Prompt library</h2>
+                <p className="text-xs text-muted">Ready-made prompts for {ai.name} — copy and paste in seconds.</p>
               </div>
               <span className="chip bg-slate-100 text-slate-600">{prompts.length} prompts</span>
             </div>
@@ -275,7 +288,7 @@ export default async function AiDetailPage({ params }: Props) {
                 </div>
               ))}
               {prompts.length === 0 ? (
-                <p className="py-3 text-sm text-muted">Prompts jald aa rahe hain.</p>
+                <p className="py-3 text-sm text-muted">Prompts for this tool are coming soon.</p>
               ) : null}
             </div>
           </section>
@@ -283,7 +296,7 @@ export default async function AiDetailPage({ params }: Props) {
           {/* Reviews */}
           <section className="card p-5" id="reviews">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-bold">User Reviews</h2>
+              <h2 className="display text-lg text-ink">User reviews</h2>
               <Link href={`/ai/${ai.slug}/${models[0]?.model.slug ?? ""}`} className="text-sm font-semibold text-brand">
                 Rate a model →
               </Link>
@@ -302,11 +315,11 @@ export default async function AiDetailPage({ params }: Props) {
                       <span className="ml-auto text-xs text-muted">{timeAgo(rating.updatedAt)}</span>
                     </div>
                     <p className="mt-1.5 text-sm text-slate-600">{rating.review}</p>
-                    {model ? <p className="mt-1 text-xs text-muted">{model.name} par rating</p> : null}
+                    {model ? <p className="mt-1 text-xs text-muted">Rated on {model.name}</p> : null}
                   </div>
                 );
               })}
-              {reviews.length === 0 ? <p className="text-sm text-muted">Abhi koi review nahi. Pehla review aap dijiye.</p> : null}
+              {reviews.length === 0 ? <p className="text-sm text-muted">No reviews yet. Be the first to write one.</p> : null}
             </div>
           </section>
 
@@ -324,7 +337,7 @@ export default async function AiDetailPage({ params }: Props) {
         </div>
 
         {/* Sidebar */}
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <div className="card p-5">
             <div className="flex items-end justify-between">
               <div>
@@ -338,7 +351,7 @@ export default async function AiDetailPage({ params }: Props) {
             </p>
             <div className="mt-3 space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-600">
-                <span>Last 7 din ratings</span>
+                <span>Ratings in last 7 days</span>
                 <span className="font-semibold">{stat.last7}</span>
               </div>
               <div className="flex justify-between text-slate-600">
@@ -348,7 +361,7 @@ export default async function AiDetailPage({ params }: Props) {
               <div className="flex justify-between text-slate-600">
                 <span>Starting plan</span>
                 <span className="font-semibold">
-                  {ai.priceType === "free" ? "₹0" : `$${ai.planPrice}/mo`}
+                  {ai.priceType === "free" ? "Free" : `$${ai.planPrice}/mo`}
                 </span>
               </div>
             </div>
@@ -365,9 +378,9 @@ export default async function AiDetailPage({ params }: Props) {
           <Distribution dist={stat.dist} votes={stat.votes} />
 
           <div className="card p-4">
-            <h3 className="text-sm font-bold">Rating dijiye</h3>
-            <p className="mt-1 text-xs text-muted">
-              Rating model wise hoti hai. Model chuniye aur apna experience share kijiye.
+            <h3 className="display text-base text-ink">Rate this tool</h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              Ratings are model-level. Pick a model and share how it worked for you.
             </p>
             {user ? (
               <div className="mt-2 space-y-1.5">
@@ -384,14 +397,14 @@ export default async function AiDetailPage({ params }: Props) {
               </div>
             ) : (
               <Link href={`/login?next=${encodeURIComponent(`/ai/${ai.slug}`)}`} className="btn btn-primary mt-2 w-full text-xs">
-                Login karke rate kijiye
+                Log in to rate
               </Link>
             )}
           </div>
 
           <div className="card p-4">
-            <h3 className="text-sm font-bold">Compare kijiye</h3>
-            <p className="mt-1 text-xs text-muted">Dekhiye {ai.name} dusre AI se kaise compare karta hai.</p>
+            <h3 className="display text-base text-ink">Compare</h3>
+            <p className="mt-1 text-xs text-muted">See how {ai.name} stacks up against another tool.</p>
             <Link href={`/compare/${ai.slug}-vs-${freeAlternative?.ai.slug ?? "chatgpt"}`} className="btn btn-ghost mt-2 w-full text-xs">
               {ai.slug === "chatgpt" ? "ChatGPT vs Gemini" : `${ai.name} vs ${freeAlternative?.ai.name ?? "ChatGPT"}`}
             </Link>
@@ -399,7 +412,7 @@ export default async function AiDetailPage({ params }: Props) {
 
           {models.length > 1 ? (
             <div className="card p-4">
-              <h3 className="text-sm font-bold">Baaki models</h3>
+              <h3 className="display text-base text-ink">Other models</h3>
               <ul className="mt-2 space-y-1.5 text-sm">
                 {models.slice(1).map((m) => (
                   <li key={m.model.id}>
@@ -420,7 +433,7 @@ export default async function AiDetailPage({ params }: Props) {
 
       {/* Similar AI */}
       <section className="mt-10">
-        <SectionHead title={`${categoryName(ai.category)} me aur AI`} />
+        <SectionHead eyebrow="Related tools" title={`More ${categoryName(ai.category)} AI`} />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[...view.aiStats.values()]
             .filter((s) => s.ai.category === ai.category && s.ai.id !== ai.id)

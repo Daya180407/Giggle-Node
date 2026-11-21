@@ -33,8 +33,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description:
       names.length >= 2
-        ? `${names.join(" vs ")} ka honest comparison — rating, price, free plan, models aur best for. Real user ratings ke saath.`
-        : "Do ya teen AI tools ko side by side compare kijiye — rating, pricing, models aur best use case.",
+        ? `An honest ${names.join(" vs ")} comparison — rating, price, free plan, models and best use cases, with real user ratings.`
+        : "Compare two or three AI tools side by side — rating, pricing, models and best use case.",
     alternates: { canonical: `/compare/${slugs.join("-vs-")}` },
   };
 }
@@ -53,19 +53,19 @@ const ROWS: { label: string; render: (s: AiStat) => ReactNode }[] = [
   { label: "Total votes", render: (s) => `${s.votes.toLocaleString("en-IN")} ratings` },
   { label: "Price", render: (s) => <PriceBadge price={s.ai.priceType} /> },
   {
-    label: "Free hai ya nahi",
+    label: "Free plan",
     render: (s) =>
       s.ai.priceType === "free" ? (
-        <span className="font-semibold text-green-600">Haan, poora free</span>
+        <span className="font-semibold text-emerald-600">Yes, fully free</span>
       ) : s.ai.priceType === "freemium" ? (
         <span className="font-semibold text-indigo-600">Free tier available</span>
       ) : (
-        <span className="font-semibold text-orange-600">Nahi, paid only</span>
+        <span className="font-semibold text-orange-600">Paid only</span>
       ),
   },
-  { label: "Starting plan", render: (s) => (s.ai.priceType === "free" ? "₹0" : `$${s.ai.planPrice}/month`) },
+  { label: "Starting plan", render: (s) => (s.ai.priceType === "free" ? "Free" : `$${s.ai.planPrice}/month`) },
   { label: "Category", render: (s) => categoryName(s.ai.category) },
-  { label: "Models ki sankhya", render: (s) => `${s.models.length} models` },
+  { label: "Number of models", render: (s) => `${s.models.length} models` },
   { label: "Best for", render: (s) => s.ai.bestFor.join(", ") },
   {
     label: "Top model",
@@ -118,8 +118,8 @@ export default async function ComparePage({ params }: Props) {
         {stats.length >= 2 ? stats.map((s) => s.ai.name).join(" vs ") : "AI Compare"}
       </h1>
       <p className="mt-2 max-w-2xl text-sm text-slate-600">
-        Rating, price, free plan aur models — sab side by side. Real user votes se banaya gaya comparison.
-        {!user ? " Compare karne ke liye login ki zarurat nahi." : null}
+        Rating, price, free plan and models, side by side. Built from real user votes.
+        {!user ? " No login needed to compare." : null}
       </p>
 
       {stats.length >= 2 ? (
@@ -134,7 +134,7 @@ export default async function ComparePage({ params }: Props) {
                   {stats.map((s) => (
                     <th key={s.ai.id} className="p-3 text-left">
                       <Link href={`/ai/${s.ai.slug}`} className="flex items-center gap-2 font-bold hover:text-brand">
-                        <AiLogo logo={s.ai.logo} color={s.ai.color} size={30} />
+                        <AiLogo slug={s.ai.slug} logo={s.ai.logo} color={s.ai.color} size={32} rounded="rounded-lg" />
                         {s.ai.name}
                       </Link>
                     </th>
@@ -162,39 +162,40 @@ export default async function ComparePage({ params }: Props) {
             <div className="card mt-4 border-indigo-100 bg-brand-soft/40 p-4">
               <h2 className="text-sm font-bold">Verdict</h2>
               <p className="mt-1 text-sm text-slate-700">
-                Weighted rating ke hisab se <strong>{best.ai.name}</strong> sabse aage hai ({best.score.toFixed(1)} ★,{" "}
-                {best.votes} votes). Free chahiye to {stats.find((s) => s.ai.priceType !== "paid")?.ai.name ?? best.ai.name}{" "}
-                se shuru kijiye — sabse pehle best for set compare kijiye, rating ek factor hai, poora answer nahi.
+                On weighted rating, <strong>{best.ai.name}</strong> leads ({best.score.toFixed(1)} ★, {best.votes} votes).
+                If you need a free option, start with{" "}
+                {stats.find((s) => s.ai.priceType !== "paid")?.ai.name ?? best.ai.name}. Compare each tool's best use
+                case first — rating is one factor, not the whole answer.
               </p>
             </div>
           ) : null}
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href={`/compare/${stats.map((s) => s.ai.slug).join("-vs-")}`} className="btn btn-ghost text-xs">
-              Link share kijiye
+              Shareable link
             </Link>
             <Link href="/compare" className="btn btn-ghost text-xs">
-              Nayi comparison banaiye
+              New comparison
             </Link>
           </div>
 
           <div className="mt-8">
-            <h2 className="text-base font-bold">Aur AI add kijiye</h2>
+            <h2 className="display text-lg text-ink">Add more AI tools</h2>
             <div className="mt-3 max-w-2xl">
               <CompareBuilder options={options} />
             </div>
           </div>
         </>
       ) : (
-        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="mt-5 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <CompareBuilder options={options} />
           <div className="card h-fit p-5">
-            <h2 className="text-sm font-bold">Compare kaise kaam karta hai</h2>
+            <h2 className="display text-base text-ink">How comparison works</h2>
             <ul className="mt-2 space-y-2 text-sm text-slate-600">
-              <li>• 2 ya 3 AI chuniye — URL automatically ban jata hai.</li>
-              <li>• Rating real user votes se banti hai (weighted).</li>
-              <li>• Price aur free plan official pricing se.</li>
-              <li>• Result share kijiye — SEO friendly link milta hai.</li>
+              <li>• Pick 2 or 3 AI tools — the URL builds itself.</li>
+              <li>• Ratings are weighted real user votes.</li>
+              <li>• Prices and free plans come from official pricing pages.</li>
+              <li>• Share the result as a clean, indexable link.</li>
             </ul>
             <p className="mt-3 text-xs text-muted">
               Popular:{" "}
