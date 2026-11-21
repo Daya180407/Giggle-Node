@@ -2,15 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { toggleBookmarkAction, toggleFollowAction } from "@/app/actions";
+import AdSlot from "@/components/AdSlot";
 import AiCard from "@/components/AiCard";
+import AiQuickRate from "@/components/AiQuickRate";
+import { ApiPricingInline } from "@/components/ApiPricing";
 import CopyButton from "@/components/CopyButton";
 import Distribution from "@/components/Distribution";
 import PostCard from "@/components/PostCard";
 import ShareButton from "@/components/ShareButton";
 import { AiLogo, PriceBadge, SectionHead, SponsoredTag, Stars, Trend } from "@/components/ui";
+import { getApiPricing } from "@/lib/api-pricing";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
 import { aiReviews, buildView, publishedPosts, promptsFor, timeAgo } from "@/lib/rank";
+import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -39,8 +44,11 @@ export default async function AiDetailPage({ params }: Props) {
   if (!ai) notFound();
 
   const view = buildView(db);
+  const settings = getSiteSettings(db);
   const stat = view.aiStats.get(ai.id)!;
   const models = [...stat.models].sort((a, b) => b.score - a.score || b.votes - a.votes);
+  const modelIds = new Set(models.map((m) => m.model.id));
+  const myRatings = user ? db.ratings.filter((r) => r.userId === user.id && modelIds.has(r.modelId)) : [];
   const prompts = promptsFor(db, ai.id);
   const reviews = aiReviews(db, ai.id, 8);
   const posts = publishedPosts(db).filter((p) => p.relatedAiIds.includes(ai.id)).slice(0, 3);
@@ -137,6 +145,9 @@ export default async function AiDetailPage({ params }: Props) {
           >
             Official Website ↗
           </a>
+          <a href="#rate" className="btn btn-ghost">
+            ★ Rate this AI
+          </a>
           <form action={toggleBookmarkAction}>
             <input type="hidden" name="aiId" value={ai.id} />
             <input type="hidden" name="back" value={`/ai/${ai.slug}`} />
@@ -162,41 +173,90 @@ export default async function AiDetailPage({ params }: Props) {
         ) : null}
       </header>
 
+      {models.length ? (
+        <div className="mt-4">
+          <AiQuickRate
+            aiSlug={ai.slug}
+            models={models.map((m) => ({ id: m.model.id, name: m.model.name }))}
+            existingRatings={myRatings}
+            isLoggedIn={Boolean(user)}
+            allowRatings={settings.allowRatings}
+          />
+        </div>
+      ) : null}
+
       <div className="mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-6">
-          {/* Models table */}
+          {/* Models & API pricing */}
           <section className="card overflow-hidden" id="models">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line p-4">
               <div>
-                <h2 className="text-base font-bold">Models</h2>
-                <p className="text-xs text-muted">Sorted by smart ranking — the strongest model comes first.</p>
+                <h2 className="text-base font-bold">Models &amp; API pricing</h2>
+                <p className="text-xs text-muted">
+                  Compare model-level API rates before you build. Strongest model first.
+                </p>
               </div>
-              <span className="chip chip-brand">Every model rated separately</span>
+              <span className="chip chip-brand">{models.length} models · every model rated separately</span>
             </div>
-            <div className="divide-y divide-line">
-              {models.map((m) => (
-                <div key={m.model.id} className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/ai/${ai.slug}/${m.model.slug}`}
-                      className="text-sm font-semibold hover:text-brand"
-                    >
-                      {m.model.name}
-                    </Link>
-                    <p className="truncate text-xs text-muted">Best for: {m.model.bestFor}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Stars value={m.score} size={12} />
-                    <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
-                    <span className="w-12 text-right text-xs text-muted">{m.votes}</span>
-                  </div>
-                  <PriceBadge price={m.model.priceType} />
-                  <Link href={`/ai/${ai.slug}/${m.model.slug}`} className="btn btn-ghost !px-2.5 !py-1 text-xs">
-                    Detail →
-                  </Link>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] text-left text-sm" aria-label="Models and API pricing">
+                <thead className="bg-slate-50/80 text-[10px] uppercase tracking-[0.12em] text-muted">
+                  <tr>
+                    <th className="px-4 py-2.5 font-semibold">Model</th>
+                    <th className="px-4 py-2.5 font-semibold">Best for</th>
+                    <th className="px-4 py-2.5 font-semibold">Rating</th>
+                    <th className="px-4 py-2.5 font-semibold">API pricing</th>
+                    <th className="px-4 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {models.map((m) => {
+                    const pricing = getApiPricing(ai, m.model);
+                    return (
+                      <tr key={m.model.id} className="align-top transition hover:bg-slate-50/60">
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/ai/${ai.slug}/${m.model.slug}`}
+                            className="font-semibold hover:text-brand"
+                          >
+                            {m.model.name}
+                          </Link>
+                          <div className="mt-1">
+                            <PriceBadge price={m.model.priceType} />
+                          </div>
+                        </td>
+                        <td className="max-w-[210px] px-4 py-3 text-xs leading-relaxed text-slate-600">
+                          {m.model.bestFor}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <Stars value={m.score} size={12} />
+                            <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
+                          </div>
+                          <p className="mt-0.5 text-[10px] text-muted">{m.votes} votes</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <ApiPricingInline pricing={pricing} />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                          <Link
+                            href={`/ai/${ai.slug}/${m.model.slug}`}
+                            className="btn btn-ghost !px-2.5 !py-1 text-xs"
+                          >
+                            Details →
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
+            <p className="border-t border-line bg-slate-50/40 px-4 py-3 text-[11px] leading-relaxed text-muted">
+              API rates are shown in USD. Public list prices are used where available; “est.” marks an indicative rate
+              derived from plan pricing. Token models are priced per 1M tokens; image, video and voice models use their
+              own units. Always confirm current rates with the provider before you build.
+            </p>
           </section>
 
           {/* About */}
@@ -377,30 +437,9 @@ export default async function AiDetailPage({ params }: Props) {
 
           <Distribution dist={stat.dist} votes={stat.votes} />
 
-          <div className="card p-4">
-            <h3 className="display text-base text-ink">Rate this tool</h3>
-            <p className="mt-1 text-xs leading-relaxed text-muted">
-              Ratings are model-level. Pick a model and share how it worked for you.
-            </p>
-            {user ? (
-              <div className="mt-2 space-y-1.5">
-                {models.slice(0, 3).map((m) => (
-                  <Link
-                    key={m.model.id}
-                    href={`/ai/${ai.slug}/${m.model.slug}`}
-                    className="flex items-center justify-between rounded-lg border border-line px-2.5 py-1.5 text-xs hover:border-indigo-200"
-                  >
-                    <span className="truncate">{m.model.name}</span>
-                    <span className="font-semibold text-brand">Rate →</span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <Link href={`/login?next=${encodeURIComponent(`/ai/${ai.slug}`)}`} className="btn btn-primary mt-2 w-full text-xs">
-                Log in to rate
-              </Link>
-            )}
-          </div>
+          {settings.adsEnabled && settings.adsClientId && settings.adsSidebarSlot ? (
+            <AdSlot clientId={settings.adsClientId} slotId={settings.adsSidebarSlot} variant="sidebar" />
+          ) : null}
 
           <div className="card p-4">
             <h3 className="display text-base text-ink">Compare</h3>

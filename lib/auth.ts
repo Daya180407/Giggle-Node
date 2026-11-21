@@ -16,7 +16,8 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!userId) return null;
   // Bounded freshness: a user created on another isolate must be visible here quickly.
   const db = await refreshDb(2000);
-  return db.users.find((u) => u.id === userId) ?? null;
+  const user = db.users.find((u) => u.id === userId) ?? null;
+  return user && !user.banned ? user : null;
 }
 
 export async function isAdmin(): Promise<boolean> {
@@ -57,6 +58,7 @@ export async function verifyCredentials(db: DB, email: string, password: string)
     await verifyPassword(password, "pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
     return null;
   }
+  if (user.banned) return null;
   const valid = await verifyPassword(password, user.passwordHash);
   return valid ? user : null;
 }

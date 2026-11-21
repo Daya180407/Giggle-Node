@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import AdSlot from "@/components/AdSlot";
 import AiCard from "@/components/AiCard";
 import PostBody from "@/components/PostBody";
 import ShareButton from "@/components/ShareButton";
@@ -8,6 +9,7 @@ import { AiLogo, PriceBadge, Stars } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { POST_TYPE_LABEL, categoryName } from "@/lib/categories";
 import { buildView, formatDate, publishedPosts, rankedAis, readingTime } from "@/lib/rank";
+import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +41,7 @@ export default async function PostPage({ params }: Props) {
   if (!post) notFound();
 
   const view = buildView(db);
+  const settings = getSiteSettings(db);
   const all = publishedPosts(db);
   const index = all.findIndex((p) => p.id === post.id);
   const nextPost = index >= 0 ? all[(index + 1) % all.length] : undefined;
@@ -112,6 +115,12 @@ export default async function PostPage({ params }: Props) {
         <div className="mt-4">
           <PostBody content={post.content} />
         </div>
+
+        {settings.adsEnabled && settings.adsClientId && settings.adsArticleSlot ? (
+          <div className="mt-6">
+            <AdSlot clientId={settings.adsClientId} slotId={settings.adsArticleSlot} variant="inline" />
+          </div>
+        ) : null}
       </article>
 
       {post.type === "top10" && topFive.length ? (

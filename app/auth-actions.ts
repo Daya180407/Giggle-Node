@@ -10,6 +10,7 @@ import {
   verifyCredentials,
 } from "@/lib/auth";
 import { hashPassword, randomToken, sha256Hex } from "@/lib/crypto";
+import { getSiteSettings } from "@/lib/settings";
 import { flushPendingWrites, mutateDb, refreshDb, uid } from "@/lib/store";
 import type { DB, User } from "@/lib/types";
 
@@ -89,6 +90,9 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
   if (password !== confirm) return { ok: false, error: "The passwords do not match." };
 
   const db = await refreshDb();
+  if (!getSiteSettings(db).allowSignups) {
+    return { ok: false, error: "New signups are paused right now. Please try again later." };
+  }
   if (db.users.some((u) => u.email.toLowerCase() === email)) {
     return { ok: false, error: "This email is already registered. Please log in." };
   }

@@ -11,4 +11,6 @@ data/db.json
 /freebuff-sites-build/
 /.open-next/
 /.wrangler/
-.session-secret
+/.session-secret
+artifacts/
+dev.log

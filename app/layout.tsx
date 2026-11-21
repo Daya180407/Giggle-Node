@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import type { ReactNode } from "react";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import { getSiteSettings } from "@/lib/settings";
+import { readDb } from "@/lib/store";
 
 const SITE_URL = "https://giglenode.com";
 const TITLE = "GigleNode — Find the Best AI Tools, Rated by Real Users";
@@ -103,10 +106,36 @@ const structuredData = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const settings = getSiteSettings(readDb());
+  const adsReady = settings.adsEnabled && /^ca-pub-\d{16}$/.test(settings.adsClientId);
+
   return (
     <html lang="en">
+      <head>
+        {adsReady ? <meta name="google-adsense-account" content={settings.adsClientId} /> : null}
+      </head>
       <body>
+        {adsReady ? (
+          <Script
+            id="adsense-loader"
+            async
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${settings.adsClientId}`}
+          />
+        ) : null}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+        {settings.announcementEnabled && settings.announcementText ? (
+          <div className="relative z-50 bg-[#07070d] px-4 py-2 text-center text-[11px] font-medium text-slate-300 sm:text-xs">
+            <span className="live-dot mr-2 align-middle" aria-hidden />
+            {settings.announcementText}
+            {settings.announcementHref ? (
+              <a href={settings.announcementHref} className="ml-2 font-semibold text-cyan-300 hover:text-white">
+                Learn more →
+              </a>
+            ) : null}
+          </div>
+        ) : null}
         <SiteHeader />
         <main className="min-h-[60vh]">{children}</main>
         <SiteFooter />

@@ -109,6 +109,7 @@ export type User = {
   role: "user" | "admin";
   createdAt: string;
   isSeed?: boolean;
+  banned?: boolean;
   passwordHash?: string;
   resetTokenHash?: string;
   resetTokenExpiresAt?: string;
@@ -116,6 +117,38 @@ export type User = {
 
 export type RateEvent = { ip: string; at: string };
 export type AuthEvent = { ip: string; at: string; kind: "login" | "reset" | "signup" };
+
+export type SiteSettings = {
+  announcementEnabled: boolean;
+  announcementText: string;
+  announcementHref: string;
+  heroTitle: string;
+  heroHighlight: string;
+  heroSuffix: string;
+  heroSubtitle: string;
+  allowSignups: boolean;
+  allowRatings: boolean;
+  showPromotions: boolean;
+  hiddenAppSlugs: string[];
+  adsEnabled: boolean;
+  adsClientId: string;
+  adsTopSlot: string;
+  adsSidebarSlot: string;
+  adsArticleSlot: string;
+  supportEmail: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type AdminLogEntry = {
+  id: string;
+  userId: string;
+  userName: string;
+  action: string;
+  target: string;
+  detail: string;
+  at: string;
+};
 
 export type DB = {
   version: number;
@@ -129,5 +162,7 @@ export type DB = {
   users: User[];
   rateEvents: RateEvent[];
   authEvents: AuthEvent[];
+  settings: SiteSettings;
+  adminLog: AdminLogEntry[];
   contentLocale?: "en";
 };

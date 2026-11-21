@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import ApiPricing from "@/components/ApiPricing";
 import Distribution from "@/components/Distribution";
 import RatingWidget from "@/components/RatingWidget";
 import { AiLogo, PriceBadge, Stars, Trend } from "@/components/ui";
+import { getApiPricing } from "@/lib/api-pricing";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
 import { buildView, formatDate, modelReviews, timeAgo } from "@/lib/rank";
+import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +39,9 @@ export default async function ModelPage({ params }: Props) {
   if (!ai || !model) notFound();
 
   const view = buildView(db);
+  const settings = getSiteSettings(db);
   const stat = view.modelStats.get(model.id)!;
+  const apiPricing = getApiPricing(ai, model);
   const existing = user ? db.ratings.find((r) => r.userId === user.id && r.modelId === model.id) ?? null : null;
   const reviews = modelReviews(db, model.id, 8);
   const siblings = (view.modelsByAi.get(ai.id) ?? [])
@@ -137,14 +142,39 @@ export default async function ModelPage({ params }: Props) {
         <p className="mt-4 text-sm leading-relaxed text-slate-600">{model.description}</p>
       </header>
 
+      <section className="card mt-4 p-5" id="api-pricing">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="eyebrow">Build with {model.name}</p>
+            <h2 className="display mt-1 text-lg text-ink">API pricing</h2>
+            <p className="mt-1 text-xs text-muted">
+              Model-level rates for developers. {apiPricing.unit === "1M tokens" ? "Token pricing is per 1M tokens." : `Priced per ${apiPricing.unit}.`}
+            </p>
+          </div>
+          <span className={`chip ${apiPricing.available ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+            {apiPricing.available ? (apiPricing.estimated ? "Indicative API rate" : "Public API list price") : "No public API"}
+          </span>
+        </div>
+        <div className="mt-4">
+          <ApiPricing pricing={apiPricing} detail />
+        </div>
+      </section>
+
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
-          <RatingWidget
-            modelId={model.id}
-            existing={existing}
-            isLoggedIn={Boolean(user)}
-            loginNext={`/ai/${ai.slug}/${model.slug}`}
-          />
+          {settings.allowRatings ? (
+            <RatingWidget
+              modelId={model.id}
+              existing={existing}
+              isLoggedIn={Boolean(user)}
+              loginNext={`/ai/${ai.slug}/${model.slug}`}
+            />
+          ) : (
+            <div className="card border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              <p className="font-semibold">Ratings are paused</p>
+              <p className="mt-1 text-xs">The administrator has temporarily disabled new ratings and reviews.</p>
+            </div>
+          )}
 
           <section className="card p-5">
             <h2 className="display text-lg text-ink">Reviews for this model</h2>

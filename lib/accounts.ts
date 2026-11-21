@@ -1,6 +1,7 @@
 import { applyCatalogue } from "./catalogue/apply";
 import { DEMO_ACCOUNTS } from "./demo-accounts";
 import { localizeContentToEnglish } from "./localize-en";
+import { DEFAULT_SITE_SETTINGS } from "./settings";
 import type { DB } from "./types";
 
 /**
@@ -15,6 +16,15 @@ export async function migrateDb(db: DB): Promise<boolean> {
     db.authEvents = [];
     changed = true;
   }
+
+  if (!Array.isArray(db.adminLog)) {
+    db.adminLog = [];
+    changed = true;
+  }
+
+  const settingsBefore = JSON.stringify(db.settings ?? null);
+  db.settings = { ...DEFAULT_SITE_SETTINGS, ...(db.settings ?? {}) };
+  if (JSON.stringify(db.settings) !== settingsBefore) changed = true;
 
   for (const account of DEMO_ACCOUNTS) {
     const user = db.users.find((u) => u.email.toLowerCase() === account.email);

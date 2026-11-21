@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AdSlot from "@/components/AdSlot";
 import AiCard from "@/components/AiCard";
 import AnimatedStats, { type HomeStat } from "@/components/AnimatedStats";
 import AppShowcase, { type AppShowcaseItem } from "@/components/AppShowcase";
@@ -12,6 +13,7 @@ import RankTabs, { type RankRow, type RankTab } from "@/components/RankTabs";
 import { SectionHead } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { CATEGORIES, categoryName } from "@/lib/categories";
+import { getSiteSettings } from "@/lib/settings";
 import { APP_ENTRIES, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
 import {
   buildView,
@@ -63,6 +65,7 @@ function toRows(stats: AiStat[]): RankRow[] {
 
 export default async function HomePage() {
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
+  const settings = getSiteSettings(db);
   const view = buildView(db);
   const saved = new Set(user ? db.bookmarks.filter((b) => b.userId === user.id).map((b) => b.aiId) : []);
   const posts = publishedPosts(db).slice(0, 6);
@@ -88,7 +91,8 @@ export default async function HomePage() {
       website: s.ai.website,
     }));
 
-  const appItems = APP_ENTRIES.map((entry): AppShowcaseItem => {
+  const hiddenApps = new Set(settings.hiddenAppSlugs ?? []);
+  const appItems = APP_ENTRIES.filter((entry) => !hiddenApps.has(entry.slug)).map((entry): AppShowcaseItem => {
     const stat = entry.aiSlug ? bySlug.get(entry.aiSlug) : undefined;
     return {
       slug: entry.slug,
@@ -216,7 +220,7 @@ export default async function HomePage() {
               <h1 className="anim-rise delay-1 mt-5">
                 <span className="sr-only">GigleNode — </span>
                 <span className="display block text-[clamp(2.45rem,6.4vw,4.65rem)] leading-[1.02] tracking-[-0.045em] text-white">
-                  Find the AI that <span className="hero-gradient">actually fits</span> your work.
+                  {settings.heroTitle} <span className="hero-gradient">{settings.heroHighlight}</span> {settings.heroSuffix}
                 </span>
               </h1>
 
@@ -225,8 +229,8 @@ export default async function HomePage() {
               </div>
 
               <p className="anim-rise delay-3 mx-auto mt-4 max-w-2xl text-[14px] leading-relaxed text-slate-400 sm:text-[15px]">
-                Video, images, code or writing — compare models, read honest reviews from verified users and choose with
-                confidence. Independent rankings, with paid placements always labelled.
+                {settings.heroSubtitle ||
+                  "Video, images, code or writing — compare models, read honest reviews from verified users and choose with confidence."}
               </p>
 
               <div className="anim-rise delay-3">
@@ -262,6 +266,12 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {settings.adsEnabled && settings.adsClientId && settings.adsTopSlot ? (
+        <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+          <AdSlot clientId={settings.adsClientId} slotId={settings.adsTopSlot} />
+        </div>
+      ) : null}
 
       <div className="mx-auto max-w-7xl space-y-14 px-4 pb-6 pt-12 sm:px-6 sm:pt-14 lg:space-y-16">
         {/* Category champions */}
@@ -299,9 +309,11 @@ export default async function HomePage() {
         </section>
 
         {/* Paid promotions */}
-        <section id="promotions">
-          <PaidPromo items={paidPicks} />
-        </section>
+        {settings.showPromotions ? (
+          <section id="promotions">
+            <PaidPromo items={paidPicks} />
+          </section>
+        ) : null}
 
         {/* Trending */}
         <section>

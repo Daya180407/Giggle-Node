@@ -1,3 +1,4 @@
+import { DEFAULT_SITE_SETTINGS } from "./settings";
 import type {
   Ai,
   Bookmark,
@@ -1600,5 +1601,7 @@ export function buildSeed(): DB {
     users,
     rateEvents: [],
     authEvents: [],
+    settings: { ...DEFAULT_SITE_SETTINGS },
+    adminLog: [],
   };
 }

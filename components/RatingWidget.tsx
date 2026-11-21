@@ -14,11 +14,14 @@ export default function RatingWidget({
   existing,
   isLoggedIn,
   loginNext,
+  embedded = false,
 }: {
   modelId: string;
   existing: Rating | null;
   isLoggedIn: boolean;
   loginNext: string;
+  /** Render without the outer card when placed inside another panel. */
+  embedded?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(rateModelAction, { ok: false });
   const [stars, setStars] = useState(existing?.stars ?? 0);
@@ -34,7 +37,7 @@ export default function RatingWidget({
 
   useEffect(() => {
     if (state.ok) setEditing(false);
-  }, [state.ok]);
+  }, [state]);
 
   useEffect(() => {
     if (!existing?.lastEditedAt || mountTime === null) return;
@@ -42,9 +45,11 @@ export default function RatingWidget({
     setLocked(elapsed < 24 * 60 * 60 * 1000);
   }, [existing?.lastEditedAt, mountTime]);
 
+  const shellClass = embedded ? "" : "card p-5";
+
   if (!isLoggedIn) {
     return (
-      <div className="card p-5">
+      <div className={shellClass}>
         <h3 className="display text-base text-ink">Rate this model</h3>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           You need an account to rate. One verified user, one rating per model.
@@ -57,7 +62,7 @@ export default function RatingWidget({
   }
 
   return (
-    <div className="card p-5">
+    <div className={shellClass}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="display text-base text-ink">Rate this model</h3>
@@ -141,15 +146,15 @@ export default function RatingWidget({
             ) : null}
             {existing ? <span className="text-xs text-muted">Editing updates your existing rating.</span> : null}
           </div>
-
-          {state.error ? (
-            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{state.error}</p>
-          ) : null}
-          {state.ok && state.message ? (
-            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{state.message}</p>
-          ) : null}
         </form>
       )}
+
+      {state.error ? (
+        <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{state.error}</p>
+      ) : null}
+      {state.ok && state.message ? (
+        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{state.message}</p>
+      ) : null}
     </div>
   );
 }

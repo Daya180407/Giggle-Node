@@ -47,6 +47,18 @@ export default function SiteNav({ user, savedCount }: { user: HeaderUser; savedC
             </Link>
           );
         })}
+        {user?.role === "admin" ? (
+          <Link
+            href="/admin"
+            className={`whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium transition ${
+              pathname.startsWith("/admin")
+                ? "bg-brand-soft text-brand"
+                : "text-slate-600 hover:bg-slate-100 hover:text-ink"
+            }`}
+          >
+            Admin
+          </Link>
+        ) : null}
       </nav>
 
       <div className="ml-auto flex items-center gap-1.5">
@@ -140,6 +152,15 @@ export default function SiteNav({ user, savedCount }: { user: HeaderUser; savedC
                 <span aria-hidden className="text-slate-300">→</span>
               </Link>
             ))}
+            {user?.role === "admin" ? (
+              <Link
+                href="/admin"
+                className="anim-rise flex items-center justify-between rounded-xl bg-brand-soft px-3 py-2.5 text-sm font-semibold text-brand"
+              >
+                Admin dashboard
+                <span aria-hidden>→</span>
+              </Link>
+            ) : null}
             <div className="mt-2 grid grid-cols-2 gap-2 border-t border-line pt-3">
               <Link href="/my-list" className="btn btn-ghost">
                 My List {savedCount > 0 ? `(${savedCount})` : ""}

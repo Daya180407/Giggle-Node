@@ -2,31 +2,105 @@ import Link from "next/link";
 import { deleteAiAction } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { Stars } from "@/components/ui";
-import { categoryName } from "@/lib/categories";
+import { CATEGORIES, categoryName } from "@/lib/categories";
 import { buildView } from "@/lib/rank";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminAiListPage() {
+const PER_PAGE = 40;
+
+export default async function AdminAiListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; cat?: string; sort?: string; page?: string }>;
+}) {
+  const { q = "", cat = "all", sort = "name", page = "1" } = await searchParams;
   const db = readDb();
   const view = buildView(db);
-  const stats = [...view.aiStats.values()].sort((a, b) => a.ai.name.localeCompare(b.ai.name));
+  const query = q.trim().toLowerCase();
+
+  const all = [...view.aiStats.values()].filter((s) => {
+    if (cat !== "all" && s.ai.category !== cat) return false;
+    if (!query) return true;
+    return [s.ai.name, s.ai.slug, s.ai.description, ...s.ai.bestFor].join(" ").toLowerCase().includes(query);
+  });
+
+  all.sort((a, b) => {
+    if (sort === "score") return b.score - a.score || b.votes - a.votes;
+    if (sort === "votes") return b.votes - a.votes;
+    if (sort === "models") return b.models.length - a.models.length;
+    if (sort === "newest") return +new Date(b.ai.createdAt) - +new Date(a.ai.createdAt);
+    return a.ai.name.localeCompare(b.ai.name);
+  });
+
+  const pages = Math.max(1, Math.ceil(all.length / PER_PAGE));
+  const pageNo = Math.min(Math.max(1, Number(page) || 1), pages);
+  const rows = all.slice((pageNo - 1) * PER_PAGE, pageNo * PER_PAGE);
+  const params = (nextPage: number) =>
+    `/admin/ai?${new URLSearchParams({
+      ...(q ? { q } : {}),
+      ...(cat !== "all" ? { cat } : {}),
+      ...(sort !== "name" ? { sort } : {}),
+      page: String(nextPage),
+    }).toString()}`;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold">AI & Models</h2>
-          <p className="text-xs text-muted">{db.ai.length} AI · {db.models.length} models</p>
+          <p className="eyebrow">Catalogue</p>
+          <h2 className="display mt-1 text-2xl text-ink">AI & models</h2>
+          <p className="mt-1 text-xs text-muted">
+            {db.ai.length} tools · {db.models.length} models · {db.prompts.length} prompts
+          </p>
         </div>
-        <Link href="/admin/ai/new" className="btn btn-primary text-xs">
-          + Naya AI
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/sponsors" className="btn btn-ghost text-xs">
+            Sponsorships
+          </Link>
+          <Link href="/admin/ai/new" className="btn btn-primary text-xs">
+            + New AI
+          </Link>
+        </div>
       </div>
 
+      <form className="card flex flex-wrap items-center gap-2 p-3" action="/admin/ai">
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Search name, slug, use case…"
+          className="field min-w-[180px] flex-1 !py-2 text-xs"
+          aria-label="Search AI tools"
+        />
+        <select name="cat" defaultValue={cat} className="field !w-auto !py-2 text-xs" aria-label="Filter by category">
+          <option value="all">All categories</option>
+          {CATEGORIES.map((c) => (
+            <option key={c.slug} value={c.slug}>
+              {c.name} ({db.ai.filter((a) => a.category === c.slug).length})
+            </option>
+          ))}
+        </select>
+        <select name="sort" defaultValue={sort} className="field !w-auto !py-2 text-xs" aria-label="Sort">
+          <option value="name">Name A–Z</option>
+          <option value="score">Highest score</option>
+          <option value="votes">Most votes</option>
+          <option value="models">Most models</option>
+          <option value="newest">Newest</option>
+        </select>
+        <button className="btn btn-primary !py-2 text-xs">Apply</button>
+        {q || cat !== "all" || sort !== "name" ? (
+          <Link href="/admin/ai" className="btn btn-ghost !py-2 text-xs">
+            Reset
+          </Link>
+        ) : null}
+        <span className="ml-auto text-[11px] text-muted">
+          {all.length} {all.length === 1 ? "result" : "results"}
+        </span>
+      </form>
+
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[680px] text-sm">
+        <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="border-b border-line bg-slate-50/70 text-left text-xs uppercase tracking-wide text-slate-500">
               <th className="p-3">AI</th>
@@ -39,12 +113,15 @@ export default function AdminAiListPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {stats.map((s) => (
-              <tr key={s.ai.id}>
+            {rows.map((s) => (
+              <tr key={s.ai.id} className="hover:bg-slate-50/60">
                 <td className="p-3">
                   <Link href={`/admin/ai/${s.ai.slug}`} className="flex items-center gap-2 font-medium hover:text-brand">
                     <span aria-hidden>{s.ai.logo}</span>
-                    {s.ai.name}
+                    <span className="min-w-0">
+                      <span className="block truncate">{s.ai.name}</span>
+                      <span className="block truncate text-[10.5px] font-normal text-muted">{s.ai.slug}</span>
+                    </span>
                   </Link>
                 </td>
                 <td className="p-3 text-xs text-muted">{categoryName(s.ai.category)}</td>
@@ -59,12 +136,15 @@ export default function AdminAiListPage() {
                 <td className="p-3">
                   <div className="flex flex-wrap gap-1">
                     {s.ai.sponsored ? <span className="chip bg-amber-50 text-amber-700">Sponsored</span> : null}
-                    {s.ai.boost > 0 ? <span className="chip bg-slate-100 text-slate-600">+{s.ai.boost}</span> : null}
+                    {s.ai.boost > 0 ? <span className="chip bg-slate-100 text-slate-600">+{s.ai.boost.toFixed(2)}</span> : null}
                     {!s.ai.sponsored && s.ai.boost === 0 ? <span className="text-xs text-slate-300">—</span> : null}
                   </div>
                 </td>
                 <td className="p-3">
                   <div className="flex items-center justify-end gap-1">
+                    <Link href={`/ai/${s.ai.slug}`} className="btn btn-ghost !px-2 !py-1 text-xs">
+                      View
+                    </Link>
                     <Link href={`/admin/ai/${s.ai.slug}`} className="btn btn-ghost !px-2 !py-1 text-xs">
                       Edit
                     </Link>
@@ -81,6 +161,32 @@ export default function AdminAiListPage() {
             ))}
           </tbody>
         </table>
+        {rows.length === 0 ? (
+          <p className="p-8 text-center text-sm text-muted">No AI tools match these filters.</p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] text-muted">
+          Showing {all.length ? (pageNo - 1) * PER_PAGE + 1 : 0}–{Math.min(pageNo * PER_PAGE, all.length)} of {all.length}
+        </p>
+        {pages > 1 ? (
+          <div className="flex items-center gap-1.5">
+            {pageNo > 1 ? (
+              <Link href={params(pageNo - 1)} className="btn btn-ghost !py-1.5 text-xs">
+                ← Prev
+              </Link>
+            ) : null}
+            <span className="px-1 text-xs text-muted">
+              {pageNo} / {pages}
+            </span>
+            {pageNo < pages ? (
+              <Link href={params(pageNo + 1)} className="btn btn-ghost !py-1.5 text-xs">
+                Next →
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

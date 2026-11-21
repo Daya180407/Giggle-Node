@@ -58,10 +58,34 @@ export default function PrivacyPage() {
         </section>
 
         <section>
+          <h2 className="display text-lg text-ink">Advertising</h2>
+          <p className="mt-2">
+            We may show inline display ads through Google AdSense. When ads are enabled, Google and its partners may use
+            cookies or device identifiers to serve and measure ads, including personalized ads based on your prior
+            visits to this and other sites. We do not share your account email or ratings with advertisers. You can
+            manage personalized advertising at{" "}
+            <a
+              href="https://adssettings.google.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-brand hover:underline"
+            >
+              Google Ads Settings
+            </a>
+            . For visitors in the EEA, UK or Switzerland, consent is requested through Google&apos;s consent management
+            tools where enabled.
+          </p>
+          <p className="mt-2">
+            Ads are placed inside page content only. GigleNode does not use pop-up, pop-under, anchor or vignette ad
+            formats.
+          </p>
+        </section>
+
+        <section>
           <h2 className="display text-lg text-ink">Cookies</h2>
           <p className="mt-2">
-            We use a single session cookie to keep you signed in. There are no third-party advertising or tracking
-            cookies.
+            We use a single session cookie to keep you signed in. If advertising is enabled, Google AdSense may also set
+            advertising and measurement cookies as described above.
           </p>
         </section>
 
