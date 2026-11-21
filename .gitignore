@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+.env
+.env.local
+data/db.json
+.DS_Store
+/freebuff-sites-build/
+/.open-next/
+/.wrangler/
