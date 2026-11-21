@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { logoutAction } from "@/app/actions";
+import { logoutAction } from "@/app/auth-actions";
 import { getCurrentUser } from "@/lib/auth";
 
 const ADMIN_NAV = [

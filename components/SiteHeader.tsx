@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { readDb } from "@/lib/store";
-import { logoutAction } from "@/app/actions";
+import { logoutAction } from "@/app/auth-actions";
 
 const NAV = [
   { href: "/category/all", label: "Rankings" },

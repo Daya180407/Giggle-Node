@@ -16,13 +16,15 @@ Data pehli request par `data/db.json` me automatically seed ho jata hai (40 AI, 
 
 ### Demo logins
 
-| Role | Email |
-| --- | --- |
-| User (ratings + bookmarks pre-seeded) | `demo@giglenode.com` |
-| Admin | `admin@giglenode.com` |
+| Role | Email | Password |
+| --- | --- | --- |
+| User (ratings + bookmarks pre-seeded) | `demo@giglenode.com` | `demo12345` |
+| Admin | `admin@giglenode.com` | `admin12345` |
 
-`/login` page par **Demo User** / **Admin** buttons se ek click me login ho jata hai. Baaki koi bhi email login kar
-sakta hai (development auth — password nahi). Production me Supabase Auth use karein.
+Auth email + password par chalta hai: `/signup` se naya account, `/login` se login, `/forgot-password` se reset link.
+Passwords PBKDF2-SHA256 (100k iterations, per-user salt) se hash hote hain aur session cookie HMAC-signed hai
+(`SESSION_SECRET`). Reset link email se nahi bhejta — demo me screen par dikhta hai, production me Supabase Auth
+(email delivery + OAuth) use karein.
 
 ## Pages
 

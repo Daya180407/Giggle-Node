@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
-import { loginAction, type ActionState } from "@/app/actions";
+import { loginAction, type AuthState } from "@/app/auth-actions";
 
 export default function LoginForm({ next }: { next: string }) {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(loginAction, { ok: false });
+  const [state, formAction, pending] = useActionState<AuthState, FormData>(loginAction, { ok: false });
 
   return (
     <form action={formAction} className="space-y-3">
@@ -13,21 +14,45 @@ export default function LoginForm({ next }: { next: string }) {
         <label className="label" htmlFor="email">
           Email
         </label>
-        <input id="email" name="email" type="email" required placeholder="aapka@email.com" className="field" />
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          placeholder="aapka@email.com"
+          className="field"
+        />
       </div>
       <div>
-        <label className="label" htmlFor="name">
-          Naam (optional)
+        <label className="label" htmlFor="password">
+          Password
         </label>
-        <input id="name" name="name" type="text" placeholder="Aapka naam" className="field" />
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          placeholder="••••••••"
+          className="field"
+        />
       </div>
+
       {state.error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{state.error}</p> : null}
+
       <button className="btn btn-primary w-full" disabled={pending}>
-        {pending ? "Logging in…" : "Login / Sign up"}
+        {pending ? "Logging in…" : "Login"}
       </button>
-      <p className="text-center text-xs text-muted">
-        Password ki zarurat nahi — email se account ban jata hai (dev mode). Production me Supabase Auth use hota hai.
-      </p>
+
+      <div className="flex items-center justify-between text-xs">
+        <Link href="/forgot-password" className="text-brand hover:underline">
+          Password bhool gaye?
+        </Link>
+        <Link href={`/signup?next=${encodeURIComponent(next)}`} className="font-semibold text-brand hover:underline">
+          Naya account banaiye
+        </Link>
+      </div>
     </form>
   );
 }

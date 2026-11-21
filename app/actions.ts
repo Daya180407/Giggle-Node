@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SESSION_COOKIE, findOrCreateUser, getCurrentUser, requestIp } from "@/lib/auth";
+import { getCurrentUser, requestIp } from "@/lib/auth";
 import { mutateDb, readDb, uid } from "@/lib/store";
 import type { CategorySlug, PostStatus, PostType, PriceType } from "@/lib/types";
 
@@ -26,52 +25,6 @@ function uniqueSlug(base: string, taken: string[]) {
   let i = 2;
   while (taken.includes(slug)) slug = `${base}-${i++}`;
   return slug;
-}
-
-/* ------------------------------- auth ------------------------------- */
-
-export async function loginAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const name = String(formData.get("name") ?? "").trim();
-  const next = String(formData.get("next") ?? "/");
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, error: "Valid email daaliye." };
-  }
-
-  const user = mutateDb((db) => findOrCreateUser(db, email, name));
-  const store = await cookies();
-  store.set(SESSION_COOKIE, user.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 60,
-  });
-  revalidatePath("/");
-  redirect(next.startsWith("/") ? next : "/");
-}
-
-export async function demoLoginAction(formData: FormData) {
-  const role = String(formData.get("role") ?? "user");
-  const email = role === "admin" ? "admin@giglenode.com" : "demo@giglenode.com";
-  const next = String(formData.get("next") ?? "/");
-  const user = mutateDb((db) => findOrCreateUser(db, email));
-  const store = await cookies();
-  store.set(SESSION_COOKIE, user.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 60,
-  });
-  revalidatePath("/");
-  redirect(next.startsWith("/") ? next : "/");
-}
-
-export async function logoutAction() {
-  const store = await cookies();
-  store.delete(SESSION_COOKIE);
-  revalidatePath("/");
-  redirect("/");
 }
 
 /* ------------------------------ ratings ------------------------------ */

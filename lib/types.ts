@@ -104,9 +104,13 @@ export type User = {
   role: "user" | "admin";
   createdAt: string;
   isSeed?: boolean;
+  passwordHash?: string;
+  resetTokenHash?: string;
+  resetTokenExpiresAt?: string;
 };
 
 export type RateEvent = { ip: string; at: string };
+export type AuthEvent = { ip: string; at: string; kind: "login" | "reset" | "signup" };
 
 export type DB = {
   version: number;
@@ -119,4 +123,5 @@ export type DB = {
   follows: Follow[];
   users: User[];
   rateEvents: RateEvent[];
+  authEvents: AuthEvent[];
 };

@@ -1594,5 +1594,6 @@ export function buildSeed(): DB {
     follows,
     users,
     rateEvents: [],
+    authEvents: [],
   };
 }
