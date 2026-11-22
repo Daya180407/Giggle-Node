@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const db = readDb();
   const ai = db.ai.find((a) => a.slug === slug);
   const model = db.models.find((m) => m.aiId === ai?.id && m.slug === modelSlug);
-  if (!ai || !model) return { title: "Model not found" };
+  if (!ai || ai.hidden || !model) return { title: "Model not found" };
   const view = buildView(db);
   const stat = view.modelStats.get(model.id);
   return {
@@ -44,7 +44,7 @@ export default async function ModelPage({ params, searchParams }: Props) {
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
   const ai = db.ai.find((a) => a.slug === slug);
   const model = db.models.find((m) => m.aiId === ai?.id && m.slug === modelSlug);
-  if (!ai || !model) notFound();
+  if (!ai || ai.hidden || !model) notFound();
 
   const view = buildView(db);
   const settings = getSiteSettings(db);

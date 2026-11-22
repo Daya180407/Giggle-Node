@@ -42,6 +42,15 @@ export async function GET() {
     feedback: db.feedback ?? [],
     pointEvents: db.pointEvents ?? [],
     changelog: db.changelog ?? [],
+    appPricing: db.appPricing ?? {},
+    priceHistory: db.priceHistory ?? [],
+    priceAlerts: db.priceAlerts ?? [],
+    subscribers: db.subscribers ?? [],
+    claimRequests: db.claimRequests ?? [],
+    reviewReplies: db.reviewReplies ?? [],
+    aiVisits: db.aiVisits ?? [],
+    toolSubmissions: db.toolSubmissions ?? [],
+    pricingReports: db.pricingReports ?? [],
   };
 
   const filename = `giglenode-backup-${new Date().toISOString().slice(0, 10)}.json`;

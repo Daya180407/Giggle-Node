@@ -87,7 +87,7 @@ export default async function HomePage({
   const bySlug = new Map([...view.aiStats.values()].map((s) => [s.ai.slug, s]));
 
   const paidPicks: PromoItem[] = [...view.aiStats.values()]
-    .filter((s) => s.ai.priceType === "paid")
+    .filter((s) => !s.ai.hidden && s.ai.priceType === "paid")
     .sort((a, b) => b.score - a.score || b.votes - a.votes)
     .slice(0, 3)
     .map((s) => ({
@@ -106,7 +106,8 @@ export default async function HomePage({
 
   const hiddenApps = new Set(settings.hiddenAppSlugs ?? []);
   const appItems = APP_ENTRIES.filter((entry) => !hiddenApps.has(entry.slug)).map((entry): AppShowcaseItem => {
-    const stat = entry.aiSlug ? bySlug.get(entry.aiSlug) : undefined;
+    const found = entry.aiSlug ? bySlug.get(entry.aiSlug) : undefined;
+    const stat = found && !found.ai.hidden ? found : undefined;
     const pricing = appPricingFor(db, entry, stat?.ai);
     return {
       slug: entry.slug,
@@ -162,11 +163,17 @@ export default async function HomePage({
   })).filter((category) => category.rows.length >= 3);
 
   const stats: HomeStat[] = [
-    { label: "AI tools", value: db.ai.length, icon: "tools", gradient: "#4f46e5", hint: "Every major category" },
+    {
+      label: "AI tools",
+      value: db.ai.filter((ai) => !ai.hidden).length,
+      icon: "tools",
+      gradient: "#4f46e5",
+      hint: "Every major category",
+    },
     { label: "Models compared", value: db.models.length, icon: "models", gradient: "#7c3aed", hint: "Rated one by one" },
     {
       label: "Real ratings",
-      value: db.ratings.length,
+      value: db.ratings.filter((r) => r.status !== "pending" && r.status !== "rejected").length,
       icon: "ratings",
       gradient: "#0891b2",
       hint: "From signed-in users",
@@ -175,7 +182,10 @@ export default async function HomePage({
   ];
 
   const categoryCounts = new Map<string, number>();
-  for (const ai of db.ai) categoryCounts.set(ai.category, (categoryCounts.get(ai.category) ?? 0) + 1);
+  for (const ai of db.ai) {
+    if (ai.hidden) continue;
+    categoryCounts.set(ai.category, (categoryCounts.get(ai.category) ?? 0) + 1);
+  }
 
   const jsonLd = {
     "@context": "https://schema.org",

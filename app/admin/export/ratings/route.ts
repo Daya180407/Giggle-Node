@@ -15,10 +15,13 @@ export async function GET() {
   const modelById = new Map(db.models.map((model) => [model.id, model]));
   const userById = new Map(db.users.map((row) => [row.id, row]));
 
-  const rows: (string | number)[][] = [["ai", "model", "category", "user", "email", "stars", "status", "review", "created_at"]];
+  const rows: (string | number)[][] = [
+    ["ai", "model", "category", "user", "email", "stars", "status", "review", "created_at", "scope"],
+  ];
   for (const rating of db.ratings) {
-    const model = modelById.get(rating.modelId);
-    const ai = model ? aiById.get(model.aiId) : undefined;
+    const model = rating.modelId ? modelById.get(rating.modelId) : undefined;
+    // Overall ratings point at the AI directly; "scope" keeps them distinguishable in the export.
+    const ai = model ? aiById.get(model.aiId) : rating.aiId ? aiById.get(rating.aiId) : undefined;
     const reviewer = userById.get(rating.userId);
     rows.push([
       ai?.name ?? "",
@@ -30,6 +33,7 @@ export async function GET() {
       rating.status ?? "approved",
       rating.review ?? "",
       rating.createdAt,
+      rating.modelId ? "model" : "overall",
     ]);
   }
 

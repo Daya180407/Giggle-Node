@@ -3,6 +3,8 @@ import type { Ai, CategorySlug, DB, Model, Post, Prompt, User } from "./types";
 export const PRIOR_VOTES = 50;
 export const RECENT_DAYS = 30;
 export const RECENT_MULTIPLIER = 1.5;
+/** An overall vote covers every model, so it weighs more than a single model vote. */
+export const AI_VOTE_WEIGHT = 2;
 
 export type Trend = "up" | "down" | "flat";
 
@@ -21,9 +23,18 @@ export type ModelStat = {
 
 export type AiStat = {
   ai: Ai;
-  votes: number;
-  avg: number;
+  /** headline score: model votes blended with AI-level overall votes */
   score: number;
+  /** score built from model votes only (the pre-overall-rating number) */
+  modelScore: number;
+  /** model votes + AI-level overall votes */
+  votes: number;
+  modelVotes: number;
+  /** AI-level (whole product) votes */
+  aiVotes: number;
+  aiAvg: number;
+  aiDist: number[];
+  avg: number;
   dist: number[];
   trend: Trend;
   models: ModelStat[];
@@ -53,9 +64,11 @@ export function recencyWeight(createdAt: string, now = Date.now()): number {
 
 export function buildView(db: DB): View {
   const now = Date.now();
+  // Pending and rejected reviews must never move a public score.
+  const ratings = db.ratings.filter((r) => r.status !== "pending" && r.status !== "rejected");
   let weightSum = 0;
   let weightedStars = 0;
-  for (const r of db.ratings) {
+  for (const r of ratings) {
     const w = recencyWeight(r.createdAt, now);
     weightSum += w;
     weightedStars += w * r.stars;
@@ -85,7 +98,9 @@ export function buildView(db: DB): View {
     acc.set(m.id, { votes: 0, wSum: 0, wStars: 0, dist: [0, 0, 0, 0, 0], recentVotes: 0, recentStars: 0, last7: 0 });
   }
 
-  for (const r of db.ratings) {
+  for (const r of ratings) {
+    // AI-level rows carry no model; they are scored separately below.
+    if (!r.modelId) continue;
     const a = acc.get(r.modelId);
     if (!a) continue;
     const ageDays = Math.max(0, (now - new Date(r.createdAt).getTime()) / 86400000);
@@ -99,6 +114,22 @@ export function buildView(db: DB): View {
       a.recentStars += r.stars;
     }
     if (ageDays <= 7) a.last7 += 1;
+  }
+
+  // AI-level (overall) votes, kept apart from the per-model counters.
+  type AiAcc = { votes: number; wSum: number; wStars: number; dist: number[]; last7: number };
+  const aiAcc = new Map<string, AiAcc>();
+  for (const r of ratings) {
+    if (r.modelId || !r.aiId) continue;
+    const a = aiAcc.get(r.aiId) ?? { votes: 0, wSum: 0, wStars: 0, dist: [0, 0, 0, 0, 0], last7: 0 };
+    const ageDays = Math.max(0, (now - new Date(r.createdAt).getTime()) / 86400000);
+    const w = recencyWeight(r.createdAt, now);
+    a.votes += 1;
+    a.wSum += w;
+    a.wStars += w * r.stars;
+    a.dist[Math.min(5, Math.max(1, r.stars)) - 1] += 1;
+    if (ageDays <= 7) a.last7 += 1;
+    aiAcc.set(r.aiId, a);
   }
 
   const aiStats = new Map<string, AiStat>();
@@ -137,10 +168,26 @@ export function buildView(db: DB): View {
     const weightedScore = totalVotes
       ? mstats.reduce((s, m) => s + m.score * m.votes, 0) / totalVotes
       : globalAvg;
+
+    // Overall votes are shrunk toward the model score, so a single overall vote
+    // cannot swing a tool with no model votes all the way to 1★ or 5★.
+    const overall = aiAcc.get(ai.id);
+    const aiVotes = overall?.votes ?? 0;
+    const aiAvg = overall && overall.wSum > 0 ? overall.wStars / overall.wSum : 0;
+    const aiDist = overall?.dist ?? [0, 0, 0, 0, 0];
+    const aiLayer =
+      aiVotes > 0 ? (aiVotes * aiAvg + PRIOR_VOTES * weightedScore) / (aiVotes + PRIOR_VOTES) : weightedScore;
+    // With no overall votes this is exactly the model score, so the existing ranking never flattens.
+    const overallScore =
+      aiVotes > 0
+        ? (totalVotes * weightedScore + AI_VOTE_WEIGHT * aiVotes * aiLayer) /
+          (totalVotes + AI_VOTE_WEIGHT * aiVotes)
+        : weightedScore;
     const avg = mstats.reduce((s, m) => s + m.recentAvg * m.votes, 0) / (totalVotes || 1);
     const dist = [0, 0, 0, 0, 0];
     for (const m of mstats) for (let i = 0; i < 5; i++) dist[i] += m.dist[i];
-    const last7 = mstats.reduce((s, m) => s + m.last7, 0);
+    for (let i = 0; i < 5; i++) dist[i] += aiDist[i];
+    const last7 = mstats.reduce((s, m) => s + m.last7, 0) + (overall?.last7 ?? 0);
     const recentAvg = mstats
       .filter((m) => m.recentVotes > 0)
       .reduce((s, m) => s + m.recentAvg * m.recentVotes, 0) /
@@ -152,9 +199,14 @@ export function buildView(db: DB): View {
 
     aiStats.set(ai.id, {
       ai,
-      votes: totalVotes,
+      score: overallScore,
+      modelScore: weightedScore,
+      votes: totalVotes + aiVotes,
+      modelVotes: totalVotes,
+      aiVotes,
+      aiAvg,
+      aiDist,
       avg,
-      score: weightedScore,
       dist,
       trend,
       models: mstats,
@@ -248,7 +300,7 @@ export function aiReviews(db: DB, aiId: string, limit?: number) {
   const rows = db.ratings
     .filter(
       (r) =>
-        modelIds.has(r.modelId) &&
+        (modelIds.has(r.modelId ?? "") || r.aiId === aiId) &&
         r.review &&
         r.review.trim().length > 0 &&
         r.status !== "pending" &&

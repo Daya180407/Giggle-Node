@@ -31,8 +31,9 @@ export default async function AdminRatingsPage({
   const users = new Map(db.users.map((u) => [u.id, u]));
 
   const enriched = db.ratings.map((r) => {
-    const model = models.get(r.modelId);
-    const ai = model ? ais.get(model.aiId) : undefined;
+    const model = r.modelId ? models.get(r.modelId) : undefined;
+    // AI-level (overall) ratings have no model; resolve the tool directly.
+    const ai = model ? ais.get(model.aiId) : r.aiId ? ais.get(r.aiId) : undefined;
     const user = users.get(r.userId);
     return { r, model, ai, user };
   });
@@ -73,8 +74,8 @@ export default async function AdminRatingsPage({
           <p className="eyebrow">Community</p>
           <h2 className="display mt-1 text-2xl text-ink">Ratings & reviews</h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-            Approve, reject, edit or delete any rating. Reviews can be reported by visitors, and deleting a rating
-            instantly recalculates the weighted ranking.
+            Approve, reject, edit or delete any rating — model ratings and AI-level overall ratings alike. Reviews can be
+            reported by visitors, and deleting a rating instantly recalculates the weighted ranking.
           </p>
         </div>
         <form action={recalculateRankingAction}>
@@ -138,8 +139,9 @@ export default async function AdminRatingsPage({
               <Stars value={r.stars} size={12} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm">
-                  <span className="font-semibold">{model?.name ?? "unknown model"}</span>{" "}
+                  <span className="font-semibold">{model?.name ?? "Overall rating"}</span>{" "}
                   <span className="text-muted">· {ai?.name ?? "unknown AI"}</span>
+                  {r.modelId ? null : <span className="chip ml-1.5 bg-indigo-50 text-indigo-700">Overall</span>}
                 </p>
                 <p className="truncate text-xs text-muted">
                   {user?.name ?? "unknown user"}

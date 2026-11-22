@@ -162,7 +162,7 @@ export default function FinderQuiz({
                     <p className="mt-0.5 truncate text-xs text-muted">{row.bestFor}</p>
                   </div>
                   <a
-                    href={row.website}
+                    href={`/go/${row.slug}`}
                     target="_blank"
                     rel="nofollow noopener noreferrer sponsored"
                     className="btn btn-primary !py-1.5 text-xs"

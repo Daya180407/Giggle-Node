@@ -27,6 +27,7 @@ import type {
   PostStatus,
   PostType,
   PriceType,
+  Rating,
   RatingStatus,
   SubscriptionPlan,
   UserRole,
@@ -92,17 +93,26 @@ function readPlans(formData: FormData): SubscriptionPlan[] {
   return plans.slice(0, 6);
 }
 
+/** Human-readable rating target for admin logs and moderation rows. */
+function ratingTarget(db: DB, rating: Rating): string {
+  if (rating.modelId) return db.models.find((m) => m.id === rating.modelId)?.name ?? rating.modelId;
+  const ai = rating.aiId ? db.ai.find((a) => a.id === rating.aiId) : undefined;
+  return ai ? `${ai.name} (overall)` : "Overall rating";
+}
+
 /* ------------------------------ ratings ------------------------------ */
 
 export async function rateModelAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Please log in to submit a rating." };
 
-  const modelId = String(formData.get("modelId") ?? "");
+  // The AI page submits aiId (whole product); a model page submits modelId.
+  const aiTargetId = String(formData.get("aiId") ?? "").trim();
+  const modelId = String(formData.get("modelId") ?? "").trim();
   const stars = Number(formData.get("stars"));
   const review = String(formData.get("review") ?? "").trim().slice(0, 600);
 
-  if (!modelId) return { ok: false, error: "Model not found." };
+  if (!aiTargetId && !modelId) return { ok: false, error: "Model not found." };
   if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
     return { ok: false, error: "Please choose a rating between 1 and 5 stars." };
   }
@@ -132,11 +142,17 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
   const savedMessage = needsApproval
     ? "Thanks! Your review is waiting for moderator approval."
     : "Rating saved. Thank you!";
-  const existing = db.ratings.find((r) => r.userId === user.id && r.modelId === modelId);
-  const model = db.models.find((m) => m.id === modelId);
-  if (!model) return { ok: false, error: "Model not found." };
-  const parent = db.ai.find((a) => a.id === model.aiId);
-  const modelPath = parent ? `/ai/${parent.slug}/${model.slug}` : "/";
+  const targetAi = aiTargetId ? db.ai.find((a) => a.id === aiTargetId && !a.hidden) : undefined;
+  const model = modelId ? db.models.find((m) => m.id === modelId) : undefined;
+  const parent = targetAi ?? (model ? db.ai.find((a) => a.id === model.aiId && !a.hidden) : undefined);
+  if (!parent || (!targetAi && !model)) {
+    return { ok: false, error: aiTargetId ? "AI not found." : "Model not found." };
+  }
+  // One rating per user per target: overall ratings never overwrite a model rating.
+  const existing = db.ratings.find(
+    (r) => r.userId === user.id && (targetAi ? r.aiId === targetAi.id && !r.modelId : r.modelId === modelId),
+  );
+  const modelPath = targetAi ? `/ai/${parent.slug}` : `/ai/${parent.slug}/${model!.slug}`;
   if (existing) {
     if (existing.lastEditedAt && Date.now() - +new Date(existing.lastEditedAt) < EDIT_LOCK_MS) {
       const hoursLeft = Math.ceil((EDIT_LOCK_MS - (Date.now() - +new Date(existing.lastEditedAt))) / 3600000);
@@ -164,7 +180,8 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
     d.ratings.push({
       id: uid("rt"),
       userId: user.id,
-      modelId,
+      modelId: targetAi ? null : model!.id,
+      aiId: targetAi ? targetAi.id : null,
       stars,
       review: review || null,
       status: ratingStatus,
@@ -273,12 +290,15 @@ export async function saveAiAction(formData: FormData) {
       .map((s) => s.trim())
       .filter(Boolean)
       .slice(0, 8);
+    const websiteRaw = String(formData.get("website") ?? "").trim();
+    const affiliateRaw = String(formData.get("affiliateUrl") ?? "").trim();
     const payload = {
       name,
       slug,
       category: String(formData.get("category") ?? "writing") as CategorySlug,
       priceType: String(formData.get("priceType") ?? "freemium") as PriceType,
-      website: String(formData.get("website") ?? "").trim(),
+      // Only http(s) targets: the Visit button redirects to these values.
+      website: /^https?:\/\//i.test(websiteRaw) ? websiteRaw : "",
       logo: String(formData.get("logo") ?? "🤖").slice(0, 4) || "🤖",
       color: String(formData.get("color") ?? "#4F46E5"),
       description: String(formData.get("description") ?? "").trim(),
@@ -305,7 +325,7 @@ export async function saveAiAction(formData: FormData) {
         .getAll("platforms")
         .map(String)
         .filter((p): p is Platform => p === "web" || p === "android" || p === "pc"),
-      affiliateUrl: String(formData.get("affiliateUrl") ?? "").trim() || null,
+      affiliateUrl: /^https?:\/\//i.test(affiliateRaw) ? affiliateRaw : null,
       hidden: formData.get("hidden") === "on",
       featured: formData.get("featured") === "on",
       freeAlternativeId: String(formData.get("freeAlternativeId") ?? "") || null,
@@ -354,7 +374,8 @@ export async function deleteAiAction(formData: FormData) {
     const modelIds = new Set(db.models.filter((m) => m.aiId === id).map((m) => m.id));
     db.ai = db.ai.filter((a) => a.id !== id);
     db.models = db.models.filter((m) => m.aiId !== id);
-    db.ratings = db.ratings.filter((r) => !modelIds.has(r.modelId));
+    // Overall (AI-level) ratings belong to the tool, so they go with it too.
+    db.ratings = db.ratings.filter((r) => r.aiId !== id && (!r.modelId || !modelIds.has(r.modelId)));
     db.prompts = db.prompts.filter((p) => p.aiId !== id);
     db.bookmarks = db.bookmarks.filter((b) => b.aiId !== id);
     db.follows = db.follows.filter((f) => f.aiId !== id);
@@ -560,9 +581,9 @@ export async function deleteRatingAction(formData: FormData) {
   const back = backRaw.startsWith("/admin/") ? backRaw : "/admin/ratings";
   mutateDb((db) => {
     const rating = db.ratings.find((r) => r.id === id);
-    const modelName = rating ? db.models.find((m) => m.id === rating.modelId)?.name : undefined;
+    const target = rating ? ratingTarget(db, rating) : undefined;
     db.ratings = db.ratings.filter((r) => r.id !== id);
-    logAdminAction(db, admin, "deleted", `Rating: ${modelName ?? id}`, `${rating?.stars ?? "?"}★ removed`);
+    logAdminAction(db, admin, "deleted", `Rating: ${target ?? id}`, `${rating?.stars ?? "?"}★ removed`);
   });
   revalidatePath(back);
   redirect(back);
@@ -570,6 +591,8 @@ export async function deleteRatingAction(formData: FormData) {
 
 export async function toggleRoleAction(formData: FormData) {
   const admin = await assertAdmin("users");
+  // Role changes are super-admin only, same rule as the access editor on the user page.
+  if (admin.role !== "admin") redirect("/admin/users?error=roles");
   const id = String(formData.get("id") ?? "");
   mutateDb((db) => {
     const u = db.users.find((x) => x.id === id);
@@ -800,11 +823,16 @@ export async function updateRatingAction(formData: FormData) {
   mutateDb((db) => {
     const rating = db.ratings.find((r) => r.id === id);
     if (!rating) return;
-    const modelName = db.models.find((m) => m.id === rating.modelId)?.name ?? rating.modelId;
     rating.stars = stars;
     rating.review = review || null;
     rating.updatedAt = new Date().toISOString();
-    logAdminAction(db, admin, "edited rating", `Rating: ${modelName}`, `${stars}★${review ? " with review" : ""}`);
+    logAdminAction(
+      db,
+      admin,
+      "edited rating",
+      `Rating: ${ratingTarget(db, rating)}`,
+      `${stars}★${review ? " with review" : ""}`,
+    );
   });
   revalidatePath("/admin/ratings");
   revalidatePath("/");
@@ -1008,8 +1036,7 @@ export async function setRatingStatusAction(formData: FormData) {
     if (!rating) return;
     rating.status = next;
     rating.updatedAt = new Date().toISOString();
-    const modelName = db.models.find((m) => m.id === rating.modelId)?.name ?? rating.modelId;
-    logAdminAction(db, admin, `review ${next}`, `Rating: ${modelName}`, `${rating.stars}★ by ${rating.userId}`);
+    logAdminAction(db, admin, `review ${next}`, `Rating: ${ratingTarget(db, rating)}`, `${rating.stars}★ by ${rating.userId}`);
   });
   revalidatePath(back);
   revalidatePath("/");
@@ -1890,10 +1917,18 @@ export async function bulkDeleteAction(formData: FormData) {
     const modelIds = new Set(db.models.filter((m) => ids.has(m.aiId)).map((m) => m.id));
     db.ai = db.ai.filter((ai) => !ids.has(ai.id));
     db.models = db.models.filter((m) => !ids.has(m.aiId));
-    db.ratings = db.ratings.filter((r) => !modelIds.has(r.modelId));
+    db.ratings = db.ratings.filter(
+      (r) => !ids.has(r.aiId ?? "") && (!r.modelId || !modelIds.has(r.modelId)),
+    );
     db.prompts = db.prompts.filter((p) => !ids.has(p.aiId));
     db.bookmarks = db.bookmarks.filter((b) => !ids.has(b.aiId));
     db.follows = db.follows.filter((f) => !ids.has(f.aiId));
+    db.priceAlerts = (db.priceAlerts ?? []).filter((row) => !ids.has(row.aiId));
+    db.priceHistory = (db.priceHistory ?? []).filter((row) => !ids.has(row.aiId));
+    db.claimRequests = (db.claimRequests ?? []).filter((row) => !ids.has(row.aiId));
+    db.toolSubmissions = (db.toolSubmissions ?? []).filter((row) => !row.aiId || !ids.has(row.aiId));
+    db.reviewReplies = (db.reviewReplies ?? []).filter((row) => !ids.has(row.aiId));
+    db.aiVisits = (db.aiVisits ?? []).filter((row) => !ids.has(row.aiId));
     removed = targets.length;
     logAdminAction(
       db,
@@ -2100,6 +2135,15 @@ export async function restoreBackupAction(formData: FormData) {
     db.pointEvents = parsed.pointEvents ?? [];
     db.changelog = parsed.changelog ?? [];
     db.adminLog = parsed.adminLog ?? [];
+    db.appPricing = parsed.appPricing ?? {};
+    db.priceHistory = parsed.priceHistory ?? [];
+    db.priceAlerts = parsed.priceAlerts ?? [];
+    db.subscribers = parsed.subscribers ?? [];
+    db.claimRequests = parsed.claimRequests ?? [];
+    db.reviewReplies = parsed.reviewReplies ?? [];
+    db.aiVisits = parsed.aiVisits ?? [];
+    db.toolSubmissions = parsed.toolSubmissions ?? [];
+    db.pricingReports = parsed.pricingReports ?? [];
     counts = { ai: db.ai.length, ratings: db.ratings.length, users: db.users.length };
     logAdminAction(
       db,

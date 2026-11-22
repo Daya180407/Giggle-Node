@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const db = readDb();
   const ai = db.ai.find((a) => a.slug === slug);
-  if (!ai) return { title: "AI not found" };
+  if (!ai || ai.hidden) return { title: "AI not found" };
   const view = buildView(db);
   const stat = view.aiStats.get(ai.id)!;
   return {
@@ -54,14 +54,17 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
   const { pricingReport } = await searchParams;
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
   const ai = db.ai.find((a) => a.slug === slug);
-  if (!ai) notFound();
+  // A hidden listing is removed from the public site: its detail page must 404 too.
+  if (!ai || ai.hidden) notFound();
 
   const view = buildView(db);
   const settings = getSiteSettings(db);
   const stat = view.aiStats.get(ai.id)!;
   const models = [...stat.models].sort((a, b) => b.score - a.score || b.votes - a.votes);
   const modelIds = new Set(models.map((m) => m.model.id));
-  const myRatings = user ? db.ratings.filter((r) => r.userId === user.id && modelIds.has(r.modelId)) : [];
+  const myRatings = user
+    ? db.ratings.filter((r) => r.userId === user.id && (modelIds.has(r.modelId ?? "") || r.aiId === ai.id))
+    : [];
   const prompts = promptsFor(db, ai.id);
   const reviews = aiReviews(db, ai.id, 8);
   const posts = publishedPosts(db).filter((p) => p.relatedAiIds.includes(ai.id)).slice(0, 3);
@@ -85,6 +88,11 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
     .filter((s) => s.ai.category === ai.category && s.ai.id !== ai.id && s.ai.priceType !== "paid")
     .sort((a, b) => b.score - a.score)[0];
   const freeAlternative = freeAltStat ?? (ai.priceType !== "free" ? fallbackFree : undefined);
+  const compareOpponent =
+    (freeAlternative && freeAlternative.ai.id !== ai.id ? freeAlternative.ai : undefined) ??
+    [...view.aiStats.values()]
+      .filter((s) => !s.ai.hidden && s.ai.id !== ai.id)
+      .sort((a, b) => b.score - a.score)[0]?.ai;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -181,6 +189,10 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                 ✓ {verified.percent}% verified
               </span>
             </div>
+            <p className="mt-1 text-[11px] text-muted">
+              Overall rating · {stat.aiVotes} overall {stat.aiVotes === 1 ? "vote" : "votes"} + {stat.modelVotes} model{" "}
+              {stat.modelVotes === 1 ? "vote" : "votes"}
+            </p>
           </div>
         </div>
 
@@ -226,17 +238,17 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
         ) : null}
       </header>
 
-      {models.length ? (
-        <div className="mt-4">
-          <AiQuickRate
-            aiSlug={ai.slug}
-            models={models.map((m) => ({ id: m.model.id, name: m.model.name }))}
-            existingRatings={myRatings}
-            isLoggedIn={Boolean(user)}
-            allowRatings={settings.allowRatings}
-          />
-        </div>
-      ) : null}
+      <div className="mt-4">
+        <AiQuickRate
+          aiId={ai.id}
+          aiName={ai.name}
+          aiSlug={ai.slug}
+          models={models.map((m) => ({ id: m.model.id, name: m.model.name }))}
+          existingRatings={myRatings}
+          isLoggedIn={Boolean(user)}
+          allowRatings={settings.allowRatings}
+        />
+      </div>
 
       <div className="mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-6">
@@ -244,9 +256,9 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           <section className="card overflow-hidden" id="models">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line p-4">
               <div>
-                <h2 className="text-base font-bold">Models &amp; API pricing</h2>
+                <h2 className="text-base font-bold">Model-by-model breakdown &amp; API pricing</h2>
                 <p className="text-xs text-muted">
-                  Compare model-level API rates before you build. Strongest model first.
+                  Each model is rated separately from the overall score. Compare model-level API rates too.
                 </p>
               </div>
               <span className="chip chip-brand">{models.length} models · every model rated separately</span>
@@ -539,9 +551,11 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           <section className="card p-5" id="reviews">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="display text-lg text-ink">User reviews</h2>
-              <Link href={`/ai/${ai.slug}/${models[0]?.model.slug ?? ""}`} className="text-sm font-semibold text-brand">
-                Rate a model →
-              </Link>
+              {models[0] ? (
+                <Link href={`/ai/${ai.slug}/${models[0].model.slug}`} className="text-sm font-semibold text-brand">
+                  Rate a model →
+                </Link>
+              ) : null}
             </div>
             <div className="mt-3 space-y-3">
               {reviews.map(({ rating, user: reviewer }) => {
@@ -560,7 +574,9 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                       <span className="ml-auto text-xs text-muted">{timeAgo(rating.updatedAt)}</span>
                     </div>
                     <p className="mt-1.5 text-sm text-slate-600">{rating.review}</p>
-                    {model ? <p className="mt-1 text-xs text-muted">Rated on {model.name}</p> : null}
+                    <p className="mt-1 text-xs text-muted">
+                      {model ? `Rated on ${model.name}` : `Rated ${ai.name} overall`}
+                    </p>
                     {rating.verified ? (
                       <p className="mt-1 text-[10.5px] font-semibold text-emerald-600">✓ Verified — opened from GigleNode</p>
                     ) : null}
@@ -615,7 +631,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           <div className="card p-5">
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-xs text-muted">Weighted score</p>
+                <p className="text-xs text-muted">Overall rating</p>
                 <p className="text-3xl font-extrabold">{stat.score.toFixed(1)}</p>
               </div>
               <Stars value={stat.score} size={19} />
@@ -624,6 +640,14 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               {stat.votes.toLocaleString("en-IN")} votes · {stat.trend === "up" ? "trend up" : stat.trend === "down" ? "trend down" : "stable"}
             </p>
             <div className="mt-3 space-y-1.5 text-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>Overall votes</span>
+                <span className="font-semibold">{stat.aiVotes}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Model votes</span>
+                <span className="font-semibold">{stat.modelVotes}</span>
+              </div>
               <div className="flex justify-between text-slate-600">
                 <span>Ratings in last 7 days</span>
                 <span className="font-semibold">{stat.last7}</span>
@@ -653,7 +677,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             <div className="card p-4">
               <RatingTrend points={trendPoints} />
               <p className="mt-2 text-[10.5px] leading-relaxed text-muted">
-                Weekly average of every vote across this tool&apos;s models.
+                Weekly average of every vote for this tool, including overall ratings.
               </p>
             </div>
           ) : null}
@@ -664,13 +688,18 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             <AdSlot clientId={settings.adsClientId} slotId={settings.adsSidebarSlot} variant="sidebar" />
           ) : null}
 
-          <div className="card p-4">
-            <h3 className="display text-base text-ink">Compare</h3>
-            <p className="mt-1 text-xs text-muted">See how {ai.name} stacks up against another tool.</p>
-            <Link href={`/compare/${ai.slug}-vs-${freeAlternative?.ai.slug ?? "chatgpt"}`} className="btn btn-ghost mt-2 w-full text-xs">
-              {ai.slug === "chatgpt" ? "ChatGPT vs Gemini" : `${ai.name} vs ${freeAlternative?.ai.name ?? "ChatGPT"}`}
-            </Link>
-          </div>
+          {compareOpponent ? (
+            <div className="card p-4">
+              <h3 className="display text-base text-ink">Compare</h3>
+              <p className="mt-1 text-xs text-muted">See how {ai.name} stacks up against another tool.</p>
+              <Link
+                href={`/compare/${ai.slug}-vs-${compareOpponent.slug}`}
+                className="btn btn-ghost mt-2 w-full text-xs"
+              >
+                {ai.name} vs {compareOpponent.name}
+              </Link>
+            </div>
+          ) : null}
 
           {models.length > 1 ? (
             <div className="card p-4">
@@ -698,7 +727,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
         <SectionHead eyebrow="Related tools" title={`More ${categoryName(ai.category)} AI`} />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[...view.aiStats.values()]
-            .filter((s) => s.ai.category === ai.category && s.ai.id !== ai.id)
+            .filter((s) => !s.ai.hidden && s.ai.category === ai.category && s.ai.id !== ai.id)
             .sort((a, b) => b.score - a.score)
             .slice(0, 4)
             .map((s) => (

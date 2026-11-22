@@ -123,7 +123,10 @@ export type RatingStatus = "pending" | "approved" | "rejected";
 export type Rating = {
   id: string;
   userId: string;
-  modelId: string;
+  /** the rated model; null when this row is an AI-level (overall) rating */
+  modelId: string | null;
+  /** set for an AI-level rating so overall votes stay attached to the tool */
+  aiId?: string | null;
   stars: number;
   review: string | null;
   createdAt: string;

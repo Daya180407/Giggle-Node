@@ -36,7 +36,13 @@ export type VerifiedShare = { verified: number; total: number; percent: number }
 /** Share of a tool's ratings that came from users who actually opened it. */
 export function verifiedShare(db: DB, aiId: string): VerifiedShare {
   const modelIds = new Set(db.models.filter((model) => model.aiId === aiId).map((model) => model.id));
-  const rows = db.ratings.filter((rating) => modelIds.has(rating.modelId) && rating.status !== "rejected");
+  // AI-level overall votes belong to the tool too, and both pending and rejected rows stay private.
+  const rows = db.ratings.filter(
+    (rating) =>
+      (modelIds.has(rating.modelId ?? "") || rating.aiId === aiId) &&
+      rating.status !== "rejected" &&
+      rating.status !== "pending",
+  );
   const verified = rows.filter((rating) => rating.verified).length;
   return { verified, total: rows.length, percent: rows.length ? Math.round((verified / rows.length) * 100) : 0 };
 }
@@ -102,7 +108,10 @@ export type TrendPoint = { label: string; avg: number; count: number; start: num
 export function weeklyRatingTrend(db: DB, aiId: string, weeks = 8): TrendPoint[] {
   const modelIds = new Set(db.models.filter((model) => model.aiId === aiId).map((model) => model.id));
   const ratings = db.ratings.filter(
-    (rating) => modelIds.has(rating.modelId) && rating.status !== "rejected" && rating.status !== "pending",
+    (rating) =>
+      (modelIds.has(rating.modelId ?? "") || rating.aiId === aiId) &&
+      rating.status !== "rejected" &&
+      rating.status !== "pending",
   );
   const now = new Date();
   now.setHours(23, 59, 59, 999);

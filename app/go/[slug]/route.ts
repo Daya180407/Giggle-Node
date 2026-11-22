@@ -25,6 +25,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     if (user) recordAiVisit(draft, user.id, ai.id);
   });
 
-  const target = ai.affiliateUrl || ai.website || "/";
+  const raw = ai.affiliateUrl || ai.website || "/";
+  // Never redirect to a non-web scheme (javascript:, data:) even if old data contains one.
+  const target = raw === "/" || /^https?:\/\//i.test(raw) ? raw : "/";
   redirect(target);
 }

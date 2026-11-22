@@ -19,7 +19,8 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const db = readDb();
-  const post = db.posts.find((p) => p.slug === slug && p.status === "published");
+  // publishedPosts also counts a scheduled post once its publish time has passed.
+  const post = publishedPosts(db).find((p) => p.slug === slug);
   if (!post) return { title: "Post not found" };
   return {
     title: post.title,
@@ -37,14 +38,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PostPage({ params }: Props) {
   const { slug } = await params;
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
-  const post = db.posts.find((p) => p.slug === slug && p.status === "published");
+  const post = publishedPosts(db).find((p) => p.slug === slug);
   if (!post) notFound();
 
   const view = buildView(db);
   const settings = getSiteSettings(db);
   const all = publishedPosts(db);
   const index = all.findIndex((p) => p.id === post.id);
-  const nextPost = index >= 0 ? all[(index + 1) % all.length] : undefined;
+  const nextPost = index >= 0 && all.length > 1 ? all[(index + 1) % all.length] : undefined;
 
   const related = post.relatedAiIds
     .map((id) => view.aiStats.get(id))

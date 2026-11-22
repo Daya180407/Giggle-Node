@@ -10,6 +10,7 @@ import {
   verifyCredentials,
 } from "@/lib/auth";
 import { hashPassword, randomToken, sha256Hex } from "@/lib/crypto";
+import { mailerConfigured } from "@/lib/mailer";
 import { queueEmail, renderTemplate } from "@/lib/notify";
 import { getSiteSettings } from "@/lib/settings";
 import { flushPendingWrites, mutateDb, refreshDb, uid } from "@/lib/store";
@@ -174,7 +175,9 @@ export async function forgotPasswordAction(_prev: AuthState, formData: FormData)
       pruneAuthEvents(d);
     });
     await flushPendingWrites();
-    resetLink = `/reset-password/${token}`;
+    // Never hand the token back to the browser once real email delivery exists:
+    // that would let anyone reset any account by typing its email address.
+    resetLink = mailerConfigured() ? undefined : `/reset-password/${token}`;
   } else {
     mutateDb((d) => {
       d.authEvents.push({ ip, at: new Date().toISOString(), kind: "reset" });

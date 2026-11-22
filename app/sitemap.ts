@@ -17,8 +17,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/stack",
     "/submit",
     "/contributors",
-    "/my-list",
-    "/login",
     "/about",
     "/contact",
     "/privacy",

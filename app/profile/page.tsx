@@ -100,24 +100,31 @@ export default async function ProfilePage() {
         {myRatings.length ? (
           <div className="card mt-3 divide-y divide-line overflow-hidden">
             {myRatings.map((r) => {
-              const model = db.models.find((m) => m.id === r.modelId);
-              const ai = model ? db.ai.find((a) => a.id === model.aiId) : undefined;
-              if (!model || !ai) return null;
-              const stat = view.modelStats.get(model.id);
+              const model = r.modelId ? db.models.find((m) => m.id === r.modelId) : undefined;
+              const ai = model
+                ? db.ai.find((a) => a.id === model.aiId)
+                : r.aiId
+                  ? db.ai.find((a) => a.id === r.aiId)
+                  : undefined;
+              if (!ai) return null;
+              // Overall ratings have no model, so they link to the AI page instead.
+              const href = model ? `/ai/${ai.slug}/${model.slug}` : `/ai/${ai.slug}`;
+              const stat = model ? view.modelStats.get(model.id) : view.aiStats.get(ai.id);
               return (
                 <div key={r.id} className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
                   <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={40} rounded="rounded-lg" />
                   <div className="min-w-0 flex-1">
-                    <Link href={`/ai/${ai.slug}/${model.slug}`} className="text-sm font-semibold text-ink hover:text-brand">
-                      {model.name}
+                    <Link href={href} className="text-sm font-semibold text-ink hover:text-brand">
+                      {model?.name ?? `${ai.name} — overall`}
                     </Link>
                     <p className="text-xs text-muted">
-                      {ai.name} · {timeAgo(r.updatedAt)} · model score {stat ? stat.score.toFixed(1) : "—"} ★
+                      {ai.name} · {timeAgo(r.updatedAt)} · {model ? "model" : "overall"} score{" "}
+                      {stat ? stat.score.toFixed(1) : "—"} ★
                     </p>
                     {r.review ? <p className="mt-1 line-clamp-2 text-xs text-slate-600">“{r.review}”</p> : null}
                   </div>
                   <Stars value={r.stars} size={16} />
-                  <Link href={`/ai/${ai.slug}/${model.slug}`} className="btn btn-ghost !px-2.5 !py-1 text-xs">
+                  <Link href={href} className="btn btn-ghost !px-2.5 !py-1 text-xs">
                     {r.lastEditedAt ? "Locked" : "Edit"}
                   </Link>
                 </div>
@@ -126,7 +133,7 @@ export default async function ProfilePage() {
           </div>
         ) : (
           <div className="card mt-3 p-8 text-center text-sm text-muted">
-            No ratings yet. Open any model page and leave a 1–5 star rating.
+            No ratings yet. Open any AI or model page and leave a 1–5 star rating.
           </div>
         )}
       </section>

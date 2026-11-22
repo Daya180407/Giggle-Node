@@ -493,13 +493,14 @@ export default async function AdminOverviewPage({
           </div>
           <div className="mt-2 divide-y divide-line">
             {recentRatings.map((r) => {
-              const model = db.models.find((m) => m.id === r.modelId);
+              const model = r.modelId ? db.models.find((m) => m.id === r.modelId) : undefined;
               const user = db.users.find((u) => u.id === r.userId);
               return (
                 <div key={r.id} className="flex items-center gap-2 py-2 text-xs">
                   <span className="w-7 shrink-0 font-semibold">{r.stars}★</span>
                   <span className="min-w-0 flex-1 truncate">
-                    {model?.name ?? "—"} <span className="text-muted">· {user?.name ?? "unknown"}</span>
+                    {model?.name ?? (r.aiId ? "Overall" : "—")}{" "}
+                    <span className="text-muted">· {user?.name ?? "unknown"}</span>
                   </span>
                   <span className="shrink-0 text-muted">{timeAgo(r.updatedAt)}</span>
                 </div>

@@ -29,7 +29,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const slugs = parseSlugs(slug);
   const db = readDb();
   const names = slugs
-    .map((s) => db.ai.find((a) => a.slug === s)?.name)
+    .map((s) => {
+      const ai = db.ai.find((a) => a.slug === s);
+      return ai && !ai.hidden ? ai.name : undefined;
+    })
     .filter(Boolean) as string[];
   const title = names.length >= 2 ? `${names.join(" vs ")} — Comparison` : "AI Compare — 2–3 AI Side by Side";
   return {
@@ -106,9 +109,13 @@ export default async function ComparePage({ params }: Props) {
     : settings.compareAiIds
         .map((id) => db.ai.find((a) => a.id === id)?.slug)
         .filter((s): s is string => Boolean(s));
-  const stats = slugs.map((s) => [...view.aiStats.values()].find((x) => x.ai.slug === s)).filter(Boolean) as AiStat[];
+  // Hidden listings are not public, so they cannot be compared or picked.
+  const stats = slugs
+    .map((s) => [...view.aiStats.values()].find((x) => x.ai.slug === s && !x.ai.hidden))
+    .filter(Boolean) as AiStat[];
 
   const options = db.ai
+    .filter((a) => !a.hidden)
     .map((a) => ({ slug: a.slug, name: a.name, logo: a.logo, color: a.color, category: a.category }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
