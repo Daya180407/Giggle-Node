@@ -1,5 +1,6 @@
 import { deletePromptAction, savePromptAction } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
+import { isVerifiedPrompt } from "@/lib/rank";
 import type { Prompt } from "@/lib/types";
 
 export default function PromptEditor({
@@ -17,6 +18,11 @@ export default function PromptEditor({
         <details key={p.id} className="rounded-xl border border-line p-3">
           <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium">
             <span className="min-w-0 flex-1 truncate">{p.title}</span>
+            {isVerifiedPrompt(p) ? (
+              <span className="chip bg-emerald-50 text-emerald-700">✓ Verified</span>
+            ) : (
+              <span className="chip bg-slate-100 text-slate-600">{p.submittedByName || "Community"}</span>
+            )}
             <span className="text-xs text-brand">Edit ▾</span>
           </summary>
           <form action={savePromptAction} className="mt-2 space-y-2">
@@ -36,11 +42,12 @@ export default function PromptEditor({
       ))}
 
       <div className="rounded-xl border border-dashed border-line p-3">
-        <h3 className="text-sm font-semibold">+ Naya prompt</h3>
+        <h3 className="text-sm font-semibold">+ New prompt</h3>
+        <p className="mt-0.5 text-[11px] text-muted">Prompts added here show a verified tick on the public page.</p>
         <form action={savePromptAction} className="mt-2 space-y-2">
           <input type="hidden" name="aiId" value={aiId} />
           <input type="hidden" name="aiSlug" value={aiSlug} />
-          <input name="title" required placeholder="Prompt ka title" className="field" />
+          <input name="title" required placeholder="Prompt title" className="field" />
           <textarea name="promptText" required rows={3} placeholder="Prompt text" className="field" />
           <button className="btn btn-ghost !py-1.5 text-xs">Add prompt</button>
         </form>

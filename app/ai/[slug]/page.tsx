@@ -13,6 +13,7 @@ import CopyButton from "@/components/CopyButton";
 import Distribution from "@/components/Distribution";
 import PostCard from "@/components/PostCard";
 import PricingReport from "@/components/PricingReport";
+import PromptSubmitForm from "@/components/PromptSubmitForm";
 import ShareButton from "@/components/ShareButton";
 import { AiLogo, PriceBadge, SectionHead, SponsoredTag, Stars, Trend } from "@/components/ui";
 import { formatMoney } from "@/lib/analytics";
@@ -23,7 +24,7 @@ import { canAccess, resolveRoles } from "@/lib/roles";
 import { formatPlanPrice } from "@/lib/plans";
 import { myPriceAlert, priceChange, priceHistoryFor, repliesFor, verifiedShare, weeklyRatingTrend } from "@/lib/community";
 import { reportRatingAction } from "@/app/actions";
-import { aiReviews, buildView, publishedPosts, promptsFor, timeAgo } from "@/lib/rank";
+import { aiReviews, buildView, isVerifiedPrompt, publishedPosts, promptsFor, timeAgo } from "@/lib/rank";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
@@ -222,6 +223,9 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               {followed ? "✓ Following" : "+ Follow"}
             </button>
           </form>
+          <Link href={`/community/${ai.slug}`} className="btn btn-ghost">
+            💬 Community
+          </Link>
           <ShareButton title={`${ai.name} — GigleNode rating`} />
           {user && canAccess(user.role, "catalogue", resolveRoles(db.roles)) ? (
             <Link href={`/admin/ai/${ai.slug}`} className="btn btn-ghost">
@@ -527,24 +531,65 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="display text-lg text-ink">Prompt library</h2>
-                <p className="text-xs text-muted">Ready-made prompts for {ai.name} — copy and paste in seconds.</p>
+                <p className="text-xs text-muted">
+                  Ready-made prompts for {ai.name} — free to copy, free to use.
+                </p>
               </div>
-              <span className="chip bg-slate-100 text-slate-600">{prompts.length} prompts</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="chip bg-slate-100 text-slate-600">{prompts.length} prompts</span>
+                <Link href={`/prompts?ai=${ai.slug}`} className="text-xs font-semibold text-brand">
+                  All prompts →
+                </Link>
+              </div>
             </div>
             <div className="mt-3 space-y-2">
-              {prompts.map((p) => (
-                <div key={p.id} className="rounded-xl border border-line p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold">{p.title}</h3>
-                    <CopyButton text={p.promptText} />
+              {prompts.map((p) => {
+                const verifiedPrompt = isVerifiedPrompt(p);
+                return (
+                  <div key={p.id} className="rounded-xl border border-line p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm font-semibold">
+                        <span className="truncate">{p.title}</span>
+                        {verifiedPrompt ? (
+                          <span
+                            className="chip bg-emerald-50 text-emerald-700"
+                            title="Written or checked by the GigleNode team"
+                          >
+                            ✓ Verified
+                          </span>
+                        ) : null}
+                      </h3>
+                      <CopyButton text={p.promptText} />
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{p.promptText}</p>
+                    <p className="mt-1 text-[10px] text-muted">
+                      {verifiedPrompt && !p.submittedBy
+                        ? "GigleNode team"
+                        : `Community · ${p.submittedByName || "a member"}`}
+                    </p>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{p.promptText}</p>
-                </div>
-              ))}
+                );
+              })}
               {prompts.length === 0 ? (
-                <p className="py-3 text-sm text-muted">Prompts for this tool are coming soon.</p>
+                <p className="py-3 text-sm text-muted">No prompts here yet — be the first to add one.</p>
               ) : null}
             </div>
+
+            {user ? (
+              <PromptSubmitForm aiId={ai.id} aiName={ai.name} />
+            ) : (
+              <div className="mt-3 rounded-xl border border-dashed border-line bg-slate-50/60 p-3">
+                <p className="text-xs text-slate-600">
+                  Have a prompt that works well for {ai.name}? Add it to the library — log in first.
+                </p>
+                <Link
+                  href={`/login?next=${encodeURIComponent(`/ai/${ai.slug}#prompts`)}`}
+                  className="btn btn-ghost mt-2 !py-1.5 text-xs"
+                >
+                  Log in to add a prompt
+                </Link>
+              </div>
+            )}
           </section>
 
           {/* Reviews */}

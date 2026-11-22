@@ -255,6 +255,78 @@ export type Prompt = {
   aiId: string;
   title: string;
   promptText: string;
+  /** signed-in user who added it; empty for prompts written by the site team */
+  submittedBy?: string | null;
+  /** name shown as the contributor for community prompts */
+  submittedByName?: string;
+  /** editorial prompts carry a verified tick; community ones stay unverified */
+  verified?: boolean;
+  createdAt?: string;
+};
+
+export type CommunityMessageKind = "text" | "image" | "voice" | "file";
+
+export type CommunityAttachment = {
+  name: string;
+  mime: string;
+  /** decoded byte size, re-checked on the server before the row is saved */
+  size: number;
+  /** data URL kept inside the JSON document, like the media library rows */
+  dataUrl: string;
+};
+
+/**
+ * An admin-created room inside an AI's community. The AI's default room is
+ * implicit (no row) and lives at /community/<ai-slug>; extra rooms get their own
+ * globally unique slug and their messages carry roomId.
+ */
+export type CommunityRoom = {
+  id: string;
+  aiId: string;
+  slug: string;
+  title: string;
+  description: string;
+  createdAt: string;
+  createdBy: string;
+  /** hidden rooms disappear from the public index and 404 */
+  hidden?: boolean;
+};
+
+/** One message in an AI's community room. Expired rows are removed on the next visit. */
+export type CommunityMessage = {
+  id: string;
+  aiId: string;
+  /** null/absent = the AI's default room */
+  roomId?: string | null;
+  userId: string;
+  userName: string;
+  avatar: string;
+  body: string;
+  kind: CommunityMessageKind;
+  attachment: CommunityAttachment | null;
+  createdAt: string;
+};
+
+/** Admin controls for the per-AI community rooms. */
+export type CommunitySettings = {
+  enabled: boolean;
+  /** messages older than this many days are deleted automatically */
+  retentionDays: number;
+  allowText: boolean;
+  allowImages: boolean;
+  allowVoice: boolean;
+  allowFiles: boolean;
+  maxMessageLength: number;
+  maxPerHour: number;
+  /** manual, non-popup ads above the composer and between messages */
+  adsEnabled: boolean;
+  adTopSlot: string;
+  adInlineSlot: string;
+  /** an inline ad is shown after this many messages */
+  adEvery: number;
+  /** house ad shown when no AdSense slot is configured */
+  houseAdText: string;
+  houseAdHref: string;
 };
 
 export type Bookmark = { id: string; userId: string; aiId: string; createdAt: string };
@@ -559,6 +631,7 @@ export type SiteSettings = {
   supportEmail: string;
   /** push an in-app notification when a new AI or published post goes live */
   notificationsAuto: boolean;
+  community: CommunitySettings;
   email: EmailSettings;
   aiSearch: AiSearchSettings;
   gamification: GamificationSettings;
@@ -629,4 +702,8 @@ export type DB = {
   aiVisits?: AiVisit[];
   /** admin-managed roles and their permissions */
   roles?: RoleDefinition[];
+  /** admin-created extra community rooms; default AI rooms need no row */
+  communityRooms?: CommunityRoom[];
+  /** per-AI community messages, pruned to the admin retention window */
+  communityMessages?: CommunityMessage[];
 };

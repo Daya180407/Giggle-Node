@@ -3,6 +3,10 @@ import { readDb } from "@/lib/store";
 import { getCategories } from "@/lib/categories";
 import { publishedPosts } from "@/lib/rank";
 
+// Rooms, posts and AI listings are edited at runtime, so the sitemap must not be
+// frozen into the build output.
+export const dynamic = "force-dynamic";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const db = readDb();
   const base = "https://giglenode.com";
@@ -13,6 +17,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/category/all",
     "/blog",
     "/compare",
+    "/prompts",
+    "/community",
     "/finder",
     "/stack",
     "/submit",
@@ -43,6 +49,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.9,
   }));
 
+  const visibleAiIds = new Set(db.ai.filter((ai) => !ai.hidden).map((ai) => ai.id));
+  const communitySlugs = [
+    ...db.ai.filter((ai) => !ai.hidden).map((ai) => ai.slug),
+    ...(db.communityRooms ?? [])
+      .filter((room) => !room.hidden && visibleAiIds.has(room.aiId))
+      .map((room) => room.slug),
+  ];
+  const community: MetadataRoute.Sitemap = communitySlugs.map((slug) => ({
+    url: `${base}/community/${slug}`,
+    lastModified: now,
+    changeFrequency: "daily",
+    priority: 0.6,
+  }));
+
   const models: MetadataRoute.Sitemap = db.models.flatMap((m) => {
     const ai = db.ai.find((a) => a.id === m.aiId);
     return ai && !ai.hidden
@@ -64,5 +84,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     }));
 
-  return [...staticRoutes, ...categories, ...ais, ...models, ...posts];
+  return [...staticRoutes, ...categories, ...ais, ...community, ...models, ...posts];
 }

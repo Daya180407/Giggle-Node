@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { logAdminAction } from "@/lib/admin-log";
 import { APP_ENTRIES } from "@/lib/software";
 import { activeSubscribers, hasVerifiedUse, recordPriceSnapshot } from "@/lib/community";
+import { ATTACHMENT_LIMITS, communityKindAllowed, pruneCommunityMessages } from "@/lib/community-chat";
 import { getCurrentUser, requestIp } from "@/lib/auth";
 import { CATEGORIES, getCategories, slugifyCategory } from "@/lib/categories";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
@@ -21,6 +22,9 @@ import { buildView, rankedAis } from "@/lib/rank";
 import type {
   AiSearchProvider,
   CategorySlug,
+  CommunityAttachment,
+  CommunityMessageKind,
+  CommunityRoom,
   DB,
   FeedbackKind,
   Platform,
@@ -377,6 +381,8 @@ export async function deleteAiAction(formData: FormData) {
     // Overall (AI-level) ratings belong to the tool, so they go with it too.
     db.ratings = db.ratings.filter((r) => r.aiId !== id && (!r.modelId || !modelIds.has(r.modelId)));
     db.prompts = db.prompts.filter((p) => p.aiId !== id);
+    db.communityRooms = (db.communityRooms ?? []).filter((room) => room.aiId !== id);
+    db.communityMessages = (db.communityMessages ?? []).filter((message) => message.aiId !== id);
     db.bookmarks = db.bookmarks.filter((b) => b.aiId !== id);
     db.follows = db.follows.filter((f) => f.aiId !== id);
     db.priceAlerts = (db.priceAlerts ?? []).filter((row) => row.aiId !== id);
@@ -479,11 +485,73 @@ export async function savePromptAction(formData: FormData) {
         logAdminAction(db, admin, "updated", `Prompt: ${title}`, `AI id ${aiId}`);
       }
     } else if (title && promptText) {
-      db.prompts.push({ id: uid("pr"), aiId, title, promptText });
+      // Team-written prompts are the checked ones, so they carry the verified tick.
+      db.prompts.push({
+        id: uid("pr"),
+        aiId,
+        title,
+        promptText,
+        submittedBy: null,
+        submittedByName: admin.name,
+        verified: true,
+        createdAt: new Date().toISOString(),
+      });
       logAdminAction(db, admin, "created", `Prompt: ${title}`, `AI id ${aiId}`);
     }
   });
   redirect(`/admin/ai/${aiSlug}`);
+}
+
+const MAX_PROMPTS_PER_DAY = 10;
+
+/** Signed-in members can add a prompt to the library; prompts stay free to use. */
+export async function submitPromptAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Please log in to add a prompt." };
+
+  const aiId = String(formData.get("aiId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim().slice(0, 80);
+  const promptText = String(formData.get("promptText") ?? "").trim().slice(0, 2000);
+
+  if (title.length < 3) return { ok: false, error: "Please give the prompt a title of at least 3 characters." };
+  if (promptText.length < 15) return { ok: false, error: "Please write at least 15 characters of prompt text." };
+
+  const db = readDb();
+  const ai = db.ai.find((a) => a.id === aiId && !a.hidden);
+  if (!ai) return { ok: false, error: "AI not found." };
+
+  const badWord = findBadWord(`${title} ${promptText}`, getSiteSettings(db).security.badWords);
+  if (badWord) return { ok: false, error: "Please remove inappropriate language and try again." };
+
+  const prompts = db.prompts ?? [];
+  const duplicate = prompts.find(
+    (p) => p.aiId === aiId && p.submittedBy === user.id && p.promptText.toLowerCase() === promptText.toLowerCase(),
+  );
+  if (duplicate) return { ok: true, message: "This prompt is already in the library." };
+
+  const dayAgo = Date.now() - 86400000;
+  const addedToday = prompts.filter(
+    (p) => p.submittedBy === user.id && p.createdAt && +new Date(p.createdAt) > dayAgo,
+  ).length;
+  if (addedToday >= MAX_PROMPTS_PER_DAY) {
+    return { ok: false, error: `You can add up to ${MAX_PROMPTS_PER_DAY} prompts per day.` };
+  }
+
+  mutateDb((draft) => {
+    draft.prompts.push({
+      id: uid("pr"),
+      aiId,
+      title,
+      promptText,
+      submittedBy: user.id,
+      submittedByName: user.name,
+      verified: false,
+      createdAt: new Date().toISOString(),
+    });
+  });
+  revalidatePath(`/ai/${ai.slug}`);
+  revalidatePath("/prompts");
+  return { ok: true, message: "Prompt added to the library. Thanks for sharing!" };
 }
 
 export async function deletePromptAction(formData: FormData) {
@@ -496,6 +564,260 @@ export async function deletePromptAction(formData: FormData) {
     logAdminAction(db, admin, "deleted", `Prompt: ${promptTitle}`, "Prompt removed");
   });
   redirect(`/admin/ai/${aiSlug}`);
+}
+
+/**
+ * Prompt library moderation: an admin can give a community prompt the verified
+ * tick (or take it away) and remove a prompt straight from the library list.
+ */
+export async function moderatePromptAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  const intent = String(formData.get("intent") ?? "");
+  const back = adminBack(formData, "/admin/prompts");
+  let aiSlug = "";
+
+  mutateDb((db) => {
+    const prompt = db.prompts.find((p) => p.id === id);
+    if (!prompt) return;
+    aiSlug = db.ai.find((a) => a.id === prompt.aiId)?.slug ?? "";
+    if (intent === "delete") {
+      db.prompts = db.prompts.filter((p) => p.id !== id);
+      logAdminAction(db, admin, "deleted", `Prompt: ${prompt.title}`, "Prompt removed from the library");
+      return;
+    }
+    const verified = intent === "verify";
+    prompt.verified = verified;
+    logAdminAction(
+      db,
+      admin,
+      verified ? "verified" : "unverified",
+      `Prompt: ${prompt.title}`,
+      verified ? "Verified tick added" : "Verified tick removed",
+    );
+  });
+
+  revalidatePath("/prompts");
+  revalidatePath("/");
+  if (aiSlug) revalidatePath(`/ai/${aiSlug}`);
+  revalidatePath(back);
+  redirect(back);
+}
+
+/* ------------------------------ ai community ------------------------------ */
+
+const MAX_COMMUNITY_ATTACHMENT_NAME = 120;
+/** Formats that can execute in a browser are never accepted as community files. */
+const UNSAFE_COMMUNITY_MIME = /^(text\/html|application\/xhtml\+xml|image\/svg\+xml|application\/javascript|text\/javascript|application\/x-shockwave-flash)/i;
+
+function readCommunityAttachment(
+  formData: FormData,
+  kind: CommunityMessageKind,
+): { attachment: CommunityAttachment } | { error: string } {
+  const dataUrl = String(formData.get("attachmentData") ?? "");
+  if (!dataUrl.startsWith("data:") || !dataUrl.includes(",")) {
+    return { error: kind === "voice" ? "Record a voice note first." : "Choose a file to share first." };
+  }
+
+  const match = /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+)(;base64)?,/i.exec(dataUrl);
+  if (!match) return { error: "That attachment could not be read. Try a different file." };
+  const mime = match[1].toLowerCase();
+  if (UNSAFE_COMMUNITY_MIME.test(mime)) return { error: "This file type cannot be shared in the community." };
+  if (kind === "image" && !mime.startsWith("image/")) return { error: "Only image files can be shared as a photo." };
+  if (kind === "voice" && !mime.startsWith("audio/")) return { error: "Only audio can be shared as a voice note." };
+
+  const encoded = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  const size = match[2] ? Math.floor(encoded.length * 0.75) : encoded.length;
+  const limit = ATTACHMENT_LIMITS[kind as Exclude<CommunityMessageKind, "text">];
+  if (size > limit) {
+    return { error: `That attachment is too large. Keep it under ${Math.round(limit / 1024)} KB.` };
+  }
+
+  const fallbackName = kind === "image" ? "image.jpg" : kind === "voice" ? "voice-note.webm" : "attachment";
+  const name = String(formData.get("attachmentName") ?? "").trim().slice(0, MAX_COMMUNITY_ATTACHMENT_NAME) || fallbackName;
+  return { attachment: { name, mime, size, dataUrl } };
+}
+
+/** Signed-in members can post in any AI room; the admin decides what may be shared. */
+export async function postCommunityMessageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Please log in to join the community." };
+
+  const db = readDb();
+  const settings = getSiteSettings(db);
+  const community = settings.community;
+  if (!community.enabled) return { ok: false, error: "The community is paused by the administrator right now." };
+
+  const aiId = String(formData.get("aiId") ?? "").trim();
+  const ai = db.ai.find((row) => row.id === aiId && !row.hidden);
+  if (!ai) return { ok: false, error: "AI not found." };
+
+  // An admin-created room must exist, belong to this AI and still be public.
+  const roomIdRaw = String(formData.get("roomId") ?? "").trim();
+  let room: CommunityRoom | null = null;
+  if (roomIdRaw) {
+    room = (db.communityRooms ?? []).find((row) => row.id === roomIdRaw && row.aiId === ai.id && !row.hidden) ?? null;
+    if (!room) return { ok: false, error: "This community room is not available." };
+  }
+
+  const rawKind = String(formData.get("kind") ?? "text");
+  const kind: CommunityMessageKind =
+    rawKind === "image" || rawKind === "voice" || rawKind === "file" ? rawKind : "text";
+  if (!communityKindAllowed(community, kind)) {
+    return { ok: false, error: "The administrator has turned off this kind of post." };
+  }
+
+  const body = String(formData.get("body") ?? "").trim().slice(0, community.maxMessageLength);
+  let attachment: CommunityAttachment | null = null;
+  if (kind !== "text") {
+    const parsed = readCommunityAttachment(formData, kind);
+    if ("error" in parsed) return { ok: false, error: parsed.error };
+    attachment = parsed.attachment;
+  }
+
+  if (!body && !attachment) return { ok: false, error: "Write a message or attach something first." };
+  if (!body && kind === "text") return { ok: false, error: "Write a message first." };
+  if (body && body.length < 2) return { ok: false, error: "Please write a little more than that." };
+
+  const badWord = findBadWord(`${body} ${attachment?.name ?? ""}`, settings.security.badWords);
+  if (badWord) return { ok: false, error: "Please remove inappropriate language and try again." };
+
+  const hourAgo = Date.now() - 3600000;
+  const recent = (db.communityMessages ?? []).filter(
+    (message) => message.userId === user.id && +new Date(message.createdAt) > hourAgo,
+  ).length;
+  if (recent >= community.maxPerHour) {
+    return { ok: false, error: `You can post up to ${community.maxPerHour} messages per hour. Please slow down.` };
+  }
+
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.communityMessages)) draft.communityMessages = [];
+    draft.communityMessages.push({
+      id: uid("cm"),
+      aiId: ai.id,
+      roomId: room?.id ?? null,
+      userId: user.id,
+      userName: user.name,
+      avatar: user.avatar,
+      body,
+      kind,
+      attachment,
+      createdAt: new Date().toISOString(),
+    });
+    pruneCommunityMessages(draft, getSiteSettings(draft).community.retentionDays);
+  });
+
+  revalidatePath(`/community/${room?.slug ?? ai.slug}`);
+  revalidatePath("/community");
+  return { ok: true, message: "Posted. Thanks for helping the community!" };
+}
+
+/* --------------------------- community rooms --------------------------- */
+
+/** Admin creates an extra room under any AI; the AI's default room already exists. */
+export async function saveCommunityRoomAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const aiId = String(formData.get("aiId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim().slice(0, 60);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 240);
+  if (title.length < 3) redirect("/admin/community?error=title");
+
+  let savedSlug = "";
+  mutateDb((db) => {
+    const ai = db.ai.find((row) => row.id === aiId);
+    if (!ai) return;
+    if (!Array.isArray(db.communityRooms)) db.communityRooms = [];
+    // A room slug can never shadow an AI slug or another room.
+    const taken = new Set([...db.ai.map((row) => row.slug), ...db.communityRooms.map((row) => row.slug)]);
+    const base = slugify(title) || "room";
+    let slug = base;
+    let suffix = 2;
+    while (taken.has(slug)) slug = `${base}-${suffix++}`;
+    savedSlug = slug;
+    db.communityRooms.push({
+      id: uid("cr"),
+      aiId: ai.id,
+      slug,
+      title,
+      description,
+      createdAt: new Date().toISOString(),
+      createdBy: admin.name,
+    });
+    logAdminAction(db, admin, "created", `Community room: ${title}`, `${ai.name} · /community/${slug}`);
+  });
+
+  if (!savedSlug) redirect("/admin/community?error=ai");
+  revalidatePath("/admin/community");
+  revalidatePath("/community");
+  revalidatePath(`/community/${savedSlug}`);
+  redirect(`/admin/community?saved=${savedSlug}`);
+}
+
+export async function toggleCommunityRoomAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  mutateDb((db) => {
+    const room = (db.communityRooms ?? []).find((row) => row.id === id);
+    if (!room) return;
+    room.hidden = !room.hidden;
+    logAdminAction(
+      db,
+      admin,
+      room.hidden ? "hidden" : "published",
+      `Community room: ${room.title}`,
+      room.hidden ? "Room hidden from the public index" : "Room published again",
+    );
+  });
+  revalidatePath("/admin/community");
+  revalidatePath("/community");
+  redirect("/admin/community");
+}
+
+export async function deleteCommunityRoomAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  mutateDb((db) => {
+    const room = (db.communityRooms ?? []).find((row) => row.id === id);
+    if (!room) return;
+    db.communityRooms = (db.communityRooms ?? []).filter((row) => row.id !== id);
+    db.communityMessages = (db.communityMessages ?? []).filter((message) => message.roomId !== id);
+    logAdminAction(db, admin, "deleted", `Community room: ${room.title}`, "Room and its messages removed");
+  });
+  revalidatePath("/admin/community");
+  revalidatePath("/community");
+  redirect("/admin/community");
+}
+
+/** Authors can remove their own message; staff can remove any message. */
+export async function deleteCommunityMessageAction(formData: FormData) {
+  const user = await getCurrentUser();
+  const backRaw = String(formData.get("back") ?? "/community");
+  const back = backRaw.startsWith("/community") ? backRaw : "/community";
+  if (!user) redirect(`/login?next=${encodeURIComponent(back)}`);
+
+  const id = String(formData.get("id") ?? "");
+  const db = readDb();
+  const message = (db.communityMessages ?? []).find((row) => row.id === id);
+  if (!message) redirect(back);
+
+  const staff = isStaffRole(user.role, resolveRoles(db.roles));
+  if (message.userId !== user.id && !staff) redirect(back);
+
+  mutateDb((draft) => {
+    draft.communityMessages = (draft.communityMessages ?? []).filter((row) => row.id !== id);
+    if (message.userId !== user.id) {
+      logAdminAction(
+        draft,
+        user,
+        "deleted",
+        `Community message: ${message.userName}`,
+        `Room ${message.aiId} · ${message.kind}`,
+      );
+    }
+  });
+  revalidatePath(back);
+  revalidatePath("/community");
+  redirect(back);
 }
 
 export async function savePostAction(formData: FormData) {
@@ -658,6 +980,16 @@ export async function saveSettingsAction(formData: FormData) {
   const adsSidebarSlot = adSlot("adsSidebarSlot");
   const adsArticleSlot = adSlot("adsArticleSlot");
 
+  const intField = (key: string, fallback: number, min: number, max: number) => {
+    const value = Number(formData.get(key));
+    if (!Number.isFinite(value)) return fallback;
+    return Math.min(max, Math.max(min, Math.round(value)));
+  };
+  const previousSettings = getSiteSettings(readDb());
+  const communityHrefRaw = String(formData.get("communityHouseAdHref") ?? "").trim().slice(0, 200);
+  const communityHouseAdHref =
+    communityHrefRaw.startsWith("/") || communityHrefRaw.startsWith("https://") ? communityHrefRaw : "";
+
   let announcementHref = String(formData.get("announcementHref") ?? "").trim().slice(0, 200);
   if (announcementHref && !announcementHref.startsWith("/") && !announcementHref.startsWith("https://")) {
     announcementHref = "/";
@@ -684,6 +1016,22 @@ export async function saveSettingsAction(formData: FormData) {
     adsSidebarSlot,
     adsArticleSlot,
     supportEmail,
+    community: {
+      enabled: formData.get("communityEnabled") === "on",
+      retentionDays: intField("communityRetentionDays", previousSettings.community.retentionDays, 1, 365),
+      allowText: formData.get("communityAllowText") === "on",
+      allowImages: formData.get("communityAllowImages") === "on",
+      allowVoice: formData.get("communityAllowVoice") === "on",
+      allowFiles: formData.get("communityAllowFiles") === "on",
+      maxMessageLength: intField("communityMaxMessageLength", previousSettings.community.maxMessageLength, 40, 2000),
+      maxPerHour: intField("communityMaxPerHour", previousSettings.community.maxPerHour, 1, 200),
+      adsEnabled: formData.get("communityAdsEnabled") === "on",
+      adTopSlot: adSlot("communityAdTopSlot"),
+      adInlineSlot: adSlot("communityAdInlineSlot"),
+      adEvery: intField("communityAdEvery", previousSettings.community.adEvery, 3, 50),
+      houseAdText: String(formData.get("communityHouseAdText") ?? "").trim().slice(0, 140),
+      houseAdHref: communityHouseAdHref,
+    },
   };
 
   mutateDb((db) => {
@@ -698,7 +1046,7 @@ export async function saveSettingsAction(formData: FormData) {
       admin,
       "updated",
       "Site settings",
-      `Announcement ${next.announcementEnabled ? "on" : "off"}, signups ${next.allowSignups ? "on" : "off"}, ratings ${next.allowRatings ? "on" : "off"}, promo ${next.showPromotions ? "on" : "off"}, ads ${adsEnabled ? "on" : "off"}`,
+      `Announcement ${next.announcementEnabled ? "on" : "off"}, signups ${next.allowSignups ? "on" : "off"}, ratings ${next.allowRatings ? "on" : "off"}, promo ${next.showPromotions ? "on" : "off"}, ads ${adsEnabled ? "on" : "off"}, community ${next.community.enabled ? "on" : "off"} (${next.community.retentionDays} day retention)`,
     );
   });
   revalidatePath("/");
@@ -731,6 +1079,7 @@ export async function deleteUserAction(formData: FormData) {
     db.ratings = db.ratings.filter((r) => r.userId !== id);
     db.bookmarks = db.bookmarks.filter((b) => b.userId !== id);
     db.follows = db.follows.filter((f) => f.userId !== id);
+    db.communityMessages = (db.communityMessages ?? []).filter((message) => message.userId !== id);
     logAdminAction(db, admin, "deleted", `User: ${user.email}`, `${user.name} and their activity removed`);
   });
   revalidatePath("/admin/users");

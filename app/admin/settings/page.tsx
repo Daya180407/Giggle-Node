@@ -413,6 +413,191 @@ export default async function AdminSettingsPage({
           </div>
         </section>
 
+        <section className="card p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold">AI community rooms</h3>
+              <p className="text-xs text-muted">
+                One free chat room per AI. Members share problems and ideas; expired messages delete themselves.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <input
+                type="checkbox"
+                name="communityEnabled"
+                defaultChecked={settings.community.enabled}
+                className="h-4 w-4 accent-indigo-600"
+              />
+              Community on
+            </label>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="label" htmlFor="communityRetentionDays">
+                Delete messages after (days)
+              </label>
+              <input
+                id="communityRetentionDays"
+                name="communityRetentionDays"
+                type="number"
+                min={1}
+                max={365}
+                defaultValue={settings.community.retentionDays}
+                className="field"
+              />
+              <p className="mt-1 text-[11px] text-muted">Default 30 days. Anything from 1 to 365.</p>
+            </div>
+            <div>
+              <label className="label" htmlFor="communityMaxMessageLength">
+                Max message length
+              </label>
+              <input
+                id="communityMaxMessageLength"
+                name="communityMaxMessageLength"
+                type="number"
+                min={40}
+                max={2000}
+                defaultValue={settings.community.maxMessageLength}
+                className="field"
+              />
+              <p className="mt-1 text-[11px] text-muted">Characters per message.</p>
+            </div>
+            <div>
+              <label className="label" htmlFor="communityMaxPerHour">
+                Messages per member / hour
+              </label>
+              <input
+                id="communityMaxPerHour"
+                name="communityMaxPerHour"
+                type="number"
+                min={1}
+                max={200}
+                defaultValue={settings.community.maxPerHour}
+                className="field"
+              />
+              <p className="mt-1 text-[11px] text-muted">Rate limit against spam.</p>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p className="label">What members may share</p>
+            <div className="mt-1 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { name: "communityAllowText", label: "Text", hint: "Questions, ideas, tips", checked: settings.community.allowText },
+                { name: "communityAllowImages", label: "Images", hint: "Screenshots and photos", checked: settings.community.allowImages },
+                { name: "communityAllowVoice", label: "Voice notes", hint: "Recorded in the browser", checked: settings.community.allowVoice },
+                { name: "communityAllowFiles", label: "Files", hint: "Small documents and logs", checked: settings.community.allowFiles },
+              ].map((item) => (
+                <label
+                  key={item.name}
+                  className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-line bg-slate-50/60 p-3"
+                >
+                  <input
+                    type="checkbox"
+                    name={item.name}
+                    defaultChecked={item.checked}
+                    className="mt-0.5 h-4 w-4 accent-indigo-600"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold">{item.label}</span>
+                    <span className="mt-0.5 block text-[11px] leading-relaxed text-muted">{item.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-line bg-slate-50/70 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-slate-700">Community ads — inline only, never popups</p>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <input
+                  type="checkbox"
+                  name="communityAdsEnabled"
+                  defaultChecked={settings.community.adsEnabled}
+                  className="h-4 w-4 accent-indigo-600"
+                />
+                Show ads in rooms
+              </label>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="label" htmlFor="communityAdTopSlot">
+                  Slot above the chatbox
+                </label>
+                <input
+                  id="communityAdTopSlot"
+                  name="communityAdTopSlot"
+                  defaultValue={settings.community.adTopSlot}
+                  className="field"
+                  maxLength={20}
+                  placeholder="1234567890"
+                  inputMode="numeric"
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="communityAdInlineSlot">
+                  Slot between messages
+                </label>
+                <input
+                  id="communityAdInlineSlot"
+                  name="communityAdInlineSlot"
+                  defaultValue={settings.community.adInlineSlot}
+                  className="field"
+                  maxLength={20}
+                  placeholder="1234567890"
+                  inputMode="numeric"
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="communityAdEvery">
+                  Inline ad every N messages
+                </label>
+                <input
+                  id="communityAdEvery"
+                  name="communityAdEvery"
+                  type="number"
+                  min={3}
+                  max={50}
+                  defaultValue={settings.community.adEvery}
+                  className="field"
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="communityHouseAdText">
+                  House ad text (fallback)
+                </label>
+                <input
+                  id="communityHouseAdText"
+                  name="communityHouseAdText"
+                  defaultValue={settings.community.houseAdText}
+                  className="field"
+                  maxLength={140}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label" htmlFor="communityHouseAdHref">
+                  House ad link (relative or https://)
+                </label>
+                <input
+                  id="communityHouseAdHref"
+                  name="communityHouseAdHref"
+                  defaultValue={settings.community.houseAdHref}
+                  className="field"
+                  maxLength={200}
+                  placeholder="/contact"
+                />
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-muted">
+              Uses the AdSense publisher ID above. An empty community slot falls back to the matching site slot; if no
+              ad unit is ready, the house ad is shown instead. Everything stays inline, so the chat never gets a popup,
+              overlay or interstitial.
+            </p>
+          </div>
+        </section>
+
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-[11px] text-muted">
             {settings.updatedAt

@@ -351,6 +351,15 @@ export function promptsFor(db: DB, aiId: string): Prompt[] {
   return db.prompts.filter((p) => p.aiId === aiId);
 }
 
+/**
+ * Editorial prompts (written by the site team, no community submitter) are the
+ * checked ones, so they show a verified tick. Community prompts are always
+ * unverified until an admin adds them from the panel.
+ */
+export function isVerifiedPrompt(p: Prompt): boolean {
+  return p.submittedBy ? Boolean(p.verified) : true;
+}
+
 export function timeAgo(input: string | Date): string {
   const date = typeof input === "string" ? new Date(input) : input;
   const diff = Date.now() - date.getTime();
