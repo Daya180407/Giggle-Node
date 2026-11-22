@@ -75,8 +75,8 @@ export default async function AdminBulkPage({
           </div>
           <button className="btn btn-primary !py-2 text-xs">Import catalogue</button>
         </div>
-        <div className="mt-3 overflow-x-auto rounded-xl border border-line">
-          <table className="w-full min-w-[520px] text-[11px]">
+        <div className="mt-3 rounded-xl border border-line">
+          <table className="w-full break-words text-[11px] sm:text-xs">
             <thead className="bg-slate-50/70 text-left text-[10px] uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="p-2">Column</th>

@@ -257,8 +257,8 @@ export default async function AdminAiSearchPage({
               <button className="btn btn-ghost !py-1.5 text-[11px]">Clear all</button>
             </form>
           </div>
-          <div className="mt-2 overflow-x-auto">
-            <table className="w-full min-w-[520px] text-xs">
+          <div className="mt-2">
+            <table className="w-full break-words text-[11px] sm:text-xs">
               <thead>
                 <tr className="border-b border-line text-left text-[10px] uppercase tracking-wide text-slate-500">
                   <th className="py-2 pr-3">Query</th>

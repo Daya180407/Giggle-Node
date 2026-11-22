@@ -109,8 +109,8 @@ export default async function AdminAiListPage({
         </span>
       </form>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
+      <div className="card">
+        <table className="w-full break-words text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-line bg-slate-50/70 text-left text-xs uppercase tracking-wide text-slate-500">
               <th className="p-3">AI</th>

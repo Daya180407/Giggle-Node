@@ -292,15 +292,15 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               </div>
               <span className="chip chip-brand">{models.length} models · every model rated separately</span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px] text-left text-sm" aria-label="Models and API pricing">
+            <div>
+              <table className="w-full break-words text-left text-xs sm:text-sm" aria-label="Models and API pricing">
                 <thead className="bg-slate-50/80 text-[10px] uppercase tracking-[0.12em] text-muted">
                   <tr>
-                    <th className="px-4 py-2.5 font-semibold">Model</th>
-                    <th className="px-4 py-2.5 font-semibold">Best for</th>
-                    <th className="px-4 py-2.5 font-semibold">Rating</th>
-                    <th className="px-4 py-2.5 font-semibold">API pricing</th>
-                    <th className="px-4 py-2.5" />
+                    <th className="px-2 py-2.5 font-semibold sm:px-4">Model</th>
+                    <th className="px-2 py-2.5 font-semibold sm:px-4">Best for</th>
+                    <th className="px-2 py-2.5 font-semibold sm:px-4">Rating</th>
+                    <th className="px-2 py-2.5 font-semibold sm:px-4">API pricing</th>
+                    <th className="px-2 py-2.5 sm:px-4" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -308,7 +308,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                     const pricing = getApiPricing(ai, m.model);
                     return (
                       <tr key={m.model.id} className="align-top transition hover:bg-slate-50/60">
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2.5 sm:px-4">
                           <Link
                             href={`/ai/${ai.slug}/${m.model.slug}`}
                             className="font-semibold hover:text-brand"
@@ -319,21 +319,21 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                             <PriceBadge price={m.model.priceType} />
                           </div>
                         </td>
-                        <td className="max-w-[210px] px-4 py-3 text-xs leading-relaxed text-slate-600">
+                        <td className="px-2 py-2.5 text-[12px] leading-relaxed text-slate-600 sm:px-4 sm:text-xs">
                           {m.model.bestFor}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2.5 sm:px-4">
                           <div className="flex items-center gap-1.5">
                             <Stars value={m.score} size={15} />
                             <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
                           </div>
                           <p className="mt-0.5 text-[10px] text-muted">{m.votes} votes</p>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2.5 sm:px-4">
                           <ApiPricingInline pricing={pricing} />
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
+                        <td className="px-2 py-2.5 text-right sm:px-4">
+                          <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:justify-end">
                             <Link
                               href={`/ai/${ai.slug}/${m.model.slug}#rate`}
                               className="btn btn-primary !px-2.5 !py-1 text-xs"

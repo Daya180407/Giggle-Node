@@ -348,8 +348,8 @@ export default async function AdminNotificationsPage({
           <h3 className="text-sm font-bold">Email outbox</h3>
           <span className="text-[11px] text-muted">Newest 20 · queued/sent/failed is real delivery state</span>
         </div>
-        <div className="mt-2 overflow-x-auto">
-          <table className="w-full min-w-[640px] text-xs">
+        <div className="mt-2">
+          <table className="w-full break-words text-[11px] sm:text-xs">
             <thead>
               <tr className="border-b border-line text-left text-[10px] uppercase tracking-wide text-slate-500">
                 <th className="py-2 pr-3">Recipient</th>

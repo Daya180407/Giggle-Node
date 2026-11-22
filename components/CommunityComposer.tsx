@@ -251,7 +251,7 @@ export default function CommunityComposer({
                 <span aria-hidden>{KIND_META[option].icon}</span>
               </button>
             ))}
-            <span className="ml-auto hidden text-[10px] text-[#667781] sm:inline">Free · please be respectful</span>
+            <span className="ml-auto hidden text-[11.5px] text-[#667781] sm:inline">Free · please be respectful</span>
           </div>
         ) : null}
 
@@ -271,7 +271,7 @@ export default function CommunityComposer({
               onChange={(event) => void pickImage(event.target.files?.[0])}
               className="sr-only"
             />
-            <span className="text-[10px] text-[#667781]">Auto-compressed · max {humanSize(LIMITS.image)}</span>
+            <span className="text-[11.5px] text-[#667781]">Auto-compressed · max {humanSize(LIMITS.image)}</span>
           </div>
         ) : null}
 
@@ -290,7 +290,7 @@ export default function CommunityComposer({
               onChange={(event) => void pickFile(event.target.files?.[0])}
               className="sr-only"
             />
-            <span className="text-[10px] text-[#667781]">Max {humanSize(LIMITS.file)}</span>
+            <span className="text-[11.5px] text-[#667781]">Max {humanSize(LIMITS.file)}</span>
           </div>
         ) : null}
 
@@ -313,7 +313,7 @@ export default function CommunityComposer({
                 🎙️ Record voice note
               </button>
             )}
-            <span className="text-[10px] text-[#667781]">Up to 45 seconds · max {humanSize(LIMITS.voice)}</span>
+            <span className="text-[11.5px] text-[#667781]">Up to 45 seconds · max {humanSize(LIMITS.voice)}</span>
           </div>
         ) : null}
 
@@ -324,7 +324,7 @@ export default function CommunityComposer({
               <img src={attachment.dataUrl} alt={attachment.name} className="h-11 w-11 rounded-lg object-cover" />
             ) : null}
             {kind === "voice" ? <audio controls src={attachment.dataUrl} className="h-8 max-w-[55%]" /> : null}
-            <span className="min-w-0 flex-1 truncate text-[11px] text-[#54656f]">
+            <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#54656f]">
               {attachment.name} · {humanSize(attachment.size)}
             </span>
             <button
@@ -353,7 +353,7 @@ export default function CommunityComposer({
                   ? `Add a caption for your ${KIND_META[kind].label.toLowerCase()} (optional)…`
                   : `Message ${aiName}…`
               }
-              className="field-sizing-content max-h-28 min-h-[26px] w-full resize-none border-0 bg-transparent py-1.5 text-[13.5px] leading-relaxed text-[#111b21] outline-none placeholder:text-[#8696a0]"
+              className="field-sizing-content max-h-32 min-h-[28px] w-full resize-none border-0 bg-transparent py-1.5 text-[15px] leading-relaxed text-[#111b21] outline-none placeholder:text-[#8696a0]"
             />
           </div>
           <button
@@ -374,12 +374,12 @@ export default function CommunityComposer({
         </div>
 
         {needsAttachment && !attachment ? (
-          <p className="mt-1 text-[10px] text-[#667781]">Choose a {KIND_META[kind].label.toLowerCase()} to post.</p>
+          <p className="mt-1 text-[11.5px] text-[#667781]">Choose a {KIND_META[kind].label.toLowerCase()} to post.</p>
         ) : null}
       </form>
 
-      {error ? <p className="mt-1.5 text-[11px] font-medium text-rose-600">{error}</p> : null}
-      {message ? <p className="mt-1.5 text-[11px] font-medium text-emerald-700">{message}</p> : null}
+      {error ? <p className="mt-1.5 text-[12.5px] font-medium text-rose-600">{error}</p> : null}
+      {message ? <p className="mt-1.5 text-[12.5px] font-medium text-emerald-700">{message}</p> : null}
     </div>
   );
 }

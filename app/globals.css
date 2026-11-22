@@ -39,6 +39,8 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* 18px base keeps body copy, tables and labels comfortably readable. */
+    font-size: 112.5%;
     scroll-behavior: smooth;
     scroll-padding-top: 5rem;
   }

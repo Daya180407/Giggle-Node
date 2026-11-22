@@ -26,17 +26,17 @@ export default function CommunityAd({
       aria-label="Advertisement"
       className="flex flex-wrap items-center gap-x-2 gap-y-1 overflow-hidden rounded-xl border border-line bg-white/70 px-3 py-2"
     >
-      <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">Sponsored</span>
+      <span className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-slate-400">Sponsored</span>
       {houseHref ? (
         <a
           href={houseHref}
           rel="nofollow sponsored noopener"
-          className="text-[11.5px] font-semibold text-slate-600 transition hover:text-brand"
+          className="text-[13px] font-semibold text-slate-600 transition hover:text-brand"
         >
           {houseText} →
         </a>
       ) : (
-        <span className="text-[11.5px] font-semibold text-slate-600">{houseText}</span>
+        <span className="text-[13px] font-semibold text-slate-600">{houseText}</span>
       )}
     </aside>
   );

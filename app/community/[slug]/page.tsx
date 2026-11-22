@@ -97,7 +97,8 @@ export default async function CommunityRoomPage({ params }: Props) {
   const inlineSlot = community.adsEnabled ? community.adInlineSlot || settings.adsArticleSlot : "";
   const houseText = community.adsEnabled ? community.houseAdText : "";
   const houseHref = community.adsEnabled ? community.houseAdHref : "";
-  const adEvery = Math.max(3, community.adEvery);
+  // Exactly one inline ad after every ten messages.
+  const adEvery = 10;
 
   return (
     <div data-community-shell="" className="w-full">
@@ -118,8 +119,8 @@ export default async function CommunityRoomPage({ params }: Props) {
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15 text-xl">🌍</span>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[15px] font-semibold leading-tight">{room.title}</h1>
-            <p className="truncate text-[11px] leading-tight text-white/75">
+            <h1 className="truncate text-[17px] font-semibold leading-tight">{room.title}</h1>
+            <p className="truncate text-[12.5px] leading-tight text-white/75">
               {ai ? `${ai.name} · ${categoryName(ai.category)} · ` : "Any AI tool · "}
               {memberCount.toLocaleString("en-IN")} {memberCount === 1 ? "member" : "members"}
               {stat ? ` · ${stat.score.toFixed(1)}★` : ""}
@@ -139,9 +140,52 @@ export default async function CommunityRoomPage({ params }: Props) {
           </Link>
         </header>
 
-        <p className="border-b border-[#e6d98f] bg-[#fdf4c5] px-3 py-1.5 text-center text-[10.5px] leading-snug text-[#54656f]">
+        <p className="border-b border-[#e6d98f] bg-[#fdf4c5] px-3 py-1.5 text-center text-[12px] leading-snug text-[#54656f]">
           🔒 Free for every signed-in member · messages delete after {community.retentionDays} days
         </p>
+
+        {community.enabled ? (
+          user ? (
+            joined ? null : (
+              <form
+                action={joinCommunityAction}
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-[#d8e5df] bg-[#e7f8f1] px-3 py-2 sm:px-4"
+              >
+                <div className="min-w-0">
+                  <p className="text-[13.5px] font-semibold leading-snug text-[#111b21]">
+                    Join {room.title} to send messages
+                  </p>
+                  <p className="mt-0.5 text-[12px] leading-snug text-[#54656f]">
+                    {memberCount.toLocaleString("en-IN")} {memberCount === 1 ? "member" : "members"} · free to join,
+                    leave anytime
+                  </p>
+                </div>
+                <input type="hidden" name="aiId" value={room.aiId} />
+                {room.roomId ? <input type="hidden" name="roomId" value={room.roomId} /> : null}
+                <input type="hidden" name="back" value={back} />
+                <button className="rounded-full bg-[#00a884] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#008f72]">
+                  Join community
+                </button>
+              </form>
+            )
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#d8e5df] bg-[#e7f8f1] px-3 py-2 sm:px-4">
+              <p className="text-[13px] leading-snug text-[#54656f]">
+                Log in free to join this chat.{" "}
+                <span className="font-semibold text-[#111b21]">
+                  {memberCount.toLocaleString("en-IN")} {memberCount === 1 ? "member" : "members"}
+                </span>{" "}
+                already here.
+              </p>
+              <Link
+                href={`/login?next=${encodeURIComponent(back)}`}
+                className="rounded-full bg-[#00a884] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#008f72]"
+              >
+                Log in to join
+              </Link>
+            </div>
+          )
+        ) : null}
 
         <CommunityChatScroll>
           <div className="mx-auto w-full max-w-4xl">
@@ -152,7 +196,7 @@ export default async function CommunityRoomPage({ params }: Props) {
                   <div className={`flex items-end gap-1.5 ${own ? "justify-end" : "justify-start"}`}>
                     {own ? null : (
                       <span
-                        className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-teal-600 to-emerald-500 text-[11px] font-bold text-white shadow-sm"
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-teal-600 to-emerald-500 text-[12px] font-bold text-white shadow-sm"
                         aria-hidden
                       >
                         {message.avatar || message.userName.slice(0, 1).toUpperCase()}
@@ -164,13 +208,13 @@ export default async function CommunityRoomPage({ params }: Props) {
                       }`}
                     >
                       {own ? null : (
-                        <p className="text-[12px] font-semibold leading-tight" style={{ color: senderTone(message.userId) }}>
+                        <p className="text-[13.5px] font-semibold leading-tight" style={{ color: senderTone(message.userId) }}>
                           {message.userName}
                         </p>
                       )}
 
                       {message.body ? (
-                        <p className="mt-0.5 whitespace-pre-line break-words text-[13.5px] leading-[1.4] text-[#111b21]">
+                        <p className="mt-0.5 whitespace-pre-line break-words text-[15px] leading-[1.45] text-[#111b21]">
                           {message.body}
                         </p>
                       ) : null}
@@ -193,7 +237,7 @@ export default async function CommunityRoomPage({ params }: Props) {
                         <a
                           href={message.attachment.dataUrl}
                           download={message.attachment.name}
-                          className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-lg bg-black/5 px-2 py-1.5 text-[11.5px] font-semibold text-[#111b21] transition hover:bg-black/10"
+                          className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-lg bg-black/5 px-2 py-1.5 text-[13px] font-semibold text-[#111b21] transition hover:bg-black/10"
                         >
                           📎 <span className="truncate">{message.attachment.name}</span>
                           <span className="text-[10px] font-normal text-[#667781]">
@@ -202,7 +246,7 @@ export default async function CommunityRoomPage({ params }: Props) {
                         </a>
                       ) : null}
 
-                      <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[10px] leading-none text-[#667781]">
+                      <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[11.5px] leading-none text-[#667781]">
                         {user && (own || staff) ? (
                           <form action={deleteCommunityMessageAction} className="flex items-center">
                             <input type="hidden" name="id" value={message.id} />
@@ -241,8 +285,8 @@ export default async function CommunityRoomPage({ params }: Props) {
             {messages.length === 0 ? (
               <div className="flex justify-center py-10">
                 <div className="max-w-sm rounded-xl bg-[#fdf4c5]/95 px-4 py-3 text-center shadow-sm">
-                  <p className="text-[13px] font-semibold text-[#111b21]">This room is empty.</p>
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-[#54656f]">
+                  <p className="text-[14.5px] font-semibold text-[#111b21]">This room is empty.</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-[#54656f]">
                     Be the first to ask a question or share something useful about {ai ? ai.name : "any AI tool"}.
                   </p>
                 </div>
@@ -266,46 +310,17 @@ export default async function CommunityRoomPage({ params }: Props) {
                   maxLength={community.maxMessageLength}
                 />
               ) : (
-                <form
-                  action={joinCommunityAction}
-                  className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-2 rounded-2xl bg-white px-3 py-2.5 shadow-sm"
-                >
-                  <div>
-                    <p className="text-[12.5px] font-semibold leading-snug text-[#111b21]">
-                      Join {room.title} to send messages
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-[#54656f]">
-                      {memberCount.toLocaleString("en-IN")} {memberCount === 1 ? "member" : "members"} · free to join,
-                      leave anytime
-                    </p>
-                  </div>
-                  <input type="hidden" name="aiId" value={room.aiId} />
-                  {room.roomId ? <input type="hidden" name="roomId" value={room.roomId} /> : null}
-                  <input type="hidden" name="back" value={back} />
-                  <button className="rounded-full bg-[#00a884] px-4 py-1.5 text-[12px] font-semibold text-white transition hover:bg-[#008f72]">
-                    Join community
-                  </button>
-                </form>
+                <p className="mx-auto w-full max-w-3xl rounded-2xl bg-white px-3 py-2.5 text-center text-[13px] font-medium text-[#54656f] shadow-sm">
+                  Join {room.title} above to start posting.
+                </p>
               )
             ) : (
-              <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-2 rounded-2xl bg-white px-3 py-2.5 shadow-sm">
-                <p className="text-[12px] leading-snug text-[#54656f]">
-                  Log in free to join this chat.{" "}
-                  <span className="font-semibold text-[#111b21]">
-                    {memberCount.toLocaleString("en-IN")} {memberCount === 1 ? "member" : "members"}
-                  </span>{" "}
-                  already here.
-                </p>
-                <Link
-                  href={`/login?next=${encodeURIComponent(back)}`}
-                  className="rounded-full bg-[#00a884] px-4 py-1.5 text-[12px] font-semibold text-white transition hover:bg-[#008f72]"
-                >
-                  Log in
-                </Link>
-              </div>
+              <p className="mx-auto w-full max-w-3xl rounded-2xl bg-white px-3 py-2.5 text-center text-[13px] font-medium text-[#54656f] shadow-sm">
+                Log in above to join this community and post.
+              </p>
             )
           ) : (
-            <p className="mx-auto max-w-3xl rounded-xl bg-[#fdf4c5] px-3 py-2 text-center text-[11.5px] font-medium text-[#7a6a1f]">
+            <p className="mx-auto max-w-3xl rounded-xl bg-[#fdf4c5] px-3 py-2 text-center text-[13px] font-medium text-[#7a6a1f]">
               Posting is closed while the community is paused.
             </p>
           )}

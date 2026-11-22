@@ -172,16 +172,16 @@ export default async function ComparePage({ params }: Props) {
 
       {stats.length >= 2 ? (
         <>
-          <div className="card mt-5 overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
+          <div className="card mt-5">
+            <table className="w-full break-words text-[12px] sm:text-sm">
               <thead>
                 <tr className="border-b border-line bg-slate-50/70">
-                  <th className="p-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="p-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 sm:p-3 sm:text-xs">
                     Compare
                   </th>
                   {stats.map((s) => (
-                    <th key={s.ai.id} className="p-3 text-left">
-                      <Link href={`/ai/${s.ai.slug}`} className="flex items-center gap-2 font-bold hover:text-brand">
+                    <th key={s.ai.id} className="p-2 text-left sm:p-3">
+                      <Link href={`/ai/${s.ai.slug}`} className="flex flex-wrap items-center gap-1.5 font-bold hover:text-brand">
                         <AiLogo slug={s.ai.slug} logo={s.ai.logo} color={s.ai.color} size={32} rounded="rounded-lg" />
                         {s.ai.name}
                       </Link>
@@ -192,7 +192,7 @@ export default async function ComparePage({ params }: Props) {
               <tbody className="divide-y divide-line">
                 {rows.map((row) => (
                   <tr key={row.label}>
-                    <th className="p-3 text-left align-top text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="p-2 text-left align-top text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 sm:p-3 sm:text-xs">
                       {row.label}
                     </th>
                     {stats.map((s) => {
@@ -200,7 +200,7 @@ export default async function ComparePage({ params }: Props) {
                       return (
                         <td
                           key={s.ai.id}
-                          className={`p-3 align-top text-slate-700 ${
+                          className={`p-2 align-top text-slate-700 sm:p-3 ${
                             won ? "bg-emerald-50/50 shadow-[inset_2px_0_0_#6ee7b7]" : ""
                           }`}
                         >

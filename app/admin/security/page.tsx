@@ -187,8 +187,8 @@ export default async function AdminSecurityPage({
               <p className="text-xs text-muted">Your current IP is {currentIp}. Raw IPs are used only for rate limiting.</p>
             </div>
           </div>
-          <div className="mt-2 overflow-x-auto">
-            <table className="w-full min-w-[360px] text-xs">
+          <div className="mt-2">
+            <table className="w-full break-words text-[11px] sm:text-xs">
               <thead>
                 <tr className="border-b border-line text-left text-[10px] uppercase tracking-wide text-slate-500">
                   <th className="py-2 pr-3">IP</th>

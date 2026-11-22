@@ -15,6 +15,7 @@ import RankTabs, { type RankRow, type RankTab } from "@/components/RankTabs";
 import { SectionHead } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName, getCategories } from "@/lib/categories";
+import { communityTotals } from "@/lib/community-chat";
 import { getSiteSettings } from "@/lib/settings";
 import { appPricingFor, formatPlanPrice } from "@/lib/plans";
 import { APP_ENTRIES, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
@@ -78,6 +79,7 @@ export default async function HomePage({
   const view = buildView(db);
   const saved = new Set(user ? db.bookmarks.filter((b) => b.userId === user.id).map((b) => b.aiId) : []);
   const categories = getCategories(db);
+  const communityStats = communityTotals(db);
   const posts = [...publishedPosts(db)]
     .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
     .slice(0, 6);
@@ -310,6 +312,29 @@ export default async function HomePage({
             <AnimatedStats stats={stats} />
           </div>
         </div>
+      </section>
+
+      {/* Community entry point */}
+      <section className="mx-auto mt-4 max-w-7xl px-4 sm:mt-5 sm:px-6">
+        <Link
+          href="/community"
+          className="card card-hover flex flex-col gap-3 border-emerald-100 bg-gradient-to-r from-emerald-50/80 via-white to-teal-50/60 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+        >
+          <span className="flex items-center gap-3">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#075e54] text-2xl shadow-md shadow-emerald-900/25">
+              💬
+            </span>
+            <span className="min-w-0">
+              <span className="eyebrow">Community</span>
+              <span className="mt-1 block text-base font-bold text-ink">Talk to other AI users</span>
+              <span className="mt-0.5 block text-sm leading-relaxed text-muted">
+                {communityStats.members.toLocaleString("en-IN")} members ·{" "}
+                {communityStats.messages.toLocaleString("en-IN")} messages · a free room for every AI tool.
+              </span>
+            </span>
+          </span>
+          <span className="btn btn-primary shrink-0">Open community →</span>
+        </Link>
       </section>
 
       {settings.adsEnabled && settings.adsClientId && settings.adsTopSlot ? (

@@ -149,21 +149,21 @@ export default async function CommunityIndexPage() {
         <header className="bg-[#075e54] px-3 pb-3 pt-4 text-white sm:px-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60">GigleNode</p>
+              <p className="text-[11.5px] font-semibold uppercase tracking-[0.2em] text-white/60">GigleNode</p>
               <h1 className="mt-1 text-2xl font-extrabold leading-none">Community</h1>
-              <p className="mt-1.5 text-[11.5px] leading-snug text-white/75">
+              <p className="mt-1.5 text-[13px] leading-snug text-white/75">
                 {rows.length} {rows.length === 1 ? "community" : "communities"} ·{" "}
                 {totals.members.toLocaleString("en-IN")} {totals.members === 1 ? "member" : "members"} · joined
                 members can post
               </p>
             </div>
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10.5px] font-semibold text-white">
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[12px] font-semibold text-white">
               {totals.messages.toLocaleString("en-IN")} messages
             </span>
           </div>
         </header>
 
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-[#e9edef] bg-[#fdf4c5]/70 px-3 py-2 text-[10.5px] leading-snug text-[#54656f] sm:px-4">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-[#e9edef] bg-[#fdf4c5]/70 px-3 py-2 text-[12px] leading-snug text-[#54656f] sm:px-4">
           <span>🔒 Free for every member</span>
           <span aria-hidden>·</span>
           <span>auto-delete after {community.retentionDays} days</span>
@@ -198,18 +198,18 @@ export default async function CommunityIndexPage() {
                   {row.avatar}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="truncate text-[14.5px] font-semibold text-[#111b21]">{row.title}</p>
+                      <p className="truncate text-[16px] font-semibold text-[#111b21]">{row.title}</p>
                       {row.topic ? (
-                        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-500">
                           Topic
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-0.5 line-clamp-1 text-[11.5px] leading-snug text-[#667781]">{row.subtitle}</p>
+                    <p className="mt-0.5 line-clamp-1 text-[13px] leading-snug text-[#667781]">{row.subtitle}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="text-[10px] text-[#667781]">{row.lastAt ? timeAgo(row.lastAt) : "New"}</span>
-                    <span className="text-[10.5px] font-semibold text-[#0b7d6b]">
+                    <span className="text-[11.5px] text-[#667781]">{row.lastAt ? timeAgo(row.lastAt) : "New"}</span>
+                    <span className="text-[12px] font-semibold text-[#0b7d6b]">
                       👥 {row.members.toLocaleString("en-IN")}
                     </span>
                   </div>

@@ -3,9 +3,9 @@ import { formatContext, formatUsd, pricingSummary, type ApiPricingInfo } from "@
 export function ApiPricingInline({ pricing }: { pricing: ApiPricingInfo }) {
   if (!pricing.available) {
     return (
-      <div className="min-w-[150px]">
+      <div className="min-w-0">
         <span className="chip bg-slate-100 text-slate-600">Subscription only</span>
-        <p className="mt-1 max-w-[220px] text-[10px] leading-snug text-muted">{pricing.note}</p>
+        <p className="mt-1 max-w-full text-[11px] leading-snug text-muted">{pricing.note}</p>
         <a
           href={pricing.source}
           target="_blank"
@@ -20,7 +20,7 @@ export function ApiPricingInline({ pricing }: { pricing: ApiPricingInfo }) {
 
   const context = formatContext(pricing.contextWindow);
   return (
-    <div className="min-w-[150px]">
+    <div className="min-w-0">
       <p className="text-xs font-semibold text-ink">{pricingSummary(pricing)}</p>
       <p className="mt-0.5 text-[10px] text-muted">
         {pricing.output !== null && pricing.unit === "1M tokens" ? "per 1M tokens" : `per ${pricing.unit}`}
@@ -29,7 +29,7 @@ export function ApiPricingInline({ pricing }: { pricing: ApiPricingInfo }) {
         {pricing.manual ? " · admin verified" : ""}
       </p>
       {pricing.note && !pricing.estimated ? (
-        <p className="mt-1 max-w-[220px] text-[10px] leading-snug text-muted">{pricing.note}</p>
+        <p className="mt-1 max-w-full text-[11px] leading-snug text-muted">{pricing.note}</p>
       ) : null}
       <a
         href={pricing.source}
