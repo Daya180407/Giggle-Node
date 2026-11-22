@@ -73,8 +73,8 @@ export default function AppShowcase({
   }
 
   return (
-    <div className="card overflow-hidden">
-      <div className="border-b border-line bg-[linear-gradient(120deg,#f5f7ff,#ffffff_55%,#eefcff)] p-3 sm:p-4">
+    <div>
+      <div className="pb-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
             {TABS.map((t) => {
@@ -159,7 +159,7 @@ export default function AppShowcase({
         </div>
       </div>
 
-      <div key={`${tab}-${group}-${query}`} className="grid gap-2.5 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-3">
+      <div key={`${tab}-${group}-${query}`} className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((item, i) => {
           const body = (
             <>
@@ -216,7 +216,7 @@ export default function AppShowcase({
           );
 
           const className =
-            "app-card anim-rise group flex flex-col rounded-xl p-3 transition hover:-translate-y-0.5 hover:bg-slate-50";
+            "app-card anim-rise group flex flex-col rounded-xl border border-line bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md";
 
           return (
             <div key={`${tab}-${item.slug}`} className={className} style={{ animationDelay: `${i * 30}ms` }}>
@@ -252,7 +252,7 @@ export default function AppShowcase({
       </div>
 
       {!showAll && filtered.length > visible.length ? (
-        <div className="border-t border-line px-4 py-3 text-center">
+        <div className="mt-4 text-center">
           <button
             type="button"
             onClick={() => setExpanded(true)}
@@ -263,7 +263,7 @@ export default function AppShowcase({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 px-1">
         {average ? <Stars value={average} size={15} /> : <span className="text-[11px] text-muted">Official app icons</span>}
         <p className="text-[11px] text-muted">
           AI-backed apps link to live ratings. Standalone tools link to their official site or store listing.
