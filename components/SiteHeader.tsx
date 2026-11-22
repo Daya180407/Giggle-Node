@@ -42,7 +42,7 @@ export default async function SiteHeader() {
           </span>
         </Link>
 
-        <form action="/search" className="mx-auto hidden w-full max-w-xs xl:block" role="search">
+        <form action="/search" data-site-search className="mx-auto hidden w-full max-w-xs xl:block" role="search">
           <div className="relative">
             <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -74,7 +74,7 @@ export default async function SiteHeader() {
         />
       </div>
 
-      <div className="border-t border-line/70 px-4 py-2 xl:hidden">
+      <div data-site-search className="border-t border-line/70 px-4 py-2 xl:hidden">
         <form action="/search" className="relative mx-auto max-w-7xl" role="search">
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>

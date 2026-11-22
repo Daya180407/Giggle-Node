@@ -292,6 +292,16 @@ export type CommunityRoom = {
   hidden?: boolean;
 };
 
+/** A user who joined a community room; posting needs this row (or a past message). */
+export type CommunityMember = {
+  id: string;
+  userId: string;
+  aiId: string;
+  /** null/absent = the AI's default room */
+  roomId?: string | null;
+  joinedAt: string;
+};
+
 /** One message in an AI's community room. Expired rows are removed on the next visit. */
 export type CommunityMessage = {
   id: string;
@@ -706,4 +716,6 @@ export type DB = {
   communityRooms?: CommunityRoom[];
   /** per-AI community messages, pruned to the admin retention window */
   communityMessages?: CommunityMessage[];
+  /** room memberships; a signed-in user must join before posting */
+  communityMembers?: CommunityMember[];
 };

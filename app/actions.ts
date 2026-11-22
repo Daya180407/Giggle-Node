@@ -6,8 +6,10 @@ import { logAdminAction } from "@/lib/admin-log";
 import { APP_ENTRIES } from "@/lib/software";
 import { activeSubscribers, hasVerifiedUse, recordPriceSnapshot } from "@/lib/community";
 import {
+  addCommunityMember,
   ATTACHMENT_LIMITS,
   communityKindAllowed,
+  isCommunityMember,
   pruneCommunityMessages,
   UNIVERSAL_AI_ID,
   UNIVERSAL_ROOM_ID,
@@ -390,6 +392,7 @@ export async function deleteAiAction(formData: FormData) {
     db.prompts = db.prompts.filter((p) => p.aiId !== id);
     db.communityRooms = (db.communityRooms ?? []).filter((room) => room.aiId !== id);
     db.communityMessages = (db.communityMessages ?? []).filter((message) => message.aiId !== id);
+    db.communityMembers = (db.communityMembers ?? []).filter((row) => row.aiId !== id);
     db.bookmarks = db.bookmarks.filter((b) => b.aiId !== id);
     db.follows = db.follows.filter((f) => f.aiId !== id);
     db.priceAlerts = (db.priceAlerts ?? []).filter((row) => row.aiId !== id);
@@ -686,6 +689,11 @@ export async function postCommunityMessageAction(_prev: ActionState, formData: F
     attachment = parsed.attachment;
   }
 
+  const targetRoomId = isUniversal ? UNIVERSAL_ROOM_ID : room?.id ?? null;
+  if (!isCommunityMember(db, user.id, isUniversal ? UNIVERSAL_AI_ID : aiId, targetRoomId)) {
+    return { ok: false, error: "Join this community before posting a message." };
+  }
+
   if (!body && !attachment) return { ok: false, error: "Write a message or attach something first." };
   if (!body && kind === "text") return { ok: false, error: "Write a message first." };
   if (body && body.length < 2) return { ok: false, error: "Please write a little more than that." };
@@ -715,6 +723,7 @@ export async function postCommunityMessageAction(_prev: ActionState, formData: F
       attachment,
       createdAt: new Date().toISOString(),
     });
+    addCommunityMember(draft, user.id, isUniversal ? UNIVERSAL_AI_ID : aiId, targetRoomId);
     pruneCommunityMessages(draft, getSiteSettings(draft).community.retentionDays);
   });
 
@@ -724,6 +733,40 @@ export async function postCommunityMessageAction(_prev: ActionState, formData: F
   revalidatePath(`/community/${targetSlug}`);
   revalidatePath("/community");
   return { ok: true, message: "Posted. Thanks for helping the community!" };
+}
+
+/** Joining a room is required before posting; members are counted per room. */
+export async function joinCommunityAction(formData: FormData) {
+  const backRaw = String(formData.get("back") ?? "/community");
+  const back = backRaw.startsWith("/community") ? backRaw : "/community";
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(back)}`);
+
+  const db = readDb();
+  const aiId = String(formData.get("aiId") ?? "").trim();
+  const roomIdRaw = String(formData.get("roomId") ?? "").trim();
+  let roomId: string | null = null;
+
+  if (aiId === UNIVERSAL_AI_ID) {
+    if (roomIdRaw !== UNIVERSAL_ROOM_ID) redirect(back);
+    roomId = UNIVERSAL_ROOM_ID;
+  } else {
+    if (!db.ai.some((row) => row.id === aiId && !row.hidden)) redirect(back);
+    if (roomIdRaw) {
+      const room = (db.communityRooms ?? []).find(
+        (row) => row.id === roomIdRaw && row.aiId === aiId && !row.hidden,
+      );
+      if (!room) redirect(back);
+      roomId = room.id;
+    }
+  }
+
+  mutateDb((draft) => {
+    addCommunityMember(draft, user.id, aiId, roomId);
+  });
+  revalidatePath(back);
+  revalidatePath("/community");
+  redirect(back);
 }
 
 /* --------------------------- community rooms --------------------------- */
@@ -795,6 +838,7 @@ export async function deleteCommunityRoomAction(formData: FormData) {
     if (!room) return;
     db.communityRooms = (db.communityRooms ?? []).filter((row) => row.id !== id);
     db.communityMessages = (db.communityMessages ?? []).filter((message) => message.roomId !== id);
+    db.communityMembers = (db.communityMembers ?? []).filter((row) => row.roomId !== id);
     logAdminAction(db, admin, "deleted", `Community room: ${room.title}`, "Room and its messages removed");
   });
   revalidatePath("/admin/community");

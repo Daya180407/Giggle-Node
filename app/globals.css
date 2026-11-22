@@ -840,6 +840,11 @@
     background: #efeae2;
     box-shadow: 0 24px 60px -42px rgb(15 23 42 / 0.55);
   }
+  .chat-shell-full {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
   .chat-wallpaper {
     background-color: #efeae2;
     background-image: radial-gradient(rgb(60 48 28 / 0.07) 1px, transparent 1px);
@@ -890,6 +895,12 @@
     background: #c3cbc6;
     border-radius: 999px;
   }
+}
+
+/* Community routes are chat-only: no site search bar and no site footer. */
+body:has([data-community-shell]) > header [data-site-search],
+body:has([data-community-shell]) > footer {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

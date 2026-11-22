@@ -218,7 +218,7 @@ export default function CommunityComposer({
   const fileInputId = `community-file-${aiId}`;
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto w-full max-w-3xl">
       <form ref={formRef} action={formAction}>
         <input type="hidden" name="aiId" value={aiId} />
         {roomId ? <input type="hidden" name="roomId" value={roomId} /> : null}

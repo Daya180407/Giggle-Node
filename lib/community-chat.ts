@@ -1,5 +1,5 @@
 import { getSiteSettings } from "./settings";
-import { mutateDb, readDb } from "./store";
+import { mutateDb, readDb, uid } from "./store";
 import type { Ai, CommunityMessage, CommunityMessageKind, CommunityRoom, CommunitySettings, DB } from "./types";
 
 /**
@@ -147,6 +147,63 @@ export function communityMessagesForRoom(db: DB, aiId: string, roomId: string | 
     .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
 }
 
+/**
+ * Members of a room: everyone who joined it, plus anyone who already posted in
+ * it, so rooms that were active before joining existed keep their real count.
+ */
+export function communityMemberIds(db: DB, aiId: string, roomId: string | null): Set<string> {
+  const ids = new Set<string>();
+  for (const row of db.communityMembers ?? []) {
+    if (row.aiId === aiId && (row.roomId ?? null) === roomId) ids.add(row.userId);
+  }
+  for (const message of db.communityMessages ?? []) {
+    if (message.aiId === aiId && (message.roomId ?? null) === roomId) ids.add(message.userId);
+  }
+  return ids;
+}
+
+/** Member ids keyed by roomSummaryKey, for the community list. */
+export function communityMemberIdsByRoom(db: DB): Map<string, Set<string>> {
+  const rooms = new Map<string, Set<string>>();
+  const add = (aiId: string, roomId: string | null | undefined, userId: string) => {
+    const key = roomSummaryKey(aiId, roomId);
+    const ids = rooms.get(key) ?? new Set<string>();
+    ids.add(userId);
+    rooms.set(key, ids);
+  };
+  for (const row of db.communityMembers ?? []) add(row.aiId, row.roomId, row.userId);
+  for (const message of db.communityMessages ?? []) add(message.aiId, message.roomId, message.userId);
+  return rooms;
+}
+
+export function communityMemberCount(db: DB, aiId: string, roomId: string | null): number {
+  return communityMemberIds(db, aiId, roomId).size;
+}
+
+export function communityMemberCounts(db: DB): Map<string, number> {
+  const counts = new Map<string, number>();
+  communityMemberIdsByRoom(db).forEach((ids, key) => counts.set(key, ids.size));
+  return counts;
+}
+
+/** A user can post only after joining; past posters count as joined. */
+export function isCommunityMember(db: DB, userId: string, aiId: string, roomId: string | null): boolean {
+  return communityMemberIds(db, aiId, roomId).has(userId);
+}
+
+export function addCommunityMember(db: DB, userId: string, aiId: string, roomId: string | null): boolean {
+  if (isCommunityMember(db, userId, aiId, roomId)) return false;
+  if (!Array.isArray(db.communityMembers)) db.communityMembers = [];
+  db.communityMembers.push({
+    id: uid("cmm"),
+    userId,
+    aiId,
+    roomId,
+    joinedAt: new Date().toISOString(),
+  });
+  return true;
+}
+
 /** Message counts and last activity per room, used by the community index. */
 export function communityRoomSummary(db: DB): Map<string, RoomSummary> {
   const summary = new Map<string, RoomSummary>();
@@ -163,7 +220,10 @@ export function communityRoomSummary(db: DB): Map<string, RoomSummary> {
 export function communityTotals(db: DB) {
   const rows = db.communityMessages ?? [];
   const rooms = new Set(rows.map((row) => roomSummaryKey(row.aiId, row.roomId)));
-  return { messages: rows.length, rooms: rooms.size };
+  const members = new Set<string>();
+  for (const row of rows) members.add(row.userId);
+  for (const row of db.communityMembers ?? []) members.add(row.userId);
+  return { messages: rows.length, rooms: rooms.size, members: members.size };
 }
 
 /** Deletes expired rows and keeps each room inside its row cap. Returns rows removed. */
