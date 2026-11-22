@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { timeAgo } from "@/lib/rank";
+import { requireAreaPage } from "@/lib/permissions";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export default async function AdminActivityPage({
 }: {
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
+  await requireAreaPage("settings");
   const { q = "", page = "1" } = await searchParams;
   const db = readDb();
   const adminLog = db.adminLog ?? [];

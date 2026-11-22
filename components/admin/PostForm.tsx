@@ -40,9 +40,32 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
           </label>
           <select id="status" name="status" defaultValue={post?.status ?? "draft"} className="field">
             <option value="draft">Draft</option>
-            <option value="published">Published</option>
+            <option value="published">Publish now</option>
+            <option value="scheduled">Schedule</option>
           </select>
         </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="scheduledAt">
+            Publish date & time (schedule ke liye)
+          </label>
+          <input
+            id="scheduledAt"
+            name="scheduledAt"
+            type="datetime-local"
+            defaultValue={post?.scheduledAt ? post.scheduledAt.slice(0, 16) : ""}
+            className="field"
+          />
+          <p className="mt-1 text-[11px] text-muted">
+            Status “Schedule” + future date = post us waqt apne aap publish ho jayegi.
+          </p>
+        </div>
+        <label className="flex items-center gap-2 self-end pb-2 text-sm">
+          <input type="checkbox" name="featured" defaultChecked={post?.featured} className="h-4 w-4 accent-indigo-600" />
+          Featured post (homepage par bada)
+        </label>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -121,6 +144,32 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
         <input type="checkbox" name="sponsored" defaultChecked={post?.sponsored} className="h-4 w-4 accent-indigo-600" />
         Sponsored post (label dikhega)
       </label>
+
+      <fieldset className="rounded-xl border border-line p-3">
+        <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">SEO</legend>
+        <div className="mt-1 space-y-2">
+          <div>
+            <label className="label" htmlFor="seoTitle">
+              Meta title (max 70)
+            </label>
+            <input id="seoTitle" name="seoTitle" defaultValue={post?.seoTitle ?? ""} maxLength={70} className="field" placeholder="Title ke bina bhi chhod sakte hain" />
+          </div>
+          <div>
+            <label className="label" htmlFor="seoDescription">
+              Meta description (max 170)
+            </label>
+            <textarea
+              id="seoDescription"
+              name="seoDescription"
+              rows={2}
+              maxLength={170}
+              defaultValue={post?.seoDescription ?? ""}
+              className="field"
+              placeholder="Search result me dikhne wali line"
+            />
+          </div>
+        </div>
+      </fieldset>
 
       <div className="flex gap-2">
         <button className="btn btn-primary">{post ? "Save post" : "Create post"}</button>

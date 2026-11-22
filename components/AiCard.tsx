@@ -78,7 +78,7 @@ export default function AiCard({
             Details
           </Link>
           <a
-            href={ai.website}
+            href={`/go/${ai.slug}`}
             target="_blank"
             rel="nofollow noopener noreferrer sponsored"
             className="btn btn-primary !px-2.5 !py-1.5 text-xs"

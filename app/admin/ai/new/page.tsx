@@ -1,10 +1,12 @@
 import Link from "next/link";
 import AiForm from "@/components/admin/AiForm";
+import { requireAreaPage } from "@/lib/permissions";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function NewAiPage() {
+export default async function NewAiPage() {
+  await requireAreaPage("catalogue");
   const db = readDb();
   return (
     <div className="space-y-4">

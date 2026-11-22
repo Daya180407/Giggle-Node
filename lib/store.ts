@@ -42,6 +42,7 @@ const g = globalThis as typeof globalThis & {
   __giglenodeFlushing?: boolean;
   __giglenodeBootError?: string | null;
   __giglenodeSyncedAt?: number;
+  __giglenodeMtime?: number;
 };
 
 /* ------------------------------ node fs ------------------------------ */
@@ -55,12 +56,21 @@ function readNodeDb(): DB | null {
   }
 }
 
+function nodeDbMtime(): number {
+  try {
+    return fs.statSync(DB_FILE).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
 function writeNodeDb(db: DB): boolean {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const tmp = `${DB_FILE}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(db));
     fs.renameSync(tmp, DB_FILE);
+    g.__giglenodeMtime = nodeDbMtime();
     return true;
   } catch {
     return false;
@@ -120,6 +130,7 @@ async function bootstrap(): Promise<void> {
   if (nodeDb) {
     g.__giglenodeDb = nodeDb;
     g.__giglenodeRuntime = "fs";
+    g.__giglenodeMtime = nodeDbMtime();
     if (await migrateDb(nodeDb)) writeNodeDb(nodeDb);
     return;
   }
@@ -251,6 +262,19 @@ function scheduleFlush() {
 /* -------------------------------- api -------------------------------- */
 
 export function readDb(): DB {
+  // Production can serve requests from more than one worker. Pick up a document
+  // written by another worker so admin saves and public submissions are visible
+  // on the very next request instead of only after a restart.
+  if (g.__giglenodeRuntime === "fs" && g.__giglenodeMtime) {
+    const mtime = nodeDbMtime();
+    if (mtime && mtime !== g.__giglenodeMtime) {
+      const fresh = readNodeDb();
+      if (fresh) {
+        Object.assign(g.__giglenodeDb!, fresh);
+        g.__giglenodeMtime = mtime;
+      }
+    }
+  }
   return g.__giglenodeDb!;
 }
 

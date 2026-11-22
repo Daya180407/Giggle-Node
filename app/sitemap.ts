@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { readDb } from "@/lib/store";
-import { CATEGORIES } from "@/lib/categories";
+import { getCategories } from "@/lib/categories";
+import { publishedPosts } from "@/lib/rank";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const db = readDb();
@@ -28,14 +29,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: path === "" ? 1 : 0.6,
   }));
 
-  const categories: MetadataRoute.Sitemap = CATEGORIES.map((c) => ({
+  const categories: MetadataRoute.Sitemap = getCategories(db).map((c) => ({
     url: `${base}/category/${c.slug}`,
     lastModified: now,
     changeFrequency: "daily",
     priority: 0.8,
   }));
 
-  const ais: MetadataRoute.Sitemap = db.ai.map((ai) => ({
+  const ais: MetadataRoute.Sitemap = db.ai.filter((ai) => !ai.hidden).map((ai) => ({
     url: `${base}/ai/${ai.slug}`,
     lastModified: now,
     changeFrequency: "daily",
@@ -44,7 +45,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const models: MetadataRoute.Sitemap = db.models.flatMap((m) => {
     const ai = db.ai.find((a) => a.id === m.aiId);
-    return ai
+    return ai && !ai.hidden
       ? [
           {
             url: `${base}/ai/${ai.slug}/${m.slug}`,
@@ -56,9 +57,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       : [];
   });
 
-  const posts: MetadataRoute.Sitemap = db.posts
-    .filter((p) => p.status === "published")
-    .map((p) => ({
+  const posts: MetadataRoute.Sitemap = publishedPosts(db).map((p) => ({
       url: `${base}/blog/${p.slug}`,
       lastModified: new Date(p.updatedAt),
       changeFrequency: "monthly",

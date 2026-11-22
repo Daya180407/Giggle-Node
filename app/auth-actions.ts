@@ -10,6 +10,7 @@ import {
   verifyCredentials,
 } from "@/lib/auth";
 import { hashPassword, randomToken, sha256Hex } from "@/lib/crypto";
+import { queueEmail, renderTemplate } from "@/lib/notify";
 import { getSiteSettings } from "@/lib/settings";
 import { flushPendingWrites, mutateDb, refreshDb, uid } from "@/lib/store";
 import type { DB, User } from "@/lib/types";
@@ -55,6 +56,9 @@ export async function loginAction(_prev: AuthState, formData: FormData): Promise
   const ip = await requestIp();
   // Another isolate may have created this account; verify against the latest document.
   const db = await refreshDb();
+  if (!getSiteSettings(db).security.emailLogin) {
+    return { ok: false, error: "Email login is turned off by the administrator." };
+  }
   if (countEvents(db, "login", ip, LOGIN_WINDOW_MS) >= LOGIN_MAX_ATTEMPTS) {
     return { ok: false, error: "Too many login attempts. Please try again in 15 minutes." };
   }
@@ -120,6 +124,22 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
   });
 
   await flushPendingWrites();
+
+  const settings = getSiteSettings(db);
+  if (settings.email.enabled && settings.email.welcome) {
+    const template = settings.email.templates.welcome;
+    mutateDb((d) => {
+      const current = getSiteSettings(d);
+      queueEmail(d, current.email, {
+        to: created.email,
+        kind: "welcome",
+        subject: template.subject,
+        body: renderTemplate(template.body, { name: created.name, site: current.siteName }),
+      });
+    });
+    await flushPendingWrites();
+  }
+
   await startSession(user.id);
   revalidatePath("/");
   redirect(next);

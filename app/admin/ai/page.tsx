@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { deleteAiAction } from "@/app/actions";
+import { deleteAiAction, toggleAiFlagAction } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { Stars } from "@/components/ui";
-import { CATEGORIES, categoryName } from "@/lib/categories";
+import { categoryName, getCategories } from "@/lib/categories";
+import { requireAreaPage } from "@/lib/permissions";
 import { buildView } from "@/lib/rank";
 import { readDb } from "@/lib/store";
 
@@ -13,15 +14,19 @@ const PER_PAGE = 40;
 export default async function AdminAiListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; cat?: string; sort?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; cat?: string; sort?: string; page?: string; visibility?: string }>;
 }) {
-  const { q = "", cat = "all", sort = "name", page = "1" } = await searchParams;
+  await requireAreaPage("catalogue");
+  const { q = "", cat = "all", sort = "name", page = "1", visibility = "all" } = await searchParams;
   const db = readDb();
   const view = buildView(db);
+  const categories = getCategories(db);
   const query = q.trim().toLowerCase();
 
   const all = [...view.aiStats.values()].filter((s) => {
     if (cat !== "all" && s.ai.category !== cat) return false;
+    if (visibility === "hidden" && !s.ai.hidden) return false;
+    if (visibility === "visible" && s.ai.hidden) return false;
     if (!query) return true;
     return [s.ai.name, s.ai.slug, s.ai.description, ...s.ai.bestFor].join(" ").toLowerCase().includes(query);
   });
@@ -75,11 +80,16 @@ export default async function AdminAiListPage({
         />
         <select name="cat" defaultValue={cat} className="field !w-auto !py-2 text-xs" aria-label="Filter by category">
           <option value="all">All categories</option>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <option key={c.slug} value={c.slug}>
               {c.name} ({db.ai.filter((a) => a.category === c.slug).length})
             </option>
           ))}
+        </select>
+        <select name="visibility" defaultValue={visibility} className="field !w-auto !py-2 text-xs" aria-label="Visibility">
+          <option value="all">All visibility</option>
+          <option value="visible">Visible only</option>
+          <option value="hidden">Hidden only</option>
         </select>
         <select name="sort" defaultValue={sort} className="field !w-auto !py-2 text-xs" aria-label="Sort">
           <option value="name">Name A–Z</option>
@@ -89,7 +99,7 @@ export default async function AdminAiListPage({
           <option value="newest">Newest</option>
         </select>
         <button className="btn btn-primary !py-2 text-xs">Apply</button>
-        {q || cat !== "all" || sort !== "name" ? (
+        {q || cat !== "all" || sort !== "name" || visibility !== "all" ? (
           <Link href="/admin/ai" className="btn btn-ghost !py-2 text-xs">
             Reset
           </Link>
@@ -135,9 +145,19 @@ export default async function AdminAiListPage({
                 <td className="p-3 text-xs">{s.models.length}</td>
                 <td className="p-3">
                   <div className="flex flex-wrap gap-1">
+                    {s.ai.hidden ? <span className="chip bg-rose-50 text-rose-600">Hidden</span> : null}
+                    {s.ai.featured ? <span className="chip bg-indigo-50 text-indigo-700">Featured</span> : null}
                     {s.ai.sponsored ? <span className="chip bg-amber-50 text-amber-700">Sponsored</span> : null}
+                    {(s.ai.platforms ?? []).map((p) => (
+                      <span key={p} className="chip bg-slate-100 text-slate-600">
+                        {p === "web" ? "Web" : p === "android" ? "Android" : "PC"}
+                      </span>
+                    ))}
                     {s.ai.boost > 0 ? <span className="chip bg-slate-100 text-slate-600">+{s.ai.boost.toFixed(2)}</span> : null}
-                    {!s.ai.sponsored && s.ai.boost === 0 ? <span className="text-xs text-slate-300">—</span> : null}
+                    {s.ai.plans?.length ? <span className="chip bg-emerald-50 text-emerald-700">{s.ai.plans.length} plans</span> : null}
+                    {!s.ai.sponsored && s.ai.boost === 0 && !s.ai.hidden && !s.ai.featured ? (
+                      <span className="text-xs text-slate-300">—</span>
+                    ) : null}
                   </div>
                 </td>
                 <td className="p-3">
@@ -145,9 +165,25 @@ export default async function AdminAiListPage({
                     <Link href={`/ai/${s.ai.slug}`} className="btn btn-ghost !px-2 !py-1 text-xs">
                       View
                     </Link>
-                    <Link href={`/admin/ai/${s.ai.slug}`} className="btn btn-ghost !px-2 !py-1 text-xs">
+                    <Link href={`/admin/ai/${s.ai.slug}`} className="btn btn-primary !px-2 !py-1 text-xs">
                       Edit
                     </Link>
+                    <form action={toggleAiFlagAction}>
+                      <input type="hidden" name="id" value={s.ai.id} />
+                      <input type="hidden" name="flag" value="hidden" />
+                      <input type="hidden" name="back" value="/admin/ai" />
+                      <button className="btn btn-ghost !px-2 !py-1 text-xs">
+                        {s.ai.hidden ? "Unhide" : "Hide"}
+                      </button>
+                    </form>
+                    <form action={toggleAiFlagAction}>
+                      <input type="hidden" name="id" value={s.ai.id} />
+                      <input type="hidden" name="flag" value="featured" />
+                      <input type="hidden" name="back" value="/admin/ai" />
+                      <button className="btn btn-ghost !px-2 !py-1 text-xs">
+                        {s.ai.featured ? "Unfeature" : "Feature"}
+                      </button>
+                    </form>
                     <form action={deleteAiAction}>
                       <input type="hidden" name="id" value={s.ai.id} />
                       <DeleteButton

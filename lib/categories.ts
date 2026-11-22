@@ -1,4 +1,4 @@
-import type { Category, CategorySlug } from "./types";
+import type { Category, CategorySlug, DB } from "./types";
 
 export const CATEGORIES: Category[] = [
   {
@@ -112,8 +112,36 @@ export const CATEGORY_MAP: Record<string, Category> = Object.fromEntries(
   CATEGORIES.map((c) => [c.slug, c]),
 );
 
+/** Admin-managed categories, falling back to the built-in list. */
+export function getCategories(db: DB): Category[] {
+  const saved = db.categories;
+  return saved && saved.length > 0 ? saved : CATEGORIES;
+}
+
+export function categoryBySlug(db: DB, slug: string): Category | undefined {
+  return getCategories(db).find((c) => c.slug === slug);
+}
+
 export function categoryName(slug: string): string {
-  return CATEGORY_MAP[slug]?.name ?? "All";
+  const known = CATEGORY_MAP[slug]?.name;
+  if (known) return known;
+  if (!slug) return "All";
+  return slug
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function categoryEmoji(slug: string): string {
+  return CATEGORY_MAP[slug]?.emoji ?? "✨";
+}
+
+export function slugifyCategory(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
 }
 
 export const PRICE_LABEL: Record<string, string> = {

@@ -10,6 +10,8 @@ export type PromoItem = {
   score: number;
   votes: number;
   planPrice: number;
+  /** formatted by the homepage using the site currency setting */
+  priceLabel?: string;
   category: string;
   bestFor: string;
   website: string;
@@ -76,17 +78,14 @@ export default function PaidPromo({ items }: { items: PromoItem[] }) {
             <div className="mt-auto flex items-end justify-between gap-2 border-t border-white/10 pt-3">
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-slate-400">Starting plan</p>
-                <p className="text-base font-extrabold text-white">
-                  ${item.planPrice}
-                  <span className="text-[11px] font-medium text-slate-400">/mo</span>
-                </p>
+                <p className="text-base font-extrabold text-white">{item.priceLabel ?? `$${item.planPrice}/mo`}</p>
               </div>
               <div className="flex items-center gap-1.5">
                 <Link href={`/ai/${item.slug}`} className="btn !bg-white/95 !py-1.5 !text-ink hover:!bg-white text-xs">
                   See details
                 </Link>
                 <a
-                  href={item.website}
+                  href={`/go/${item.slug}`}
                   target="_blank"
                   rel="nofollow noopener noreferrer sponsored"
                   className="btn border border-white/20 !bg-white/5 !py-1.5 text-xs text-white hover:!bg-white/10"

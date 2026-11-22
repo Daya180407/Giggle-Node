@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import AiCard from "@/components/AiCard";
+import AiSearchResults from "@/components/AiSearchResults";
 import PostCard from "@/components/PostCard";
 import { PriceBadge, Stars } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
@@ -19,8 +20,12 @@ export const metadata: Metadata = {
 
 const SUGGESTIONS = ["chatgpt", "video", "coding", "free", "youtube", "thumbnail", "music", "writing"];
 
-export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q = "" } = await searchParams;
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; reported?: string; sent?: string }>;
+}) {
+  const { q = "", reported } = await searchParams;
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
   const view = buildView(db);
   const results = searchAll(view, q);
@@ -35,6 +40,14 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
         Search by tool, model, category or task — for example “free coding” or “AI for YouTube thumbnails”.
       </p>
+
+      {reported ? (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          {reported === "empty"
+            ? "Add a short reason so the team can review the answer."
+            : "Thanks — the team will review this AI search answer."}
+        </div>
+      ) : null}
 
       <form action="/search" className="search-shell mt-5 max-w-2xl" role="search">
         <div className="search-inner">
@@ -55,6 +68,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           <button className="btn btn-primary shrink-0 !rounded-full !px-4">Search</button>
         </div>
       </form>
+
+      {q ? <AiSearchResults query={q} /> : null}
 
       {!q ? (
         <div className="mt-8 space-y-8">
@@ -83,27 +98,18 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         </div>
       ) : (
         <div className="mt-8 space-y-10">
-          <section>
-            <h2 className="display mb-3 text-xl text-ink">
-              AI tools <span className="text-slate-400">({results.ais.length})</span>
-            </h2>
-            {results.ais.length ? (
+          {results.ais.length ? (
+            <section>
+              <h2 className="display mb-3 text-xl text-ink">
+                AI tools <span className="text-slate-400">({results.ais.length})</span>
+              </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {results.ais.slice(0, 8).map((s) => (
                   <AiCard key={s.ai.id} stat={s} saved={saved.has(s.ai.id)} back={`/search?q=${encodeURIComponent(q)}`} />
                 ))}
               </div>
-            ) : (
-              <div className="card p-8 text-center">
-                <p className="text-sm text-slate-600">
-                  No AI tool matched “{q}”. Try a category, or browse the live leaderboard.
-                </p>
-                <Link href="/category/all" className="btn btn-primary mt-3">
-                  Browse rankings
-                </Link>
-              </div>
-            )}
-          </section>
+            </section>
+          ) : null}
 
           {results.models.length ? (
             <section>

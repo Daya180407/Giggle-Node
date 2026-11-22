@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { deleteUserAction, toggleBanAction, toggleRoleAction } from "@/app/actions";
+import { deleteUserAction, setUserAccessAction, toggleBanAction } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { getCurrentUser } from "@/lib/auth";
+import { requireAreaPage } from "@/lib/permissions";
 import { contributorBoard, formatDate } from "@/lib/rank";
+import { resolveRoles, roleLabel } from "@/lib/roles";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +16,11 @@ export default async function AdminUsersPage({
 }: {
   searchParams: Promise<{ q?: string; role?: string; page?: string }>;
 }) {
-  const { q = "", role = "all", page = "1" } = await searchParams;
+  await requireAreaPage("users");
+  const { q = "", role: roleParam = "all", page = "1" } = await searchParams;
   const db = readDb();
+  const roles = resolveRoles(db.roles);
+  const role = roleParam !== "all" && roles.some((row) => row.id === roleParam) ? roleParam : "all";
   const admin = await getCurrentUser();
   const board = contributorBoard(db, 10);
   const boardIds = new Set(board.map((b) => b.user.id));
@@ -49,15 +54,21 @@ export default async function AdminUsersPage({
         <p className="eyebrow">Community</p>
         <h2 className="display mt-1 text-2xl text-ink">Users & access</h2>
         <p className="mt-1 text-xs text-muted">
-          {db.users.length.toLocaleString("en-IN")} accounts · {db.users.filter((u) => u.role === "admin").length} admins ·{" "}
+          {db.users.length.toLocaleString("en-IN")} accounts · {db.users.filter((u) => u.role !== "user").length}{" "}
+          staff across {roles.length} roles · {db.users.filter((u) => u.verified).length} verified ·{" "}
           {db.users.filter((u) => u.banned).length} banned
         </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Link href="/admin/roles" className="btn btn-ghost text-xs">
+          🔐 Roles &amp; permissions
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {[
           { label: "Total users", value: db.users.length, hint: "All accounts" },
-          { label: "Admins", value: db.users.filter((u) => u.role === "admin").length, hint: "Full access" },
+                      { label: "Staff", value: db.users.filter((u) => u.role !== "user").length, hint: "Any role with admin access" },
           { label: "Banned", value: db.users.filter((u) => u.banned).length, hint: "Cannot sign in" },
           { label: "New (7 days)", value: joined7, hint: "Recent signups" },
         ].map((c) => (
@@ -93,8 +104,11 @@ export default async function AdminUsersPage({
         />
         <select name="role" defaultValue={role} className="field !w-auto !py-2 text-xs" aria-label="Filter role">
           <option value="all">All roles</option>
-          <option value="admin">Admins</option>
-          <option value="user">Users</option>
+          {roles.map((row) => (
+            <option key={row.id} value={row.id}>
+              {row.name} ({db.users.filter((u) => u.role === row.id).length})
+            </option>
+          ))}
         </select>
         <button className="btn btn-primary !py-2 text-xs">Search</button>
         {q || role !== "all" ? (
@@ -129,7 +143,9 @@ export default async function AdminUsersPage({
                         {u.avatar}
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate">{u.name}</span>
+                        <Link href={`/admin/users/${u.id}`} className="block truncate hover:text-brand">
+                          {u.name}
+                        </Link>
                         <span className="block text-[10px] text-muted">
                           {self ? "You" : u.isSeed ? "Seeded reviewer" : u.id}
                         </span>
@@ -141,11 +157,18 @@ export default async function AdminUsersPage({
                   <td className="p-3">
                     <span
                       className={`chip ${
-                        u.role === "admin" ? "bg-brand-soft text-brand" : "bg-slate-100 text-slate-600"
+                        u.role === "admin"
+                          ? "bg-brand-soft text-brand"
+                          : u.role === "editor"
+                            ? "bg-indigo-50 text-indigo-700"
+                            : u.role === "moderator"
+                              ? "bg-cyan-50 text-cyan-700"
+                              : "bg-slate-100 text-slate-600"
                       }`}
                     >
-                      {u.role}
+                      {roleLabel(u.role, roles)}
                     </span>
+                    {u.verified ? <span className="chip ml-1 bg-emerald-50 text-emerald-700">✓ verified</span> : null}
                   </td>
                   <td className="p-3">
                     {u.banned ? (
@@ -158,15 +181,32 @@ export default async function AdminUsersPage({
                   <td className="p-3 text-xs text-muted">{formatDate(u.createdAt)}</td>
                   <td className="p-3">
                     <div className="flex flex-wrap items-center justify-end gap-1">
+                      <Link href={`/admin/users/${u.id}`} className="btn btn-primary !px-2 !py-1 text-xs">
+                        Manage
+                      </Link>
                       {self ? (
                         <span className="text-[11px] text-muted">Current account</span>
                       ) : (
                         <>
-                          <form action={toggleRoleAction}>
+                          <form action={setUserAccessAction} className="flex flex-wrap items-center gap-1">
                             <input type="hidden" name="id" value={u.id} />
-                            <button className="btn btn-ghost !px-2 !py-1 text-xs">
-                              {u.role === "admin" ? "Make user" : "Make admin"}
-                            </button>
+                            <select name="role" defaultValue={u.role} className="field !w-auto !py-1 text-xs" aria-label="Role">
+                              {roles.map((row) => (
+                                <option key={row.id} value={row.id}>
+                                  {row.name}
+                                </option>
+                              ))}
+                            </select>
+                            <label className="flex items-center gap-1 text-[11px] text-slate-600">
+                              <input
+                                type="checkbox"
+                                name="verified"
+                                defaultChecked={u.verified}
+                                className="h-3.5 w-3.5 accent-emerald-600"
+                              />
+                              Verified
+                            </label>
+                            <button className="btn btn-ghost !px-2 !py-1 text-xs">Save</button>
                           </form>
                           <form action={toggleBanAction}>
                             <input type="hidden" name="id" value={u.id} />

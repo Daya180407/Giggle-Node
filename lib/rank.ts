@@ -130,6 +130,9 @@ export function buildView(db: DB): View {
       return modelStat;
     });
 
+    // Pinned models stay on top, the rest follow the live score.
+    mstats.sort((a, b) => Number(Boolean(b.model.pin)) - Number(Boolean(a.model.pin)) || b.score - a.score);
+
     const totalVotes = mstats.reduce((s, m) => s + m.votes, 0);
     const weightedScore = totalVotes
       ? mstats.reduce((s, m) => s + m.score * m.votes, 0) / totalVotes
@@ -174,23 +177,43 @@ export function sortByRank(list: AiStat[]): AiStat[] {
 }
 
 export function rankedAis(view: View, category?: CategorySlug | "all"): AiStat[] {
-  const all = [...view.aiStats.values()];
+  const all = [...view.aiStats.values()].filter((s) => !s.ai.hidden);
   const filtered = !category || category === "all" ? all : all.filter((s) => s.ai.category === category);
   return sortByRank(filtered);
 }
 
-export function trendingAis(view: View, limit = 4): AiStat[] {
-  return [...view.aiStats.values()]
-    .sort((a, b) => b.trendingScore - a.trendingScore || b.votes - a.votes)
-    .slice(0, limit);
+export function trendingAis(view: View, limit = 4, manualIds: string[] = []): AiStat[] {
+  const publicStats = [...view.aiStats.values()].filter((s) => !s.ai.hidden);
+  const manual = manualIds
+    .map((id) => publicStats.find((s) => s.ai.id === id))
+    .filter((s): s is AiStat => Boolean(s));
+  if (manual.length > 0) {
+    if (manual.length >= limit) return manual.slice(0, limit);
+    const rest = publicStats
+      .filter((s) => !manualIds.includes(s.ai.id))
+      .sort((a, b) => b.trendingScore - a.trendingScore || b.votes - a.votes)
+      .slice(0, limit - manual.length);
+    return [...manual, ...rest];
+  }
+  return publicStats.sort((a, b) => b.trendingScore - a.trendingScore || b.votes - a.votes).slice(0, limit);
 }
 
 export function risingAis(view: View, limit = 6): AiStat[] {
   const cutoff = Date.now() - 120 * 86400000;
   return [...view.aiStats.values()]
-    .filter((s) => new Date(s.ai.createdAt).getTime() >= cutoff && s.votes < 160 && s.score >= 4.4)
+    .filter((s) => !s.ai.hidden && new Date(s.ai.createdAt).getTime() >= cutoff && s.votes < 160 && s.score >= 4.4)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
+}
+
+/** Manual champion for a category, or the featured tool when an admin ticked one. */
+export function championFor(view: View, category: CategorySlug, overrides: Record<string, string> = {}): AiStat[] {
+  const ranked = rankedAis(view, category);
+  const overrideId = overrides[category] ?? ranked.find((s) => s.ai.featured)?.ai.id;
+  if (!overrideId) return ranked;
+  const picked = ranked.find((s) => s.ai.id === overrideId);
+  if (!picked) return ranked;
+  return [picked, ...ranked.filter((s) => s.ai.id !== overrideId)];
 }
 
 export type DistRow = { stars: number; count: number; percent: number };
@@ -206,7 +229,14 @@ export function distribution(dist: number[]): DistRow[] {
 export function modelReviews(db: DB, modelId: string, limit?: number) {
   const users = new Map<string, User>(db.users.map((u) => [u.id, u]));
   const rows = db.ratings
-    .filter((r) => r.modelId === modelId && r.review && r.review.trim().length > 0)
+    .filter(
+      (r) =>
+        r.modelId === modelId &&
+        r.review &&
+        r.review.trim().length > 0 &&
+        r.status !== "pending" &&
+        r.status !== "rejected",
+    )
     .sort((a, b) => b.stars - a.stars || +new Date(b.createdAt) - +new Date(a.createdAt))
     .map((r) => ({ rating: r, user: users.get(r.userId) }));
   return limit ? rows.slice(0, limit) : rows;
@@ -216,7 +246,14 @@ export function aiReviews(db: DB, aiId: string, limit?: number) {
   const users = new Map<string, User>(db.users.map((u) => [u.id, u]));
   const modelIds = new Set(db.models.filter((m) => m.aiId === aiId).map((m) => m.id));
   const rows = db.ratings
-    .filter((r) => modelIds.has(r.modelId) && r.review && r.review.trim().length > 0)
+    .filter(
+      (r) =>
+        modelIds.has(r.modelId) &&
+        r.review &&
+        r.review.trim().length > 0 &&
+        r.status !== "pending" &&
+        r.status !== "rejected",
+    )
     .sort((a, b) => b.stars - a.stars || +new Date(b.createdAt) - +new Date(a.createdAt))
     .map((r) => ({ rating: r, user: users.get(r.userId) }));
   return limit ? rows.slice(0, limit) : rows;
@@ -240,9 +277,22 @@ export function contributorBoard(db: DB, limit = 10) {
 }
 
 export function publishedPosts(db: DB): Post[] {
+  const now = Date.now();
   return db.posts
-    .filter((p) => p.status === "published")
+    .filter(
+      (p) =>
+        p.status === "published" ||
+        (p.status === "scheduled" && Boolean(p.scheduledAt) && +new Date(p.scheduledAt as string) <= now),
+    )
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+}
+
+/** Total visits across the catalogue, minus hidden tools. */
+export function mostVisited(view: View, limit = 5): AiStat[] {
+  return [...view.aiStats.values()]
+    .filter((s) => !s.ai.hidden)
+    .sort((a, b) => b.ai.visits - a.ai.visits)
+    .slice(0, limit);
 }
 
 export function promptsFor(db: DB, aiId: string): Prompt[] {
@@ -282,11 +332,12 @@ export function searchAll(view: View, query: string) {
   const matches = (haystack: string) => words.every((w) => haystack.toLowerCase().includes(w));
 
   const ais = [...view.aiStats.values()].filter((s) => {
+    if (s.ai.hidden) return false;
     const hay = [s.ai.name, s.ai.category, s.ai.description, ...s.ai.bestFor, ...s.models.map((m) => m.model.name)].join(" ");
     return matches(hay);
   });
-  const models = [...view.modelStats.values()].filter((m) =>
-    matches([m.model.name, m.model.bestFor, m.ai.name].join(" ")),
+  const models = [...view.modelStats.values()].filter(
+    (m) => !m.ai.hidden && matches([m.model.name, m.model.bestFor, m.ai.name].join(" ")),
   );
   const posts = view.db.posts.filter(
     (p) => p.status === "published" && matches([p.title, p.excerpt, p.content].join(" ")),

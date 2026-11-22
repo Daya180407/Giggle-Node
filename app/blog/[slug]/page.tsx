@@ -154,7 +154,7 @@ export default async function PostPage({ params }: Props) {
                 </div>
                 <PriceBadge price={s.ai.priceType} />
                 <a
-                  href={s.ai.website}
+                  href={`/go/${s.ai.slug}`}
                   target="_blank"
                   rel="nofollow noopener noreferrer sponsored"
                   className="btn btn-ghost !px-2 !py-1 text-xs"

@@ -3,18 +3,25 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import ApiPricing from "@/components/ApiPricing";
 import Distribution from "@/components/Distribution";
+import PricingReport from "@/components/PricingReport";
 import RatingWidget from "@/components/RatingWidget";
 import { AiLogo, PriceBadge, Stars, Trend } from "@/components/ui";
 import { getApiPricing } from "@/lib/api-pricing";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
+import { canAccess, resolveRoles } from "@/lib/roles";
+import { formatPlanPrice } from "@/lib/plans";
+import { reportRatingAction } from "@/app/actions";
 import { buildView, formatDate, modelReviews, timeAgo } from "@/lib/rank";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string; model: string }> };
+type Props = {
+  params: Promise<{ slug: string; model: string }>;
+  searchParams: Promise<{ pricingReport?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, model: modelSlug } = await params;
@@ -31,8 +38,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ModelPage({ params }: Props) {
+export default async function ModelPage({ params, searchParams }: Props) {
   const { slug, model: modelSlug } = await params;
+  const { pricingReport } = await searchParams;
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
   const ai = db.ai.find((a) => a.slug === slug);
   const model = db.models.find((m) => m.aiId === ai?.id && m.slug === modelSlug);
@@ -82,6 +90,17 @@ export default async function ModelPage({ params }: Props) {
         <span className="text-slate-600">{model.name}</span>
       </nav>
 
+      {pricingReport === "sent" ? (
+        <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          Report bhej di gayi. Admin price check karke update karega.
+        </div>
+      ) : null}
+      {pricingReport === "short" ? (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
+          Report likhne ke liye kam se kam 5 characters likhein.
+        </div>
+      ) : null}
+
       <header className="card mt-3 p-5">
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-brand-soft/70 p-3">
           <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={38} rounded="rounded-lg" />
@@ -107,16 +126,24 @@ export default async function ModelPage({ params }: Props) {
           </div>
           <div className="flex flex-wrap gap-2">
             <a
-              href={ai.website}
+              href={`/go/${ai.slug}`}
               target="_blank"
               rel="nofollow noopener noreferrer sponsored"
               className="btn btn-primary"
             >
               Try {model.name} ↗
             </a>
+            <a href="#rate" className="btn btn-ghost">
+              ★ Rate this model
+            </a>
             <Link href={`/compare/${ai.slug}`} className="btn btn-ghost">
               Compare With Other AI
             </Link>
+            {user && canAccess(user.role, "catalogue", resolveRoles(db.roles)) ? (
+              <Link href={`/admin/ai/${ai.slug}`} className="btn btn-ghost">
+                ✎ Admin edit
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -158,23 +185,31 @@ export default async function ModelPage({ params }: Props) {
         <div className="mt-4">
           <ApiPricing pricing={apiPricing} detail />
         </div>
+        <PricingReport
+          targetType="model"
+          targetId={model.id}
+          targetName={`${ai.name} · ${model.name}`}
+          back={`/ai/${ai.slug}/${model.slug}`}
+        />
       </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
-          {settings.allowRatings ? (
-            <RatingWidget
-              modelId={model.id}
-              existing={existing}
-              isLoggedIn={Boolean(user)}
-              loginNext={`/ai/${ai.slug}/${model.slug}`}
-            />
-          ) : (
-            <div className="card border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-              <p className="font-semibold">Ratings are paused</p>
-              <p className="mt-1 text-xs">The administrator has temporarily disabled new ratings and reviews.</p>
-            </div>
-          )}
+          <div id="rate" className="scroll-mt-24">
+            {settings.allowRatings ? (
+              <RatingWidget
+                modelId={model.id}
+                existing={existing}
+                isLoggedIn={Boolean(user)}
+                loginNext={`/ai/${ai.slug}/${model.slug}`}
+              />
+            ) : (
+              <div className="card border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <p className="font-semibold">Ratings are paused</p>
+                <p className="mt-1 text-xs">The administrator has temporarily disabled new ratings and reviews.</p>
+              </div>
+            )}
+          </div>
 
           <section className="card p-5">
             <h2 className="display text-lg text-ink">Reviews for this model</h2>
@@ -186,6 +221,9 @@ export default async function ModelPage({ params }: Props) {
                       {reviewer?.avatar ?? "U"}
                     </span>
                     <span className="text-sm font-semibold">{reviewer?.name ?? "User"}</span>
+                    {reviewer?.verified ? (
+                      <span className="chip bg-emerald-50 text-emerald-700">✓ verified</span>
+                    ) : null}
                     <Stars value={rating.stars} size={12} />
                     {rating.lastEditedAt ? (
                       <span className="chip bg-slate-100 text-slate-500">edited</span>
@@ -193,6 +231,13 @@ export default async function ModelPage({ params }: Props) {
                     <span className="ml-auto text-xs text-muted">{timeAgo(rating.updatedAt)}</span>
                   </div>
                   <p className="mt-1.5 text-sm text-slate-600">{rating.review}</p>
+                  <form action={reportRatingAction} className="mt-1.5">
+                    <input type="hidden" name="id" value={rating.id} />
+                    <input type="hidden" name="back" value={`/ai/${ai.slug}/${model.slug}`} />
+                    <button className="text-[11px] font-medium text-muted transition hover:text-rose-600">
+                      ⚑ Report this review
+                    </button>
+                  </form>
                 </div>
               ))}
               {reviews.length === 0 ? (
@@ -205,6 +250,25 @@ export default async function ModelPage({ params }: Props) {
         <aside className="space-y-4">
           <Distribution dist={stat.dist} votes={stat.votes} />
 
+          {ai.plans?.length ? (
+            <div className="card p-4">
+              <h3 className="display text-base text-ink">Plans from {ai.name}</h3>
+              <ul className="mt-2 space-y-1.5 text-sm">
+                {ai.plans.map((plan) => (
+                  <li key={plan.id} className="flex items-baseline justify-between gap-2">
+                    <span className="truncate">{plan.name}</span>
+                    <span className="shrink-0 text-xs font-semibold text-brand">
+                      {formatPlanPrice(plan, settings.appearance)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <Link href={`/ai/${ai.slug}#plans`} className="btn btn-ghost mt-2 w-full text-xs">
+                Plan details
+              </Link>
+            </div>
+          ) : null}
+
           <div className="card p-4">
             <h3 className="display text-base text-ink">Other models from {ai.name}</h3>
             <ul className="mt-2 space-y-1.5 text-sm">
@@ -212,10 +276,15 @@ export default async function ModelPage({ params }: Props) {
                 <li key={s.model.id}>
                   <Link
                     href={`/ai/${ai.slug}/${s.model.slug}`}
-                    className="flex items-center justify-between rounded-lg px-1.5 py-1.5 hover:bg-brand-soft hover:text-brand"
+                    className="block rounded-lg px-1.5 py-1.5 hover:bg-brand-soft hover:text-brand"
                   >
-                    <span className="truncate">{s.model.name}</span>
-                    <span className="text-xs text-muted">{s.score.toFixed(1)} ★</span>
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="truncate">{s.model.name}</span>
+                      <span className="shrink-0 text-xs text-muted">{s.score.toFixed(1)} ★</span>
+                    </span>
+                    <span className="mt-0.5 block truncate text-[10.5px] text-muted">
+                      Best for: {s.model.bestFor || "general use"}
+                    </span>
                   </Link>
                 </li>
               ))}

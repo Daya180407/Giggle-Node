@@ -1,6 +1,8 @@
 import { applyCatalogue } from "./catalogue/apply";
+import { CATEGORIES } from "./categories";
 import { DEMO_ACCOUNTS } from "./demo-accounts";
 import { localizeContentToEnglish } from "./localize-en";
+import { resolveRoles } from "./roles";
 import { DEFAULT_SITE_SETTINGS } from "./settings";
 import type { DB } from "./types";
 
@@ -21,6 +23,46 @@ export async function migrateDb(db: DB): Promise<boolean> {
     db.adminLog = [];
     changed = true;
   }
+
+  if (!Array.isArray(db.categories) || db.categories.length === 0) {
+    db.categories = CATEGORIES;
+    changed = true;
+  }
+
+  if (!Array.isArray(db.searchLogs)) {
+    db.searchLogs = [];
+    changed = true;
+  }
+
+  const collections = [
+    "notifications",
+    "emailOutbox",
+    "searchCache",
+    "searchAiReports",
+    "searchRequests",
+    "media",
+    "pages",
+    "traffic",
+    "feedback",
+    "pointEvents",
+    "changelog",
+    "pricingReports",
+  ] as const;
+  for (const key of collections) {
+    if (!Array.isArray(db[key])) {
+      (db as unknown as Record<string, unknown>)[key] = [];
+      changed = true;
+    }
+  }
+
+  if (!db.appPricing || typeof db.appPricing !== "object" || Array.isArray(db.appPricing)) {
+    db.appPricing = {};
+    changed = true;
+  }
+
+  const rolesBefore = JSON.stringify(db.roles ?? null);
+  db.roles = resolveRoles(db.roles);
+  if (JSON.stringify(db.roles) !== rolesBefore) changed = true;
 
   const settingsBefore = JSON.stringify(db.settings ?? null);
   db.settings = { ...DEFAULT_SITE_SETTINGS, ...(db.settings ?? {}) };

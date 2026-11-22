@@ -14,3 +14,6 @@ data/db.json
 /.session-secret
 artifacts/
 dev.log
+
+server.log
+server.pid

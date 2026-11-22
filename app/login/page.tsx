@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
 import { getCurrentUser } from "@/lib/auth";
+import { getSiteSettings } from "@/lib/settings";
+import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,7 @@ export default async function LoginPage({
   const { next = "/", reset } = await searchParams;
   const user = await getCurrentUser();
   if (user) redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  const settings = getSiteSettings(readDb());
 
   return (
     <div className="mx-auto max-w-md px-4 py-12 sm:py-16">
@@ -38,7 +41,17 @@ export default async function LoginPage({
         ) : null}
 
         <div className="mt-5">
-          <LoginForm next={next} />
+          {settings.security.emailLogin ? (
+            <LoginForm next={next} />
+          ) : (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+              Email and password login is currently turned off by the administrator. Please contact{" "}
+              <a href={`mailto:${settings.supportEmail}`} className="font-semibold underline">
+                {settings.supportEmail}
+              </a>{" "}
+              if you need access.
+            </div>
+          )}
         </div>
 
         <div className="mt-5 rounded-xl border border-line bg-slate-50/80 p-3.5 text-xs text-slate-600">

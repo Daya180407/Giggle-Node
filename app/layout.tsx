@@ -4,19 +4,25 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import TrafficBeacon from "@/components/TrafficBeacon";
+import { accentVars } from "@/lib/analytics";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
+import type { CSSProperties } from "react";
 
 const SITE_URL = "https://giglenode.com";
-const TITLE = "GigleNode — Find the Best AI Tools, Rated by Real Users";
 const DESCRIPTION =
   "Discover the best AI tools for every job. Real user ratings, model-level detail, honest comparisons, paid-plan picks and expert guides — plus AI mobile apps and desktop software.";
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = getSiteSettings(readDb());
+  const siteName = settings.siteName || "GigleNode";
+  const TITLE = `${siteName} — Find the Best AI Tools, Rated by Real Users`;
+  return {
   metadataBase: new URL(SITE_URL),
   title: {
     default: TITLE,
-    template: "%s | GigleNode",
+    template: `%s | ${siteName}`,
   },
   description: DESCRIPTION,
   keywords: [
@@ -75,7 +81,8 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
-};
+  };
+}
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -110,11 +117,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const adsReady = settings.adsEnabled && /^ca-pub-\d{16}$/.test(settings.adsClientId);
 
   return (
-    <html lang="en">
+    <html
+      lang={settings.language === "hi" ? "hi" : "en"}
+      data-theme={settings.appearance.theme}
+      style={accentVars(settings.appearance) as CSSProperties}
+    >
       <head>
         {adsReady ? <meta name="google-adsense-account" content={settings.adsClientId} /> : null}
       </head>
       <body>
+        <TrafficBeacon />
         {adsReady ? (
           <Script
             id="adsense-loader"

@@ -1,6 +1,9 @@
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
-import { CATEGORIES } from "@/lib/categories";
+import { getCategories } from "@/lib/categories";
+import { menuFor, socialsFor } from "@/lib/pages";
+import { getSiteSettings } from "@/lib/settings";
+import { readDb } from "@/lib/store";
 
 const COMPANY = [
   { href: "/about", label: "About us" },
@@ -21,6 +24,15 @@ const POPULAR = [
 ];
 
 export default function SiteFooter() {
+  const db = readDb();
+  const categories = getCategories(db);
+  const settings = getSiteSettings(db);
+  const socials = socialsFor(db);
+  const company = [
+    ...COMPANY,
+    ...menuFor(db, "footer").map((item) => ({ href: item.href, label: item.label })),
+    ...(settings.changelogEnabled ? [{ href: "/changelog", label: "Changelog" }] : []),
+  ];
   return (
     <footer className="mt-20 border-t border-line bg-[#0b1220] text-slate-300">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
@@ -42,6 +54,21 @@ export default function SiteFooter() {
               </span>
               <span className="chip border border-white/10 bg-white/5 text-slate-300">No paid ranking</span>
             </div>
+            {socials.length ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {socials.map((social) => (
+                  <a
+                    key={social.id}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="chip border border-white/10 bg-white/5 text-slate-300 transition hover:border-indigo-300/40 hover:text-white"
+                  >
+                    {social.label} ↗
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div>
@@ -83,7 +110,7 @@ export default function SiteFooter() {
           <div>
             <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Categories</h3>
             <ul className="mt-4 space-y-2.5 text-sm">
-              {CATEGORIES.slice(0, 5).map((c) => (
+              {categories.slice(0, 5).map((c) => (
                 <li key={c.slug}>
                   <Link href={`/category/${c.slug}`} className="text-slate-300 transition hover:text-white">
                     {c.name} AI
@@ -116,7 +143,7 @@ export default function SiteFooter() {
           <div>
             <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">GigleNode</h3>
             <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-              {COMPANY.map((item) => (
+              {company.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="text-slate-400 transition hover:text-white">
                     {item.label}

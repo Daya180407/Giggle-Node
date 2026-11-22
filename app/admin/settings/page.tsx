@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { saveSettingsAction } from "@/app/actions";
+import { changePasswordAction, saveSettingsAction } from "@/app/actions";
+import { requireAreaPage } from "@/lib/permissions";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
@@ -10,6 +11,7 @@ export default async function AdminSettingsPage({
 }: {
   searchParams: Promise<{ saved?: string; error?: string }>;
 }) {
+  await requireAreaPage("settings");
   const { saved, error } = await searchParams;
   const settings = getSiteSettings(readDb());
 
@@ -28,9 +30,62 @@ export default async function AdminSettingsPage({
         </Link>
       </div>
 
+      <section className="card p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold">All settings & controls</h3>
+            <p className="text-xs text-muted">Every configuration area, one tap away.</p>
+          </div>
+          <span className="chip bg-brand-soft text-brand">10 areas</span>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {[
+            { href: "/admin/appearance", label: "Theme & Currency", hint: "Dark mode, ₹/$, logo", icon: "🎨" },
+            { href: "/admin/search-ai", label: "AI Search", hint: "Provider, limits, cache", icon: "✨" },
+            { href: "/admin/notifications", label: "Notifications & Email", hint: "Bell, templates, Top 5", icon: "🔔" },
+            { href: "/admin/security", label: "Spam & Security", hint: "IP blocks, bad words, login", icon: "🛡️" },
+            { href: "/admin/pages", label: "Pages & Menu", hint: "Legal copy, nav, socials", icon: "📄" },
+            { href: "/admin/media", label: "Media Library", hint: "Images and logos", icon: "🖼️" },
+            { href: "/admin/gamification", label: "Gamification", hint: "Points, badges, leaderboard", icon: "🏅" },
+            { href: "/admin/feedback", label: "Feedback Inbox", hint: "Messages, bugs, requests", icon: "📬" },
+            { href: "/admin/analytics", label: "Analytics & Reports", hint: "Traffic and searches", icon: "📊" },
+            { href: "/admin/export", label: "Backup / Export", hint: "Restore and CSV downloads", icon: "⬇" },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="group flex items-center gap-2.5 rounded-xl border border-line bg-slate-50/70 px-3 py-2.5 transition hover:border-brand/30 hover:bg-white"
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-sm shadow-sm" aria-hidden>
+                {item.icon}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-ink group-hover:text-brand">{item.label}</span>
+                <span className="block truncate text-[10.5px] text-muted">{item.hint}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {saved ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
-          Settings saved and published.
+          {saved === "password" ? "Password changed. Use the new password next time you sign in." : "Settings saved and published."}
+        </div>
+      ) : null}
+      {error === "password-short" ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
+          New password must be at least 8 characters long.
+        </div>
+      ) : null}
+      {error === "password-match" ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
+          New password and confirmation do not match.
+        </div>
+      ) : null}
+      {error === "password-current" ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
+          Current password is incorrect.
         </div>
       ) : null}
       {error === "email" ? (
@@ -46,6 +101,42 @@ export default async function AdminSettingsPage({
       ) : null}
 
       <form action={saveSettingsAction} className="space-y-4">
+        <section className="card p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold">Site identity</h3>
+              <p className="text-xs text-muted">Browser title, brand emoji and the site language.</p>
+            </div>
+            <span className="chip bg-slate-100 text-slate-500">{settings.siteName}</span>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="sm:col-span-2">
+              <label className="label" htmlFor="siteName">
+                Site name
+              </label>
+              <input id="siteName" name="siteName" defaultValue={settings.siteName} maxLength={40} className="field" />
+            </div>
+            <div>
+              <label className="label" htmlFor="logoEmoji">
+                Brand emoji
+              </label>
+              <input id="logoEmoji" name="logoEmoji" defaultValue={settings.logoEmoji} maxLength={4} className="field" />
+            </div>
+            <div>
+              <label className="label" htmlFor="language">
+                Site language
+              </label>
+              <select id="language" name="language" defaultValue={settings.language} className="field">
+                <option value="en">English</option>
+                <option value="hi">Hindi (हिन्दी)</option>
+              </select>
+              <p className="mt-1 text-[11px] text-muted">
+                Sets the page language for browsers and screen readers. Content itself English me rehta hai.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section className="card p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -292,6 +383,20 @@ export default async function AdminSettingsPage({
                 </span>
               </span>
             </label>
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-line bg-slate-50/60 p-3">
+              <input
+                type="checkbox"
+                name="requireReviewApproval"
+                defaultChecked={settings.requireReviewApproval}
+                className="mt-0.5 h-4 w-4 accent-indigo-600"
+              />
+              <span>
+                <span className="block text-sm font-semibold">Approve reviews first</span>
+                <span className="mt-0.5 block text-[11px] leading-relaxed text-muted">
+                  New written reviews wait in Ratings → Pending before they show on the site. Stars still count.
+                </span>
+              </span>
+            </label>
           </div>
           <div className="mt-3 max-w-sm">
             <label className="label" htmlFor="supportEmail">
@@ -318,13 +423,66 @@ export default async function AdminSettingsPage({
         </div>
       </form>
 
+      <section className="card p-4">
+        <h3 className="text-sm font-bold">Admin password</h3>
+        <p className="mt-1 max-w-2xl text-xs text-muted">
+          Apna password yahan se badlein. Aapka current session chalta rahega, agli baar naya password lagega.
+        </p>
+        <form action={changePasswordAction} className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="label" htmlFor="currentPassword">
+              Current password
+            </label>
+            <input
+              id="currentPassword"
+              name="currentPassword"
+              type="password"
+              required
+              autoComplete="current-password"
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="newPassword">
+              New password (min 8)
+            </label>
+            <input
+              id="newPassword"
+              name="newPassword"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="confirmPassword">
+              Confirm new password
+            </label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              className="field"
+            />
+          </div>
+          <div className="sm:col-span-3">
+            <button className="btn btn-primary !py-2 text-xs">Change password</button>
+          </div>
+        </form>
+      </section>
+
       <section className="card border-amber-200 bg-amber-50/60 p-4">
         <h3 className="text-sm font-bold text-amber-900">Backups</h3>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-amber-800">
           Export a JSON snapshot of the catalogue, ratings, posts, users (without password hashes), settings and audit log.
           Keep it somewhere safe before bulk edits or a reset.
         </p>
-        <Link href="/admin/export" className="btn btn-ghost mt-2 !border-amber-300 !bg-white/70 !py-2 text-xs">
+        <Link href="/admin/export/download" className="btn btn-ghost mt-2 !border-amber-300 !bg-white/70 !py-2 text-xs">
           Download JSON backup
         </Link>
       </section>

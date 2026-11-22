@@ -3,6 +3,7 @@ import { toggleAppVisibilityAction } from "@/app/actions";
 import AiLogo from "@/components/AiLogo";
 import { DESKTOP_GROUPS, MOBILE_GROUPS, APP_ENTRIES } from "@/lib/software";
 import { getSiteSettings } from "@/lib/settings";
+import { requireAreaPage } from "@/lib/permissions";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export default async function AdminAppsPage({
 }: {
   searchParams: Promise<{ q?: string; kind?: string; page?: string }>;
 }) {
+  await requireAreaPage("catalogue");
   const { q = "", kind = "all", page = "1" } = await searchParams;
   const db = readDb();
   const settings = getSiteSettings(db);
@@ -97,6 +99,11 @@ export default async function AdminAppsPage({
                     {entry.kind === "mobile" ? "Mobile" : "PC"}
                   </span>
                   {entry.aiSlug ? <span className="chip bg-brand-soft text-brand">AI-backed</span> : null}
+                  {db.appPricing?.[entry.slug]?.plans?.length ? (
+                    <span className="chip bg-emerald-50 text-emerald-700">
+                      {db.appPricing[entry.slug].plans.length} plans
+                    </span>
+                  ) : null}
                   {isHidden ? <span className="chip bg-rose-50 text-rose-600">Hidden</span> : null}
                 </div>
                 <p className="truncate text-[11px] text-muted">
@@ -104,6 +111,9 @@ export default async function AdminAppsPage({
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1">
+                <Link href={`/admin/apps/${entry.slug}`} className="btn btn-primary !px-2 !py-1 text-xs">
+                  Plans &amp; pricing
+                </Link>
                 {entry.aiSlug ? (
                   <Link href={`/ai/${entry.aiSlug}`} className="btn btn-ghost !px-2 !py-1 text-xs">
                     AI page

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AiLogo, Stars } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { buildView, contributorBoard, timeAgo } from "@/lib/rank";
+import { resolveRoles, roleAreas, roleLabel } from "@/lib/roles";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ export default async function ProfilePage() {
   }
 
   const view = buildView(db);
+  const roles = resolveRoles(db.roles);
+  const isStaff = roleAreas(user.role, roles).length > 0;
   const board = contributorBoard(db, 10);
   const rankIndex = board.findIndex((row) => row.user.id === user.id);
   const myRatings = db.ratings
@@ -52,14 +55,14 @@ export default async function ProfilePage() {
             {rankIndex >= 0 && rankIndex < 10 ? (
               <span className="chip bg-amber-100 text-amber-700">🏅 Top reviewer #{rankIndex + 1}</span>
             ) : null}
-            {user.role === "admin" ? <span className="chip chip-brand">Admin</span> : null}
+            {isStaff ? <span className="chip chip-brand">{roleLabel(user.role, roles)}</span> : null}
           </div>
           <p className="truncate text-sm text-slate-600" title={user.email}>
             {user.email}
           </p>
           <p className="text-xs text-muted">Member since {timeAgo(user.createdAt)}</p>
         </div>
-        {user.role === "admin" ? (
+        {isStaff ? (
           <Link href="/admin" className="btn btn-primary">
             Admin dashboard →
           </Link>

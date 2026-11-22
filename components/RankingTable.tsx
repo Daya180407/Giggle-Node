@@ -50,7 +50,7 @@ export default function RankingTable({ stats }: { stats: AiStat[] }) {
             <PriceBadge price={s.ai.priceType} />
           </div>
           <a
-            href={s.ai.website}
+            href={`/go/${s.ai.slug}`}
             target="_blank"
             rel="nofollow noopener noreferrer sponsored"
             aria-label={`Visit ${s.ai.name}`}

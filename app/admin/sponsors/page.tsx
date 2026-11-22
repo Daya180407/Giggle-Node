@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { setBoostAction, setSponsoredAction } from "@/app/actions";
+import { saveSponsorshipAction, setBoostAction, setSponsoredAction } from "@/app/actions";
 import { AiLogo, Stars } from "@/components/ui";
+import { requireAreaPage } from "@/lib/permissions";
 import { buildView, rankedAis } from "@/lib/rank";
 import { readDb } from "@/lib/store";
 
@@ -9,9 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function AdminSponsorsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; saved?: string }>;
 }) {
-  const { q = "" } = await searchParams;
+  await requireAreaPage("sponsors");
+  const { q = "", saved } = await searchParams;
   const db = readDb();
   const view = buildView(db);
   const ranked = rankedAis(view);
@@ -35,6 +37,12 @@ export default async function AdminSponsorsPage({
         </div>
         <span className="chip bg-amber-50 text-amber-700">{db.ai.filter((a) => a.sponsored).length} sponsored</span>
       </div>
+
+      {saved ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          Sponsorship saved.
+        </div>
+      ) : null}
 
       <form className="card flex flex-wrap items-center gap-2 p-3" action="/admin/sponsors">
         <input
@@ -122,6 +130,65 @@ function SponsorRow({
           {sponsored ? "Sponsored ✓" : "Mark sponsored"}
         </button>
       </form>
+
+      <details className="w-full">
+        <summary className="cursor-pointer text-[11px] font-semibold text-brand">
+          Deal details
+          {ai.sponsorAmount ? ` · ₹${ai.sponsorAmount}` : ""}
+          {ai.sponsorUntil ? ` · till ${ai.sponsorUntil}` : ""}
+          {ai.affiliateUrl ? " · affiliate" : ""}
+        </summary>
+        <form action={saveSponsorshipAction} className="mt-2 flex flex-wrap items-end gap-1.5 rounded-xl border border-line bg-slate-50/70 p-2">
+          <input type="hidden" name="id" value={ai.id} />
+          <div>
+            <label className="label !text-[10px]" htmlFor={`amount_${ai.id}`}>
+              Amount paid (₹)
+            </label>
+            <input
+              id={`amount_${ai.id}`}
+              name="sponsorAmount"
+              type="number"
+              min={0}
+              defaultValue={ai.sponsorAmount ?? ""}
+              className="field !w-28 !py-1 text-xs"
+            />
+          </div>
+          <div>
+            <label className="label !text-[10px]" htmlFor={`days_${ai.id}`}>
+              Days booked
+            </label>
+            <input
+              id={`days_${ai.id}`}
+              name="sponsorDays"
+              type="number"
+              min={0}
+              className="field !w-24 !py-1 text-xs"
+              placeholder="30"
+            />
+          </div>
+          <div className="min-w-[220px] flex-1">
+            <label className="label !text-[10px]" htmlFor={`aff_${ai.id}`}>
+              Affiliate URL
+            </label>
+            <input
+              id={`aff_${ai.id}`}
+              name="affiliateUrl"
+              defaultValue={ai.affiliateUrl ?? ""}
+              className="field !py-1 text-xs"
+              placeholder="https://partner.example.com/ref=giglenode"
+            />
+          </div>
+          <label className="flex items-center gap-1.5 pb-1 text-[11px] text-slate-600">
+            <input type="checkbox" name="sponsored" defaultChecked={ai.sponsored} className="h-3.5 w-3.5 accent-indigo-600" />
+            Sponsored label
+          </label>
+          <label className="flex items-center gap-1.5 pb-1 text-[11px] text-slate-600">
+            <input type="checkbox" name="clearEnd" className="h-3.5 w-3.5 accent-rose-600" />
+            Clear end date
+          </label>
+          <button className="btn btn-primary !py-1 text-xs">Save deal</button>
+        </form>
+      </details>
     </div>
   );
 }

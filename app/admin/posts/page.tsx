@@ -2,6 +2,7 @@ import Link from "next/link";
 import { deletePostAction, duplicatePostAction, setPostStatusAction } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { POST_TYPE_LABEL } from "@/lib/categories";
+import { requireAreaPage } from "@/lib/permissions";
 import { formatDate, readingTime } from "@/lib/rank";
 import { readDb } from "@/lib/store";
 
@@ -14,6 +15,7 @@ export default async function AdminPostsPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
+  await requireAreaPage("posts");
   const { q = "", status = "all", page = "1" } = await searchParams;
   const db = readDb();
   const query = q.trim().toLowerCase();
@@ -43,8 +45,9 @@ export default async function AdminPostsPage({
           <h2 className="display mt-1 text-2xl text-ink">Posts & guides</h2>
           <p className="mt-1 text-xs text-muted">
             {db.posts.filter((p) => p.status === "published").length} published ·{" "}
+            {db.posts.filter((p) => p.status === "scheduled").length} scheduled ·{" "}
             {db.posts.filter((p) => p.status === "draft").length} drafts ·{" "}
-            {db.posts.filter((p) => p.sponsored).length} sponsored
+            {db.posts.filter((p) => p.featured).length} featured
           </p>
         </div>
         <Link href="/admin/posts/new" className="btn btn-primary text-xs">
@@ -63,6 +66,7 @@ export default async function AdminPostsPage({
         <select name="status" defaultValue={status} className="field !w-auto !py-2 text-xs" aria-label="Filter status">
           <option value="all">All statuses</option>
           <option value="published">Published</option>
+          <option value="scheduled">Scheduled</option>
           <option value="draft">Drafts</option>
         </select>
         <button className="btn btn-primary !py-2 text-xs">Search</button>
@@ -83,10 +87,15 @@ export default async function AdminPostsPage({
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{p.title}</p>
               <p className="truncate text-[11px] text-muted">
-                {POST_TYPE_LABEL[p.type]} · {p.status === "published" ? "Published" : "Draft"} ·{" "}
-                {formatDate(p.createdAt)} · {readingTime(p.content)} min · {p.relatedAiIds.length} AI · {p.author}
+                {POST_TYPE_LABEL[p.type]} ·{" "}
+                {p.status === "published" ? "Published" : p.status === "scheduled" ? "Scheduled" : "Draft"}
+                {p.status === "scheduled" && p.scheduledAt
+                  ? ` for ${new Date(p.scheduledAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}`
+                  : ""}{" "}
+                · {formatDate(p.createdAt)} · {readingTime(p.content)} min · {p.relatedAiIds.length} AI · {p.author}
               </p>
             </div>
+            {p.featured ? <span className="chip bg-indigo-50 text-indigo-700">Featured</span> : null}
             {p.sponsored ? <span className="chip bg-amber-50 text-amber-700">Sponsored</span> : null}
             <div className="flex flex-wrap items-center gap-1">
               <Link href={`/admin/posts/${p.id}`} className="btn btn-ghost !px-2 !py-1 text-xs">

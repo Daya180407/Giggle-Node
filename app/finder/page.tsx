@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import FinderQuiz from "@/components/FinderQuiz";
+import { getCategories } from "@/lib/categories";
 import { buildView } from "@/lib/rank";
+import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +16,10 @@ export const metadata: Metadata = {
 export default async function FinderPage() {
   const db = readDb();
   const view = buildView(db);
+  const settings = getSiteSettings(db);
+  const categories = getCategories(db);
   const options = [...view.aiStats.values()]
+    .filter((s) => !s.ai.hidden)
     .map((s) => ({
       slug: s.ai.slug,
       name: s.ai.name,
@@ -42,7 +47,11 @@ export default async function FinderPage() {
       </div>
 
       <div className="mt-7">
-        <FinderQuiz options={options} />
+        <FinderQuiz
+          options={options}
+          questionText={Object.fromEntries(settings.quizQuestions.map((q) => [q.id, q.question]))}
+          workOptions={categories.map((c) => ({ key: c.slug, label: c.name, emoji: c.emoji }))}
+        />
       </div>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-3">

@@ -7,9 +7,10 @@ import PostCard from "@/components/PostCard";
 import RankingTable from "@/components/RankingTable";
 import { SectionHead } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
-import { CATEGORIES, CATEGORY_MAP } from "@/lib/categories";
+import { getCategories } from "@/lib/categories";
 import type { CategorySlug } from "@/lib/types";
 import { buildView, publishedPosts, rankedAis, risingAis } from "@/lib/rank";
+import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const cat = CATEGORY_MAP[slug];
+  const cat = getCategories(readDb()).find((c) => c.slug === slug);
   const title = cat ? `Best ${cat.name} AI Tools (2026) — Real User Ratings` : "All AI Tools Ranked";
   const description = cat
     ? `${cat.blurb} Compare the best ${cat.name.toLowerCase()} AI tools by real user ratings, pricing and model-level detail.`
@@ -28,11 +29,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params;
-  if (slug !== "all" && !CATEGORY_MAP[slug]) notFound();
-
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
+  const categories = getCategories(db);
+  const cat = categories.find((c) => c.slug === slug);
+  if (slug !== "all" && !cat) notFound();
   const view = buildView(db);
-  const cat = CATEGORY_MAP[slug];
+  const settings = getSiteSettings(db);
   const stats = rankedAis(view, slug === "all" ? "all" : (slug as CategorySlug));
   const saved = new Set(user ? db.bookmarks.filter((b) => b.userId === user.id).map((b) => b.aiId) : []);
   const rising = risingAis(view, 4);
@@ -95,7 +97,7 @@ export default async function CategoryPage({ params }: Props) {
           </div>
 
           <div className="no-scrollbar -mx-1 flex w-full gap-1.5 overflow-x-auto px-1 sm:w-auto sm:max-w-md sm:flex-wrap lg:max-w-xs">
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <Link
                 key={c.slug}
                 href={`/category/${c.slug}`}
@@ -132,6 +134,8 @@ export default async function CategoryPage({ params }: Props) {
             unitLabel={cat?.unit.label ?? "tasks / month"}
             defaultQty={cat?.unit.defaultQty ?? 50}
             options={calcOptions}
+            currency={settings.appearance.currency}
+            usdRate={settings.appearance.usdRate}
           />
           <div className="card p-5">
             <h3 className="display text-base text-ink">About this category</h3>
@@ -141,7 +145,7 @@ export default async function CategoryPage({ params }: Props) {
               page before subscribing.
             </p>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {CATEGORIES.filter((c) => c.slug !== slug)
+              {categories.filter((c) => c.slug !== slug)
                 .slice(0, 6)
                 .map((c) => (
                   <Link

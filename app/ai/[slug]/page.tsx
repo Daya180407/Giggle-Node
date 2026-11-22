@@ -9,18 +9,26 @@ import { ApiPricingInline } from "@/components/ApiPricing";
 import CopyButton from "@/components/CopyButton";
 import Distribution from "@/components/Distribution";
 import PostCard from "@/components/PostCard";
+import PricingReport from "@/components/PricingReport";
 import ShareButton from "@/components/ShareButton";
 import { AiLogo, PriceBadge, SectionHead, SponsoredTag, Stars, Trend } from "@/components/ui";
+import { formatMoney } from "@/lib/analytics";
 import { getApiPricing } from "@/lib/api-pricing";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
+import { canAccess, resolveRoles } from "@/lib/roles";
+import { formatPlanPrice } from "@/lib/plans";
+import { reportRatingAction } from "@/app/actions";
 import { aiReviews, buildView, publishedPosts, promptsFor, timeAgo } from "@/lib/rank";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ pricingReport?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -37,8 +45,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function AiDetailPage({ params }: Props) {
+export default async function AiDetailPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { pricingReport } = await searchParams;
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
   const ai = db.ai.find((a) => a.slug === slug);
   if (!ai) notFound();
@@ -109,6 +118,17 @@ export default async function AiDetailPage({ params }: Props) {
         <span className="text-slate-600">{ai.name}</span>
       </nav>
 
+      {pricingReport === "sent" ? (
+        <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          Report bhej di gayi. Admin panel me dikhegi aur price check karke fix kiya jayega.
+        </div>
+      ) : null}
+      {pricingReport === "short" ? (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
+          Report likhne ke liye kam se kam 5 characters likhein.
+        </div>
+      ) : null}
+
       {/* Header */}
       <header className="page-hero mt-3">
         <div className="flex flex-wrap items-start gap-4">
@@ -117,12 +137,19 @@ export default async function AiDetailPage({ params }: Props) {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-extrabold sm:text-3xl">{ai.name}</h1>
               {ai.sponsored ? <SponsoredTag /> : null}
+              {ai.featured ? <span className="chip bg-indigo-50 text-indigo-700">★ Featured</span> : null}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
               <Link href={`/category/${ai.category}`} className="chip bg-brand-soft text-brand">
                 {categoryName(ai.category)}
               </Link>
               <PriceBadge price={ai.priceType} />
+              <span className="chip bg-emerald-50 text-emerald-700">{formatMoney(ai, settings.appearance)}</span>
+              {(ai.platforms ?? []).map((platform) => (
+                <span key={platform} className="chip bg-slate-100 text-slate-600">
+                  {platform === "web" ? "🌐 Website" : platform === "android" ? "📱 Android" : "💻 PC"}
+                </span>
+              ))}
               <span>{models.length} models</span>
               <span>·</span>
               <span>{followers} followers</span>
@@ -138,7 +165,7 @@ export default async function AiDetailPage({ params }: Props) {
 
         <div className="mt-4 flex flex-wrap gap-2">
           <a
-            href={ai.website}
+            href={`/go/${ai.slug}`}
             target="_blank"
             rel="nofollow noopener noreferrer sponsored"
             className="btn btn-primary"
@@ -163,6 +190,11 @@ export default async function AiDetailPage({ params }: Props) {
             </button>
           </form>
           <ShareButton title={`${ai.name} — GigleNode rating`} />
+          {user && canAccess(user.role, "catalogue", resolveRoles(db.roles)) ? (
+            <Link href={`/admin/ai/${ai.slug}`} className="btn btn-ghost">
+              ✎ Admin edit
+            </Link>
+          ) : null}
         </div>
 
         {ai.sponsored ? (
@@ -239,12 +271,20 @@ export default async function AiDetailPage({ params }: Props) {
                           <ApiPricingInline pricing={pricing} />
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right">
-                          <Link
-                            href={`/ai/${ai.slug}/${m.model.slug}`}
-                            className="btn btn-ghost !px-2.5 !py-1 text-xs"
-                          >
-                            Details →
-                          </Link>
+                          <div className="flex items-center justify-end gap-1">
+                            <Link
+                              href={`/ai/${ai.slug}/${m.model.slug}#rate`}
+                              className="btn btn-primary !px-2.5 !py-1 text-xs"
+                            >
+                              ★ Rate
+                            </Link>
+                            <Link
+                              href={`/ai/${ai.slug}/${m.model.slug}`}
+                              className="btn btn-ghost !px-2.5 !py-1 text-xs"
+                            >
+                              Details →
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -257,6 +297,72 @@ export default async function AiDetailPage({ params }: Props) {
               derived from plan pricing. Token models are priced per 1M tokens; image, video and voice models use their
               own units. Always confirm current rates with the provider before you build.
             </p>
+            {models.length ? (
+              <div className="border-t border-line bg-slate-50/50 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
+                  Which model is best for what?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {models.map((m) => (
+                    <Link
+                      key={m.model.id}
+                      href={`/ai/${ai.slug}/${m.model.slug}`}
+                      className="chip border border-line bg-white text-slate-600 transition hover:border-indigo-200 hover:text-brand"
+                    >
+                      <strong className="font-semibold">{m.model.bestFor || "General use"}</strong>
+                      <span aria-hidden>→</span>
+                      {m.model.name} · {m.score.toFixed(1)}★
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+
+          {/* Subscription plans */}
+          <section className="card p-5" id="plans">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 className="display text-lg text-ink">Subscription plans</h2>
+                <p className="mt-1 text-xs text-muted">
+                  {ai.name} ke current plans. Prices admin panel se update hote hain.
+                </p>
+              </div>
+              <span className="chip chip-brand">
+                {ai.plans?.length ? `${ai.plans.length} plans` : "Not listed yet"}
+              </span>
+            </div>
+            {ai.plans?.length ? (
+              <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {ai.plans.map((plan) => (
+                  <div key={plan.id} className="rounded-xl border border-line bg-slate-50/60 p-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-sm font-bold text-ink">{plan.name}</p>
+                      <p className="text-sm font-extrabold text-brand">
+                        {formatPlanPrice(plan, settings.appearance)}
+                      </p>
+                    </div>
+                    {plan.priceYearly !== null ? (
+                      <p className="mt-0.5 text-[11px] text-muted">
+                        ${plan.priceYearly.toFixed(plan.priceYearly % 1 === 0 ? 0 : 2)} / year
+                      </p>
+                    ) : null}
+                    {plan.note ? <p className="mt-1 text-[11.5px] leading-relaxed text-slate-600">{plan.note}</p> : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Detailed plans abhi admin panel se add nahi hue. Starting price {formatMoney(ai, settings.appearance)} —
+                official website par latest plans confirm karein.
+              </p>
+            )}
+            <PricingReport
+              targetType="ai"
+              targetId={ai.id}
+              targetName={ai.name}
+              back={`/ai/${ai.slug}`}
+            />
           </section>
 
           {/* About */}
@@ -371,11 +477,21 @@ export default async function AiDetailPage({ params }: Props) {
                         {reviewer?.avatar ?? "U"}
                       </span>
                       <span className="text-sm font-semibold">{reviewer?.name ?? "GigleNode user"}</span>
+                      {reviewer?.verified ? (
+                        <span className="chip bg-emerald-50 text-emerald-700">✓ verified</span>
+                      ) : null}
                       <Stars value={rating.stars} size={12} />
                       <span className="ml-auto text-xs text-muted">{timeAgo(rating.updatedAt)}</span>
                     </div>
                     <p className="mt-1.5 text-sm text-slate-600">{rating.review}</p>
                     {model ? <p className="mt-1 text-xs text-muted">Rated on {model.name}</p> : null}
+                    <form action={reportRatingAction} className="mt-1.5">
+                      <input type="hidden" name="id" value={rating.id} />
+                      <input type="hidden" name="back" value={`/ai/${ai.slug}`} />
+                      <button className="text-[11px] font-medium text-muted transition hover:text-rose-600">
+                        ⚑ Report this review
+                      </button>
+                    </form>
                   </div>
                 );
               })}
@@ -420,13 +536,11 @@ export default async function AiDetailPage({ params }: Props) {
               </div>
               <div className="flex justify-between text-slate-600">
                 <span>Starting plan</span>
-                <span className="font-semibold">
-                  {ai.priceType === "free" ? "Free" : `$${ai.planPrice}/mo`}
-                </span>
+                <span className="font-semibold">{formatMoney(ai, settings.appearance)}</span>
               </div>
             </div>
             <a
-              href={ai.website}
+              href={`/go/${ai.slug}`}
               target="_blank"
               rel="nofollow noopener noreferrer sponsored"
               className="btn btn-primary mt-3 w-full"

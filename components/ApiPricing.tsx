@@ -26,6 +26,7 @@ export function ApiPricingInline({ pricing }: { pricing: ApiPricingInfo }) {
         {pricing.output !== null && pricing.unit === "1M tokens" ? "per 1M tokens" : `per ${pricing.unit}`}
         {context ? ` · ${context} context` : ""}
         {pricing.estimated ? " · est." : ""}
+        {pricing.manual ? " · admin verified" : ""}
       </p>
       {pricing.note && !pricing.estimated ? (
         <p className="mt-1 max-w-[220px] text-[10px] leading-snug text-muted">{pricing.note}</p>
@@ -101,7 +102,7 @@ export default function ApiPricing({ pricing, detail = false }: { pricing: ApiPr
       ) : null}
 
       <p className="mt-3 text-[11px] leading-relaxed text-muted">
-        {pricing.estimated ? "Indicative rate. " : "List price. "}
+        {pricing.manual ? "Admin-verified rate. " : pricing.estimated ? "Indicative rate. " : "List price. "}
         Confirm current pricing on the{" "}
         <a
           href={pricing.source}

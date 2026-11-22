@@ -1,10 +1,12 @@
 import Link from "next/link";
 import PostForm from "@/components/admin/PostForm";
+import { requireAreaPage } from "@/lib/permissions";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function NewPostPage() {
+export default async function NewPostPage() {
+  await requireAreaPage("posts");
   const db = readDb();
   return (
     <div className="space-y-4">

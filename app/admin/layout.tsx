@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { logoutAction } from "@/app/auth-actions";
 import AdminNav from "@/components/admin/AdminNav";
 import BrandLogo from "@/components/BrandLogo";
-import { getCurrentUser } from "@/lib/auth";
+import { requireStaffPage, roleLabel } from "@/lib/permissions";
+import { resolveRoles, roleAreas } from "@/lib/roles";
+import { readDb } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Admin",
@@ -13,8 +14,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") redirect("/login?next=/admin");
+  const user = await requireStaffPage();
+  const roles = resolveRoles(readDb().roles);
 
   return (
     <div className="mx-auto max-w-[1400px] px-3 py-4 sm:px-6 sm:py-6">
@@ -31,7 +32,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               <p className="text-[9.5px] font-bold uppercase tracking-[0.22em] text-cyan-300/80">Admin workspace</p>
               <h1 className="display text-2xl leading-tight sm:text-[28px]">Control center</h1>
               <p className="mt-0.5 text-[11px] text-slate-400">
-                {user.name} · full access · every change is logged
+                {user.name} · {roleLabel(user.role, roles)} · every change is logged
               </p>
             </div>
           </div>
@@ -55,7 +56,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </header>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[228px_minmax(0,1fr)]">
-        <AdminNav />
+        <div className="min-w-0">
+          <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 lg:hidden">
+            All admin sections · swipe →
+          </p>
+          <AdminNav areas={roleAreas(user.role, roles)} />
+        </div>
         <div className="min-w-0">{children}</div>
       </div>
     </div>

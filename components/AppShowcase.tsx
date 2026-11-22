@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import AiLogo from "@/components/AiLogo";
+import PricingReport from "@/components/PricingReport";
 import { PriceBadge, Stars } from "@/components/ui";
 import type { AppGroup } from "@/lib/apps/types";
 import type { PriceType } from "@/lib/types";
@@ -21,6 +22,8 @@ export type AppShowcaseItem = {
   external: boolean;
   iconSrc: string;
   kind: "mobile" | "desktop";
+  plans: { name: string; price: string; note?: string }[];
+  apiNote: string | null;
 };
 
 const TABS = [
@@ -191,33 +194,54 @@ export default function AppShowcase({
                     <span className="ml-auto shrink-0 text-[11px] font-bold text-amber-600">★ {item.score.toFixed(1)}</span>
                   ) : null}
                 </span>
+                {item.plans.length ? (
+                  <span className="mt-1 flex flex-wrap gap-1">
+                    {item.plans.slice(0, 4).map((plan) => (
+                      <span
+                        key={plan.name}
+                        title={plan.note}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600"
+                      >
+                        {plan.name}
+                        <span className="font-normal text-muted">{plan.price}</span>
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
+                {item.apiNote ? (
+                  <span className="mt-1 block text-[10px] leading-snug text-muted">{item.apiNote}</span>
+                ) : null}
               </span>
             </>
           );
 
           const className =
-            "app-card anim-rise group flex items-start gap-3 rounded-xl border border-line bg-white p-3 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md";
+            "app-card anim-rise group flex flex-col rounded-xl border border-line bg-white p-3 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md";
 
-          return item.external ? (
-            <a
-              key={`${tab}-${item.slug}`}
-              href={item.href}
-              target="_blank"
-              rel="nofollow noopener noreferrer"
-              className={className}
-              style={{ animationDelay: `${i * 30}ms` }}
-            >
-              {body}
-            </a>
-          ) : (
-            <Link
-              key={`${tab}-${item.slug}`}
-              href={item.href}
-              className={className}
-              style={{ animationDelay: `${i * 30}ms` }}
-            >
-              {body}
-            </Link>
+          return (
+            <div key={`${tab}-${item.slug}`} className={className} style={{ animationDelay: `${i * 30}ms` }}>
+              {item.external ? (
+                <a
+                  href={item.href}
+                  target="_blank"
+                  rel="nofollow noopener noreferrer"
+                  className="flex items-start gap-3"
+                >
+                  {body}
+                </a>
+              ) : (
+                <Link href={item.href} className="flex items-start gap-3">
+                  {body}
+                </Link>
+              )}
+              <PricingReport
+                targetType="app"
+                targetId={item.slug}
+                targetName={item.name}
+                back="/#apps"
+                compact
+              />
+            </div>
           );
         })}
         {visible.length === 0 ? (

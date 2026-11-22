@@ -20,9 +20,20 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function SiteNav({ user, savedCount }: { user: HeaderUser; savedCount: number }) {
+export default function SiteNav({
+  user,
+  savedCount,
+  unread = 0,
+  extraNav = [],
+}: {
+  user: HeaderUser;
+  savedCount: number;
+  unread?: number;
+  extraNav?: { href: string; label: string }[];
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const navItems = [...NAV, ...extraNav];
 
   useEffect(() => {
     setOpen(false);
@@ -31,7 +42,7 @@ export default function SiteNav({ user, savedCount }: { user: HeaderUser; savedC
   return (
     <>
       <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
-        {NAV.map((item) => {
+        {navItems.map((item) => {
           const active = isActive(pathname, item.href);
           return (
             <Link
@@ -47,7 +58,7 @@ export default function SiteNav({ user, savedCount }: { user: HeaderUser; savedC
             </Link>
           );
         })}
-        {user?.role === "admin" ? (
+        {user && user.role !== "user" ? (
           <Link
             href="/admin"
             className={`whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium transition ${
@@ -62,6 +73,28 @@ export default function SiteNav({ user, savedCount }: { user: HeaderUser; savedC
       </nav>
 
       <div className="ml-auto flex items-center gap-1.5">
+        {user ? (
+          <Link
+            href="/notifications"
+            aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+            className="relative grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-slate-600 transition hover:border-indigo-200 hover:text-brand"
+          >
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <path
+                d="M5.5 8a4.5 4.5 0 019 0c0 3 1.2 4.2 1.6 4.6H3.9c.4-.4 1.6-1.6 1.6-4.6z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path d="M8.2 15.2a2 2 0 003.6 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            {unread > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            ) : null}
+          </Link>
+        ) : null}
         <Link
           href="/my-list"
           aria-label="My list"
@@ -140,7 +173,7 @@ export default function SiteNav({ user, savedCount }: { user: HeaderUser; savedC
           className="absolute inset-x-0 top-full z-50 border-b border-line bg-white px-4 pb-5 pt-3 shadow-2xl shadow-slate-900/10 lg:hidden"
         >
           <div className="mx-auto grid max-w-7xl gap-1.5">
-            {NAV.map((item, i) => (
+            {navItems.map((item, i) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -152,7 +185,7 @@ export default function SiteNav({ user, savedCount }: { user: HeaderUser; savedC
                 <span aria-hidden className="text-slate-300">→</span>
               </Link>
             ))}
-            {user?.role === "admin" ? (
+            {user && user.role !== "user" ? (
               <Link
                 href="/admin"
                 className="anim-rise flex items-center justify-between rounded-xl bg-brand-soft px-3 py-2.5 text-sm font-semibold text-brand"
@@ -162,6 +195,11 @@ export default function SiteNav({ user, savedCount }: { user: HeaderUser; savedC
               </Link>
             ) : null}
             <div className="mt-2 grid grid-cols-2 gap-2 border-t border-line pt-3">
+              {user ? (
+                <Link href="/notifications" className="btn btn-ghost">
+                  Notifications{unread > 0 ? ` (${unread})` : ""}
+                </Link>
+              ) : null}
               <Link href="/my-list" className="btn btn-ghost">
                 My List {savedCount > 0 ? `(${savedCount})` : ""}
               </Link>

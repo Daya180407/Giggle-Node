@@ -253,3 +253,41 @@ end $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
 for each row execute function public.handle_new_user();
+
+-- ---------- AI search cache (app/api/search) ----------
+-- The running app keeps this in its JSON/R2 document; these tables are for the
+-- Supabase deployment described in the PRD.
+create table if not exists public.search_cache (
+  id uuid primary key default uuid_generate_v4(),
+  query_text text not null,
+  normalized_query text not null unique,
+  category text,
+  budget text,
+  use_case text,
+  result_json jsonb not null default '{}'::jsonb,
+  search_count integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists search_cache_normalized_idx on public.search_cache (normalized_query);
+
+-- One row per AI search request; ip_hash is a salted SHA-256, never the raw IP.
+create table if not exists public.search_logs (
+  id bigserial primary key,
+  query_text text not null,
+  ip_hash text not null,
+  cached boolean not null default false,
+  source text not null default 'fallback',
+  created_at timestamptz not null default now()
+);
+create index if not exists search_logs_created_idx on public.search_logs (created_at desc);
+create index if not exists search_logs_ip_idx on public.search_logs (ip_hash, created_at desc);
+
+alter table public.search_cache enable row level security;
+alter table public.search_logs enable row level security;
+
+-- Only the service role (server) reads or writes these; no public policy.
+create policy "admin search cache" on public.search_cache
+  for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin search logs" on public.search_logs
+  for all using (public.is_admin()) with check (public.is_admin());

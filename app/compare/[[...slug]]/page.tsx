@@ -3,10 +3,13 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import CompareBuilder from "@/components/CompareBuilder";
 import { AiLogo, PriceBadge, Stars, Trend } from "@/components/ui";
+import { formatMoney } from "@/lib/analytics";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
 import { buildView, type AiStat } from "@/lib/rank";
+import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
+import type { SiteSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +42,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const ROWS: { label: string; render: (s: AiStat) => ReactNode }[] = [
+function buildRows(appearance: SiteSettings["appearance"]): { label: string; render: (s: AiStat) => ReactNode }[] {
+  return [
   {
     label: "Weighted rating",
     render: (s) => (
@@ -63,7 +67,7 @@ const ROWS: { label: string; render: (s: AiStat) => ReactNode }[] = [
         <span className="font-semibold text-orange-600">Paid only</span>
       ),
   },
-  { label: "Starting plan", render: (s) => (s.ai.priceType === "free" ? "Free" : `$${s.ai.planPrice}/month`) },
+  { label: "Starting plan", render: (s) => formatMoney(s.ai, appearance) },
   { label: "Category", render: (s) => categoryName(s.ai.category) },
   { label: "Number of models", render: (s) => `${s.models.length} models` },
   { label: "Best for", render: (s) => s.ai.bestFor.join(", ") },
@@ -78,7 +82,7 @@ const ROWS: { label: string; render: (s: AiStat) => ReactNode }[] = [
     label: "Website",
     render: (s) => (
       <a
-        href={s.ai.website}
+        href={`/go/${s.ai.slug}`}
         target="_blank"
         rel="nofollow noopener noreferrer sponsored"
         className="font-semibold text-brand"
@@ -87,13 +91,21 @@ const ROWS: { label: string; render: (s: AiStat) => ReactNode }[] = [
       </a>
     ),
   },
-];
+  ];
+}
 
 export default async function ComparePage({ params }: Props) {
   const { slug } = await params;
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
   const view = buildView(db);
-  const slugs = parseSlugs(slug);
+  const settings = getSiteSettings(db);
+  const rows = buildRows(settings.appearance);
+  const parsed = parseSlugs(slug);
+  const slugs = parsed.length
+    ? parsed
+    : settings.compareAiIds
+        .map((id) => db.ai.find((a) => a.id === id)?.slug)
+        .filter((s): s is string => Boolean(s));
   const stats = slugs.map((s) => [...view.aiStats.values()].find((x) => x.ai.slug === s)).filter(Boolean) as AiStat[];
 
   const options = db.ai
@@ -142,7 +154,7 @@ export default async function ComparePage({ params }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {ROWS.map((row) => (
+                {rows.map((row) => (
                   <tr key={row.label}>
                     <th className="p-3 text-left align-top text-xs font-semibold uppercase tracking-wide text-slate-500">
                       {row.label}

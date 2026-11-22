@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PostForm from "@/components/admin/PostForm";
+import { requireAreaPage } from "@/lib/permissions";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAreaPage("posts");
   const { id } = await params;
   const db = readDb();
   const post = db.posts.find((p) => p.id === id);

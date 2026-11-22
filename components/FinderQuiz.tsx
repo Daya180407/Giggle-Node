@@ -40,7 +40,15 @@ const LEVEL = [
   { key: "pro", label: "Pro", emoji: "🎯" },
 ];
 
-export default function FinderQuiz({ options }: { options: FinderOption[] }) {
+export default function FinderQuiz({
+  options,
+  questionText,
+  workOptions = WORK,
+}: {
+  options: FinderOption[];
+  questionText?: Record<string, string>;
+  workOptions?: { key: string; label: string; emoji?: string }[];
+}) {
   const [step, setStep] = useState(0);
   const [work, setWork] = useState<string | null>(null);
   const [budget, setBudget] = useState<string | null>(null);
@@ -79,8 +87,8 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
 
   const questions = [
     {
-      title: "What do you need to get done?",
-      options: WORK,
+      title: questionText?.work ?? "What do you need to get done?",
+      options: workOptions,
       value: work,
       onPick: (k: string) => {
         setWork(k);
@@ -88,7 +96,7 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
       },
     },
     {
-      title: "What is your monthly budget?",
+      title: questionText?.budget ?? "What is your monthly budget?",
       options: BUDGET,
       value: budget,
       onPick: (k: string) => {
@@ -97,7 +105,7 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
       },
     },
     {
-      title: "How experienced are you with AI tools?",
+      title: questionText?.level ?? "How experienced are you with AI tools?",
       options: LEVEL,
       value: level,
       onPick: (k: string) => {
@@ -116,7 +124,7 @@ export default function FinderQuiz({ options }: { options: FinderOption[] }) {
               <span className="eyebrow">Your matches</span>
               <h2 className="display mt-1 text-xl text-ink sm:text-2xl">Three AI tools worth trying</h2>
               <p className="mt-1 text-xs text-muted">
-                {WORK.find((w) => w.key === work)?.label} · {BUDGET.find((b) => b.key === budget)?.label} ·{" "}
+                {workOptions.find((w) => w.key === work)?.label} · {BUDGET.find((b) => b.key === budget)?.label} ·{" "}
                 {LEVEL.find((l) => l.key === level)?.label}
               </p>
             </div>

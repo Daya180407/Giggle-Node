@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import CustomPageBody from "@/components/CustomPageBody";
+import { customPageIsLive } from "@/lib/pages";
+import { readDb } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Disclaimer",
@@ -8,6 +11,9 @@ export const metadata: Metadata = {
 };
 
 export default function DisclaimerPage() {
+  const page = customPageIsLive(readDb(), "disclaimer");
+  if (page) return <CustomPageBody page={page} />;
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <header className="page-hero">

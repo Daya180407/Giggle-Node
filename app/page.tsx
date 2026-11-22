@@ -8,15 +8,18 @@ import ChampionPodium, { type ChampionCategory } from "@/components/ChampionPodi
 import FeatureRotator from "@/components/FeatureRotator";
 import HeroSearch from "@/components/HeroSearch";
 import PaidPromo, { type PromoItem } from "@/components/PaidPromo";
+import { formatMoney } from "@/lib/analytics";
 import PostCard from "@/components/PostCard";
 import RankTabs, { type RankRow, type RankTab } from "@/components/RankTabs";
 import { SectionHead } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
-import { CATEGORIES, categoryName } from "@/lib/categories";
+import { categoryName, getCategories } from "@/lib/categories";
 import { getSiteSettings } from "@/lib/settings";
+import { appPricingFor, formatPlanPrice } from "@/lib/plans";
 import { APP_ENTRIES, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
 import {
   buildView,
+  championFor,
   publishedPosts,
   rankedAis,
   risingAis,
@@ -63,13 +66,21 @@ function toRows(stats: AiStat[]): RankRow[] {
   }));
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pricingReport?: string }>;
+}) {
+  const { pricingReport } = await searchParams;
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
   const settings = getSiteSettings(db);
   const view = buildView(db);
   const saved = new Set(user ? db.bookmarks.filter((b) => b.userId === user.id).map((b) => b.aiId) : []);
-  const posts = publishedPosts(db).slice(0, 6);
-  const trending = trendingAis(view, 4);
+  const categories = getCategories(db);
+  const posts = [...publishedPosts(db)]
+    .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
+    .slice(0, 6);
+  const trending = trendingAis(view, 4, settings.trendingAiIds);
   const rising = risingAis(view, 4);
 
   const bySlug = new Map([...view.aiStats.values()].map((s) => [s.ai.slug, s]));
@@ -86,6 +97,7 @@ export default async function HomePage() {
       score: s.score,
       votes: s.votes,
       planPrice: s.ai.planPrice,
+      priceLabel: formatMoney(s.ai, settings.appearance),
       category: categoryName(s.ai.category),
       bestFor: s.ai.bestFor.join(" · "),
       website: s.ai.website,
@@ -94,6 +106,7 @@ export default async function HomePage() {
   const hiddenApps = new Set(settings.hiddenAppSlugs ?? []);
   const appItems = APP_ENTRIES.filter((entry) => !hiddenApps.has(entry.slug)).map((entry): AppShowcaseItem => {
     const stat = entry.aiSlug ? bySlug.get(entry.aiSlug) : undefined;
+    const pricing = appPricingFor(db, entry, stat?.ai);
     return {
       slug: entry.slug,
       name: entry.name,
@@ -108,6 +121,12 @@ export default async function HomePage() {
       external: !stat,
       iconSrc: stat ? `/logos/${stat.ai.slug}.png` : `/app-icons/${entry.slug}.png`,
       kind: entry.kind,
+      plans: pricing.plans.map((plan) => ({
+        name: plan.name,
+        price: formatPlanPrice(plan, settings.appearance),
+        note: plan.note,
+      })),
+      apiNote: [pricing.apiFrom, pricing.apiNote].filter(Boolean).join(" · ") || null,
     };
   });
   const mobileApps = appItems.filter((item) => item.kind === "mobile");
@@ -115,18 +134,18 @@ export default async function HomePage() {
 
   const tabs: RankTab[] = [
     { slug: "all", label: "All", rows: toRows(rankedAis(view).slice(0, 5)) },
-    ...CATEGORIES.map((c) => ({
+    ...categories.map((c) => ({
       slug: c.slug,
       label: c.name,
       rows: toRows(rankedAis(view, c.slug).slice(0, 5)),
     })),
   ];
 
-  const champions: ChampionCategory[] = CATEGORIES.map((category) => ({
+  const champions: ChampionCategory[] = categories.map((category) => ({
     slug: category.slug,
     label: category.name,
     emoji: category.emoji,
-    rows: rankedAis(view, category.slug)
+    rows: championFor(view, category.slug, settings.championOverrides)
       .slice(0, 3)
       .map((s, i) => ({
         rank: i + 1,
@@ -186,9 +205,24 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
+      {pricingReport === "sent" ? (
+        <div className="mx-auto mt-3 max-w-7xl px-3 sm:px-5">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+            Pricing report bhej di gayi. Admin panel me dikhegi aur price check karke fix kiya jayega.
+          </div>
+        </div>
+      ) : null}
+      {pricingReport === "short" ? (
+        <div className="mx-auto mt-3 max-w-7xl px-3 sm:px-5">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
+            Report likhne ke liye kam se kam 5 characters likhein.
+          </div>
+        </div>
+      ) : null}
+
       {/* Hero */}
-      <section className="relative px-3 pt-3 sm:px-5 sm:pt-5">
-        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[1.6rem] bg-[#07070d] sm:rounded-[2rem]">
+      <section className="relative pt-3 sm:pt-5">
+        <div className="relative overflow-hidden bg-[#07070d]">
           <div className="hero-blobs absolute inset-0" aria-hidden>
             <span className="hero-blob-1" />
             <span className="hero-blob-2" />
@@ -427,7 +461,7 @@ export default async function HomePage() {
             subtitle="Pick the job you need done — every category has a live top-three and a full leaderboard."
           />
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-            {CATEGORIES.map((c, i) => {
+            {categories.map((c, i) => {
               const tint = CATEGORY_TINTS[i % CATEGORY_TINTS.length];
               return (
                 <Link

@@ -1,7 +1,14 @@
 import Link from "next/link";
-import { deleteRatingAction, updateRatingAction } from "@/app/actions";
+import {
+  clearRatingReportsAction,
+  deleteRatingAction,
+  recalculateRankingAction,
+  setRatingStatusAction,
+  updateRatingAction,
+} from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { Stars } from "@/components/ui";
+import { requireAreaPage } from "@/lib/permissions";
 import { timeAgo } from "@/lib/rank";
 import { readDb } from "@/lib/store";
 
@@ -12,9 +19,10 @@ const PER_PAGE = 60;
 export default async function AdminRatingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; stars?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; stars?: string; page?: string; status?: string; reports?: string }>;
 }) {
-  const { q = "", stars = "all", page = "1" } = await searchParams;
+  await requireAreaPage("ratings");
+  const { q = "", stars = "all", page = "1", status = "all", reports = "" } = await searchParams;
   const db = readDb();
   const query = q.trim().toLowerCase();
 
@@ -32,6 +40,9 @@ export default async function AdminRatingsPage({
 
   const filtered = enriched.filter(({ r, model, ai, user }) => {
     if (stars !== "all" && r.stars !== Number(stars)) return false;
+    const state = r.status ?? "approved";
+    if (status !== "all" && state !== status) return false;
+    if (reports === "1" && (r.reports ?? 0) === 0) return false;
     if (!query) return true;
     return [model?.name, ai?.name, user?.name, user?.email, r.review]
       .filter(Boolean)
@@ -44,28 +55,38 @@ export default async function AdminRatingsPage({
   const pageNo = Math.min(Math.max(1, Number(page) || 1), pages);
   const rows = filtered.slice((pageNo - 1) * PER_PAGE, pageNo * PER_PAGE);
   const last7 = db.ratings.filter((r) => Date.now() - +new Date(r.createdAt) < 7 * 86400000).length;
+  const pending = db.ratings.filter((r) => r.status === "pending").length;
+  const reported = db.ratings.filter((r) => (r.reports ?? 0) > 0).length;
   const params = (nextPage: number) =>
     `/admin/ratings?${new URLSearchParams({
       ...(q ? { q } : {}),
       ...(stars !== "all" ? { stars } : {}),
+      ...(status !== "all" ? { status } : {}),
+      ...(reports === "1" ? { reports } : {}),
       page: String(nextPage),
     }).toString()}`;
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="eyebrow">Community</p>
-        <h2 className="display mt-1 text-2xl text-ink">Ratings moderation</h2>
-        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-          Search, edit or remove any rating. Deleting a rating instantly recalculates the weighted ranking.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="eyebrow">Community</p>
+          <h2 className="display mt-1 text-2xl text-ink">Ratings & reviews</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+            Approve, reject, edit or delete any rating. Reviews can be reported by visitors, and deleting a rating
+            instantly recalculates the weighted ranking.
+          </p>
+        </div>
+        <form action={recalculateRankingAction}>
+          <button className="btn btn-ghost text-xs">↻ Recalculate ranking</button>
+        </form>
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {[
           { label: "Total ratings", value: db.ratings.length.toLocaleString("en-IN") },
-          { label: "With review", value: db.ratings.filter((r) => r.review?.trim()).length },
-          { label: "Edited", value: db.ratings.filter((r) => r.lastEditedAt).length },
+          { label: "Pending review", value: pending },
+          { label: "Reported", value: reported },
           { label: "Last 7 days", value: last7 },
         ].map((c) => (
           <div key={c.label} className="card p-3">
@@ -91,8 +112,18 @@ export default async function AdminRatingsPage({
             </option>
           ))}
         </select>
+        <select name="status" defaultValue={status} className="field !w-auto !py-2 text-xs" aria-label="Filter status">
+          <option value="all">All reviews</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <input type="checkbox" name="reports" value="1" defaultChecked={reports === "1"} className="h-4 w-4 accent-rose-600" />
+          Reported only
+        </label>
         <button className="btn btn-primary !py-2 text-xs">Filter</button>
-        {q || stars !== "all" ? (
+        {q || stars !== "all" || status !== "all" || reports === "1" ? (
           <Link href="/admin/ratings" className="btn btn-ghost !py-2 text-xs">
             Reset
           </Link>
@@ -111,10 +142,51 @@ export default async function AdminRatingsPage({
                   <span className="text-muted">· {ai?.name ?? "unknown AI"}</span>
                 </p>
                 <p className="truncate text-xs text-muted">
-                  {user?.name ?? "unknown user"} · {user?.email ?? "no email"} · {timeAgo(r.updatedAt)}
+                  {user?.name ?? "unknown user"}
+                  {user?.verified ? <span className="ml-1 font-semibold text-emerald-600">✓ verified</span> : null} ·{" "}
+                  {user?.email ?? "no email"} · {timeAgo(r.updatedAt)}
                   {r.lastEditedAt ? " · user edited" : ""}
                 </p>
               </div>
+              <span
+                className={`chip ${
+                  (r.status ?? "approved") === "pending"
+                    ? "bg-amber-50 text-amber-700"
+                    : (r.status ?? "approved") === "rejected"
+                      ? "bg-rose-50 text-rose-600"
+                      : "bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {r.status ?? "approved"}
+              </span>
+              {(r.reports ?? 0) > 0 ? (
+                <span className="chip bg-rose-50 text-rose-600">⚑ {r.reports} reports</span>
+              ) : null}
+              {(r.status ?? "approved") !== "approved" ? (
+                <form action={setRatingStatusAction}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <input type="hidden" name="status" value="approved" />
+                  <input type="hidden" name="back" value="/admin/ratings" />
+                  <button className="btn !border !border-emerald-200 !bg-emerald-50 !px-2 !py-1 text-xs text-emerald-700">
+                    Approve
+                  </button>
+                </form>
+              ) : null}
+              {(r.status ?? "approved") !== "rejected" ? (
+                <form action={setRatingStatusAction}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <input type="hidden" name="status" value="rejected" />
+                  <input type="hidden" name="back" value="/admin/ratings" />
+                  <button className="btn btn-ghost !px-2 !py-1 text-xs text-rose-600">Reject</button>
+                </form>
+              ) : null}
+              {(r.reports ?? 0) > 0 ? (
+                <form action={clearRatingReportsAction}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <input type="hidden" name="back" value="/admin/ratings?reports=1" />
+                  <button className="btn btn-ghost !px-2 !py-1 text-xs">Clear flags</button>
+                </form>
+              ) : null}
               <form action={deleteRatingAction}>
                 <input type="hidden" name="id" value={r.id} />
                 <input type="hidden" name="back" value="/admin/ratings" />

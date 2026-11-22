@@ -9,6 +9,8 @@ export type ApiPricingInfo = {
   unit: ApiPricingUnit;
   contextWindow: number | null;
   estimated: boolean;
+  /** true when an admin typed this price in the panel */
+  manual: boolean;
   note?: string;
   source: string;
 };
@@ -251,6 +253,20 @@ function roundRate(value: number) {
  * price and category, clearly flagged as estimated in the UI.
  */
 export function getApiPricing(ai: Ai, model: Model): ApiPricingInfo {
+  if (model.pricing) {
+    return {
+      available: model.pricing.available,
+      input: model.pricing.input,
+      output: model.pricing.output,
+      unit: (model.pricing.unit || (TEXT_CATEGORIES.has(ai.category) ? "1M tokens" : "request")) as ApiPricingUnit,
+      contextWindow: model.pricing.contextWindow,
+      estimated: false,
+      manual: true,
+      note: model.pricing.note || undefined,
+      source: model.pricing.source || ai.website,
+    };
+  }
+
   const key = `${ai.slug}|${model.slug}`;
   const curated = CURATED[key];
   if (curated) {
@@ -266,6 +282,7 @@ export function getApiPricing(ai: Ai, model: Model): ApiPricingInfo {
             ? 128000
             : null,
       estimated: false,
+      manual: false,
       note: curated.note,
       source: curated.source ?? PRICING_URLS[ai.slug] ?? ai.website,
     };
@@ -283,6 +300,7 @@ export function getApiPricing(ai: Ai, model: Model): ApiPricingInfo {
       unit: "image",
       contextWindow: null,
       estimated: true,
+      manual: false,
       note: "Indicative per-image rate — confirm the provider's current API price.",
       source,
     };
@@ -297,6 +315,7 @@ export function getApiPricing(ai: Ai, model: Model): ApiPricingInfo {
       unit: "second",
       contextWindow: null,
       estimated: true,
+      manual: false,
       note: "Indicative per-second rate — video APIs often bill in credits.",
       source,
     };
@@ -311,6 +330,7 @@ export function getApiPricing(ai: Ai, model: Model): ApiPricingInfo {
       unit: "1M characters",
       contextWindow: null,
       estimated: true,
+      manual: false,
       note: "Indicative character-based rate — check the voice provider's API tier.",
       source,
     };
@@ -324,6 +344,7 @@ export function getApiPricing(ai: Ai, model: Model): ApiPricingInfo {
       unit: "track",
       contextWindow: null,
       estimated: true,
+      manual: false,
       note: "Indicative per-track rate — music APIs usually bill in credits.",
       source,
     };
@@ -339,6 +360,7 @@ export function getApiPricing(ai: Ai, model: Model): ApiPricingInfo {
     unit: "1M tokens",
     contextWindow: 128000,
     estimated: true,
+    manual: false,
     note: "Indicative token rate — confirm the provider's current API price.",
     source,
   };

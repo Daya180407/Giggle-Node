@@ -1,12 +1,69 @@
 import Link from "next/link";
+import { recalculateRankingAction } from "@/app/actions";
 import AiLogo from "@/components/AiLogo";
 import { Stars } from "@/components/ui";
+import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
-import { buildView, publishedPosts, rankedAis, timeAgo } from "@/lib/rank";
+import { canAccess, resolveRoles, type AdminArea } from "@/lib/roles";
+import { buildView, contributorBoard, mostVisited, publishedPosts, rankedAis, timeAgo } from "@/lib/rank";
 import { getSiteSettings } from "@/lib/settings";
 import { bootstrapDiagnostics, readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+
+const CONTROL_GROUPS: {
+  label: string;
+  items: { href: string; label: string; hint: string; icon: string; area: AdminArea }[];
+}[] = [
+  {
+    label: "Catalogue",
+    items: [
+      { href: "/admin/ai", label: "AI & Models", hint: "Tools, models, prompts", icon: "🤖", area: "catalogue" },
+      { href: "/admin/apps", label: "Apps & Software", hint: "Mobile and desktop apps", icon: "📱", area: "catalogue" },
+      { href: "/admin/categories", label: "Categories", hint: "Copy, units and defaults", icon: "🗂️", area: "categories" },
+      { href: "/admin/bulk", label: "Bulk Upload", hint: "CSV import and bulk edits", icon: "📥", area: "bulk" },
+    ],
+  },
+  {
+    label: "Community",
+    items: [
+      { href: "/admin/ratings", label: "Ratings & Reviews", hint: "Moderate and flag", icon: "★", area: "ratings" },
+      { href: "/admin/users", label: "Users & Roles", hint: "Accounts and access", icon: "👥", area: "users" },
+      { href: "/admin/roles", label: "Roles & Permissions", hint: "Create roles, grant sections", icon: "🔐", area: "users" },
+      { href: "/admin/gamification", label: "Gamification", hint: "Points, badges, leaderboard", icon: "🏅", area: "gamification" },
+      { href: "/admin/feedback", label: "Feedback Inbox", hint: "Bugs and feature requests", icon: "📬", area: "feedback" },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      { href: "/admin/posts", label: "Posts", hint: "Guides and blog", icon: "📝", area: "posts" },
+      { href: "/admin/pages", label: "Pages & Menu", hint: "Legal pages, nav, socials", icon: "📄", area: "pages" },
+      { href: "/admin/media", label: "Media Library", hint: "Images and logos", icon: "🖼️", area: "media" },
+    ],
+  },
+  {
+    label: "Growth",
+    items: [
+      { href: "/admin/homepage", label: "Homepage & Quiz", hint: "Hero, sections, finder", icon: "🏠", area: "homepage" },
+      { href: "/admin/sponsors", label: "Sponsors & Ads", hint: "Paid placement and boost", icon: "💼", area: "sponsors" },
+      { href: "/admin/pricing", label: "Pricing Reports", hint: "Wrong plan or API price", icon: "💰", area: "catalogue" },
+      { href: "/admin/notifications", label: "Notifications & Email", hint: "Bell, templates, Top 5", icon: "🔔", area: "notifications" },
+      { href: "/admin/analytics", label: "Analytics & Reports", hint: "Traffic, searches, views", icon: "📊", area: "analytics" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/admin/search-ai", label: "AI Search", hint: "Provider, limits, cache", icon: "✨", area: "search" },
+      { href: "/admin/security", label: "Spam & Security", hint: "IP blocks and bad words", icon: "🛡️", area: "security" },
+      { href: "/admin/appearance", label: "Theme & Currency", hint: "Dark mode, ₹/$, logos", icon: "🎨", area: "settings" },
+      { href: "/admin/settings", label: "Site Settings", hint: "Site-wide options", icon: "⚙️", area: "settings" },
+      { href: "/admin/activity", label: "Audit Log", hint: "Every admin action", icon: "🕘", area: "settings" },
+      { href: "/admin/export", label: "Backup / Export", hint: "Backup, restore, CSV", icon: "⬇", area: "settings" },
+    ],
+  },
+];
 
 function dayStart(daysAgo: number) {
   const d = new Date();
@@ -15,8 +72,20 @@ function dayStart(daysAgo: number) {
   return d;
 }
 
-export default function AdminOverviewPage() {
+export default async function AdminOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ recalculated?: string; denied?: string }>;
+}) {
+  const { recalculated, denied } = await searchParams;
   const db = readDb();
+  const roles = resolveRoles(db.roles);
+  const user = await getCurrentUser();
+  const controlGroups = CONTROL_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canAccess(user?.role, item.area, roles)),
+  })).filter((group) => group.items.length > 0);
+  const controlCount = controlGroups.reduce((sum, group) => sum + group.items.length, 0);
   const settings = getSiteSettings(db);
   const adminLog = db.adminLog ?? [];
   const view = buildView(db);
@@ -29,6 +98,12 @@ export default function AdminOverviewPage() {
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
     .slice(0, 5);
   const diagnostics = bootstrapDiagnostics();
+  const pendingReviews = db.ratings.filter((r) => r.status === "pending");
+  const reportedReviews = db.ratings.filter((r) => (r.reports ?? 0) > 0);
+  const visited = mostVisited(view, 5);
+  const contributors = contributorBoard(db, 5);
+  const todayStart = dayStart(0).getTime();
+  const todayRatings = db.ratings.filter((r) => +new Date(r.createdAt) >= todayStart).length;
 
   const now = Date.now();
   const last7 = db.ratings.filter((r) => now - +new Date(r.createdAt) < 7 * 86400000).length;
@@ -106,6 +181,17 @@ export default function AdminOverviewPage() {
 
   return (
     <div className="space-y-5">
+      {denied ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-900">
+          Your role does not include the <strong>{denied}</strong> section. Ask a super admin for access.
+        </div>
+      ) : null}
+      {recalculated ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          Ranking recalculated from the latest ratings.
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">Today</p>
@@ -125,7 +211,49 @@ export default function AdminOverviewPage() {
           <Link href="/admin/settings" className="btn btn-ghost text-xs">
             Settings
           </Link>
+          <form action={recalculateRankingAction}>
+            <button className="btn btn-ghost text-xs">↻ Recalculate ranking</button>
+          </form>
         </div>
+      </div>
+
+      <div className="grid gap-2.5 sm:grid-cols-3">
+        {[
+          {
+            label: "Today's ratings",
+            value: todayRatings,
+            hint: "New votes in the last 24h",
+            href: "/admin/ratings",
+            tone: "bg-indigo-50 text-indigo-700",
+          },
+          {
+            label: "Reviews pending",
+            value: pendingReviews.length,
+            hint: "Waiting for approval",
+            href: "/admin/ratings?status=pending",
+            tone: pendingReviews.length ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500",
+          },
+          {
+            label: "Reported reviews",
+            value: reportedReviews.length,
+            hint: "Flagged by visitors",
+            href: "/admin/ratings?reports=1",
+            tone: reportedReviews.length ? "bg-rose-50 text-rose-700" : "bg-slate-100 text-slate-500",
+          },
+        ].map((c) => (
+          <Link key={c.label} href={c.href} className="card card-hover flex items-center gap-3 p-3.5">
+            <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base ${c.tone}`} aria-hidden>
+              {c.label === "Today's ratings" ? "★" : c.label === "Reviews pending" ? "⏳" : "⚑"}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-xl font-extrabold leading-none">{c.value.toLocaleString("en-IN")}</span>
+              <span className="mt-1 block text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                {c.label}
+              </span>
+              <span className="block text-[10.5px] text-muted">{c.hint}</span>
+            </span>
+          </Link>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -158,6 +286,48 @@ export default function AdminOverviewPage() {
           </Link>
         ))}
       </div>
+
+      <section className="card overflow-hidden p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="eyebrow">Control center</p>
+            <h3 className="display mt-1 text-lg text-ink">Every control in one place</h3>
+            <p className="text-xs text-muted">Settings, content, security and reports — no hidden menus.</p>
+          </div>
+          <span className="chip bg-brand-soft text-brand">{controlCount} sections</span>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {controlGroups.map((group) => (
+            <div key={group.label} className="rounded-2xl border border-line bg-slate-50/70 p-3">
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-slate-400">{group.label}</p>
+              <ul className="mt-2 space-y-0.5">
+                {group.items.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="group flex items-start gap-2 rounded-lg px-1.5 py-1.5 transition hover:bg-white"
+                    >
+                      <span
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-[13px] shadow-sm"
+                        aria-hidden
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-1 text-[12px] font-semibold text-ink group-hover:text-brand">
+                          {item.label}
+                          <span className="text-[10px] text-slate-300 transition group-hover:text-brand">→</span>
+                        </span>
+                        <span className="block truncate text-[10px] text-muted">{item.hint}</span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
         <section className="card p-4 sm:p-5">
@@ -381,6 +551,60 @@ export default function AdminOverviewPage() {
             {adminLog.length === 0 ? (
               <p className="py-4 text-xs text-muted">No admin actions logged yet. Changes will appear here.</p>
             ) : null}
+          </div>
+        </section>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="card p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold">Most visited AI</h3>
+              <p className="text-xs text-muted">Tracked outbound and page visits</p>
+            </div>
+            <span className="chip bg-slate-100 text-slate-500">
+              {db.ai.reduce((sum, a) => sum + (a.visits || 0), 0).toLocaleString("en-IN")} total
+            </span>
+          </div>
+          <ol className="mt-2 divide-y divide-line">
+            {visited.map((s, i) => (
+              <li key={s.ai.id} className="flex items-center gap-2 py-2.5 text-xs">
+                <span className="w-4 font-bold text-slate-400">{i + 1}</span>
+                <AiLogo slug={s.ai.slug} logo={s.ai.logo} color={s.ai.color} size={28} rounded="rounded-lg" />
+                <Link href={`/admin/ai/${s.ai.slug}`} className="min-w-0 flex-1 truncate font-medium hover:text-brand">
+                  {s.ai.name}
+                </Link>
+                <span className="text-muted">{s.ai.visits.toLocaleString("en-IN")} visits</span>
+              </li>
+            ))}
+            {visited.length === 0 ? <p className="py-3 text-xs text-muted">No visits recorded yet.</p> : null}
+          </ol>
+        </section>
+
+        <section className="card p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold">Top contributors</h3>
+              <p className="text-xs text-muted">Most useful reviewers this month</p>
+            </div>
+            <Link href="/admin/users" className="text-[11px] font-semibold text-brand">
+              Manage users →
+            </Link>
+          </div>
+          <div className="mt-2 divide-y divide-line">
+            {contributors.map((row) => (
+              <div key={row.user.id} className="flex items-center gap-2 py-2.5 text-xs">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-soft text-[11px] font-bold text-brand">
+                  {row.user.avatar}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-medium">
+                  {row.user.name}
+                  {row.user.verified ? <span className="ml-1 text-emerald-600" aria-label="verified">✓</span> : null}
+                </span>
+                <span className="text-muted">{row.ratings} ratings · {row.reviews} reviews</span>
+              </div>
+            ))}
+            {contributors.length === 0 ? <p className="py-3 text-xs text-muted">No reviewer activity yet.</p> : null}
           </div>
         </section>
       </div>

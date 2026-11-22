@@ -828,3 +828,82 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* --------------------- admin-controlled appearance --------------------- */
+/* Accent colours arrive as --color-brand* inline variables on <html>.    */
+
+html[data-theme="dark"] body {
+  color: #e2e8f0;
+  background-color: #07070d;
+  background-image:
+    radial-gradient(1100px 520px at 8% -12%, #1e1b4b 0%, transparent 62%),
+    radial-gradient(900px 460px at 96% -4%, #083344 0%, transparent 58%),
+    radial-gradient(700px 420px at 50% 108%, #2e1065 0%, transparent 60%);
+}
+html[data-theme="dark"] body > header {
+  background: rgb(7 7 13 / 0.9);
+  border-color: #1e2537;
+}
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .soft-panel,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .search-inner,
+html[data-theme="dark"] .field,
+html[data-theme="dark"] .btn-ghost {
+  background: #0f1420;
+  border-color: #1e2537;
+  color: #e6ebf5;
+}
+html[data-theme="dark"] .page-hero {
+  border-color: #26304a;
+  background:
+    radial-gradient(600px 240px at 12% -10%, rgb(79 70 229 / 0.3), transparent 70%),
+    radial-gradient(500px 220px at 90% 0%, rgb(8 145 178 / 0.22), transparent 70%),
+    #0f1420;
+}
+html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .bg-white\/80,
+html[data-theme="dark"] .bg-white\/90,
+html[data-theme="dark"] .bg-slate-50,
+html[data-theme="dark"] .bg-slate-50\/60,
+html[data-theme="dark"] .bg-slate-50\/70,
+html[data-theme="dark"] .bg-slate-50\/80,
+html[data-theme="dark"] .bg-slate-100 {
+  background-color: #121828;
+}
+html[data-theme="dark"] .bg-brand-soft,
+html[data-theme="dark"] .bg-brand-soft\/30,
+html[data-theme="dark"] .bg-brand-soft\/40,
+html[data-theme="dark"] .bg-brand-soft\/50 {
+  background-color: #1a1f3d;
+}
+html[data-theme="dark"] .text-ink,
+html[data-theme="dark"] .text-slate-700,
+html[data-theme="dark"] .text-slate-900 {
+  color: #e6ebf5;
+}
+html[data-theme="dark"] .text-slate-600 {
+  color: #a9b4c7;
+}
+html[data-theme="dark"] .text-muted,
+html[data-theme="dark"] .text-slate-500 {
+  color: #8b97ab;
+}
+html[data-theme="dark"] .text-brand {
+  color: #a5b4fc;
+}
+html[data-theme="dark"] .border-line,
+html[data-theme="dark"] .divide-line > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e2537;
+}
+html[data-theme="dark"] .prose-blog h2 {
+  color: #f1f5f9;
+}
+html[data-theme="dark"] .prose-blog p,
+html[data-theme="dark"] .prose-blog li {
+  color: #a9b4c7;
+}
+html[data-theme="dark"] ::selection {
+  background: #4338ca;
+  color: #fff;
+}
