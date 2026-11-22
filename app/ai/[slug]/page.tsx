@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { toggleBookmarkAction, toggleFollowAction, togglePriceAlertAction } from "@/app/actions";
 import AdSlot from "@/components/AdSlot";
 import { ClaimListingForm, ReviewReplyForm } from "@/components/CommunityForms";
+import ContributePanel from "@/components/ContributePanel";
 import EmbedBadge from "@/components/EmbedBadge";
 import RatingTrend from "@/components/RatingTrend";
 import AiCard from "@/components/AiCard";
@@ -23,6 +24,7 @@ import { categoryName } from "@/lib/categories";
 import { canAccess, resolveRoles } from "@/lib/roles";
 import { formatPlanPrice } from "@/lib/plans";
 import { myPriceAlert, priceChange, priceHistoryFor, repliesFor, verifiedShare, weeklyRatingTrend } from "@/lib/community";
+import { CONTRIBUTION_LABEL, myContributions } from "@/lib/contributions";
 import { communityMessagesForRoom, UNIVERSAL_ROOM_SLUG } from "@/lib/community-chat";
 import { reportRatingAction } from "@/app/actions";
 import { aiReviews, buildView, isVerifiedPrompt, publishedPosts, promptsFor, timeAgo } from "@/lib/rank";
@@ -83,6 +85,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
     db,
     reviews.map((row) => row.rating.id),
   );
+  const myRequests = user ? myContributions(db, user.id, ai.id).slice(0, 6) : [];
   const isClaimedVendor = Boolean(user && ai.claim && ai.claim.email.toLowerCase() === user.email.toLowerCase());
   const canReply = Boolean(isClaimedVendor || (user && canAccess(user.role, "ratings", resolveRoles(db.roles))));
 
@@ -475,6 +478,42 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               back={`/ai/${ai.slug}`}
             />
           </section>
+
+          {/* User contributions: private until an admin approves them */}
+          <ContributePanel aiId={ai.id} aiSlug={ai.slug} aiName={ai.name} signedIn={Boolean(user)} />
+
+          {user && myRequests.length ? (
+            <section className="card p-5" id="my-requests">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="display text-lg text-ink">Your requests for {ai.name}</h2>
+                <span className="chip bg-slate-100 text-slate-600">Only you can see these</span>
+              </div>
+              <div className="mt-2 divide-y divide-line">
+                {myRequests.map((row) => (
+                  <div key={row.id} className="flex flex-wrap items-center gap-2 py-2 text-xs">
+                    <span
+                      className={`chip ${
+                        row.status === "approved"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : row.status === "rejected"
+                            ? "bg-rose-50 text-rose-600"
+                            : "bg-amber-50 text-amber-700"
+                      }`}
+                    >
+                      {row.status === "pending" ? "In review" : row.status}
+                    </span>
+                    <span className="font-semibold text-ink">
+                      {CONTRIBUTION_LABEL[row.type]}: {row.title}
+                    </span>
+                    <span className="ml-auto text-muted">{timeAgo(row.createdAt)}</span>
+                    {row.status === "rejected" && row.reviewNote ? (
+                      <p className="w-full text-[11px] text-rose-600">Editor note: {row.reviewNote}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           {/* Price history & alerts */}
           <section className="card p-5" id="pricing">

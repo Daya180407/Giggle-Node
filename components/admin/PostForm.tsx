@@ -114,6 +114,36 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
         </p>
       </div>
 
+      <fieldset className="rounded-xl border border-line p-3">
+        <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Custom HTML + CSS file
+        </legend>
+        <p className="mt-1 text-[11px] leading-relaxed text-muted">
+          Upload one .html file with its own <code>&lt;style&gt;</code> block (or paste the same markup below). When this
+          is set it is published exactly as written instead of the Content field above.
+        </p>
+        <div className="mt-2 space-y-2">
+          <input
+            type="file"
+            name="htmlFile"
+            accept=".html,.htm,text/html"
+            className="field !py-1.5 text-xs"
+            aria-label="Upload an HTML file with embedded CSS"
+          />
+          <textarea
+            id="html"
+            name="html"
+            rows={6}
+            defaultValue={post?.html ?? ""}
+            className="field font-mono text-xs"
+            placeholder={"<!doctype html>\n<style>h2{color:#4f46e5}</style>\n<h2>Hello</h2>\n<p>Your article…</p>"}
+          />
+        </div>
+        <p className="mt-1 text-[11px] text-muted">
+          Admin-only, published as-is. Leave both empty to keep using the markdown Content field.
+        </p>
+      </fieldset>
+
       <div>
         <label className="label" htmlFor="relatedAiIds">
           Related AI (hold Ctrl/Cmd to select multiple)

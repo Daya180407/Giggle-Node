@@ -583,6 +583,20 @@
     line-height: 1.7;
     color: #334155;
   }
+  /* Admin-uploaded HTML + CSS posts keep their own styles; these are safety defaults. */
+  .post-html img,
+  .post-html video,
+  .post-html iframe {
+    max-width: 100%;
+    height: auto;
+  }
+  .post-html table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .post-html pre {
+    overflow-x: auto;
+  }
   .page-hero {
     border-radius: 1.5rem;
     border: 1px solid #e0e7ff;

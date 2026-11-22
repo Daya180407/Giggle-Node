@@ -114,7 +114,12 @@ export default async function PostPage({ params }: Props) {
         </div>
 
         <div className="mt-4">
-          <PostBody content={post.content} />
+          {post.html ? (
+            // Admin-uploaded combined HTML + CSS file, published as-is.
+            <div className="post-html" dangerouslySetInnerHTML={{ __html: post.html }} />
+          ) : (
+            <PostBody content={post.content} />
+          )}
         </div>
 
         {settings.adsEnabled && settings.adsClientId && settings.adsArticleSlot ? (

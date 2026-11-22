@@ -18,7 +18,7 @@ import { categoryName, getCategories } from "@/lib/categories";
 import { communityTotals } from "@/lib/community-chat";
 import { getSiteSettings } from "@/lib/settings";
 import { appPricingFor, formatPlanPrice } from "@/lib/plans";
-import { APP_ENTRIES, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
+import { allApps, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
 import {
   buildView,
   championFor,
@@ -107,7 +107,9 @@ export default async function HomePage({
     }));
 
   const hiddenApps = new Set(settings.hiddenAppSlugs ?? []);
-  const appItems = APP_ENTRIES.filter((entry) => !hiddenApps.has(entry.slug)).map((entry): AppShowcaseItem => {
+  const appItems = allApps(db.customApps)
+    .filter((entry) => !hiddenApps.has(entry.slug))
+    .map((entry): AppShowcaseItem => {
     const found = entry.aiSlug ? bySlug.get(entry.aiSlug) : undefined;
     const stat = found && !found.ai.hidden ? found : undefined;
     const pricing = appPricingFor(db, entry, stat?.ai);

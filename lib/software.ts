@@ -38,3 +38,8 @@ function normalize(rows: AppRow[], kind: AppKind): AppEntry[] {
 export const MOBILE_APPS = normalize(MOBILE_ROWS, "mobile");
 export const DESKTOP_APPS = normalize(DESKTOP_ROWS, "desktop");
 export const APP_ENTRIES: AppEntry[] = [...MOBILE_APPS, ...DESKTOP_APPS];
+
+/** The built-in catalogue plus apps approved from user requests. */
+export function allApps(custom?: AppEntry[] | null): AppEntry[] {
+  return custom && custom.length ? [...APP_ENTRIES, ...custom] : APP_ENTRIES;
+}

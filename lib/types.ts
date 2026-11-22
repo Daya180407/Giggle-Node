@@ -1,3 +1,5 @@
+import type { AppEntry } from "./apps/types";
+
 export type PriceType = "free" | "freemium" | "paid";
 
 /** Category slugs are dynamic now: admins can add their own, so this is a plain string. */
@@ -222,6 +224,48 @@ export type ReviewReply = {
 /** One outbound click from a signed-in user — the basis of a verified rating. */
 export type AiVisit = { userId: string; aiId: string; at: string };
 
+/**
+ * A catalogue addition sent by a signed-in user. Nothing here is public until an
+ * admin approves it: plans, models, pricing, new AI listings and new apps all
+ * land in the same review queue.
+ */
+export type ContributionType = "plan" | "model" | "pricing" | "ai" | "app";
+export type ContributionStatus = "pending" | "approved" | "rejected";
+
+export type Contribution = {
+  id: string;
+  type: ContributionType;
+  status: ContributionStatus;
+  /** existing AI the request belongs to; empty for a new AI or a new app */
+  aiId?: string | null;
+  aiName?: string;
+  title: string;
+  website?: string;
+  category?: CategorySlug;
+  /** app requests only */
+  appKind?: "mobile" | "desktop";
+  group?: string;
+  platforms?: string[];
+  priceType?: PriceType;
+  /** plan price, or the new starting price for a pricing correction */
+  priceMonthly?: number;
+  priceYearly?: number | null;
+  priceInr?: number | null;
+  /** plan limits, model description or the correction details */
+  note: string;
+  sourceUrl?: string;
+  userId: string | null;
+  userName: string;
+  userEmail: string;
+  /** admin feedback for the submitter, also used for rejections */
+  reviewNote?: string;
+  createdAt: string;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+  /** slug or id created when the request was approved */
+  resultId?: string | null;
+};
+
 export type PostStatus = "draft" | "published" | "scheduled";
 export type PostType = "news" | "comparison" | "top10" | "tutorial";
 
@@ -248,6 +292,8 @@ export type Post = {
   seoDescription?: string | null;
   /** times the post page was opened (tracked by the public beacon) */
   views?: number;
+  /** a complete HTML + CSS file uploaded by an admin; rendered instead of content */
+  html?: string | null;
 };
 
 export type Prompt = {
@@ -710,6 +756,10 @@ export type DB = {
   reviewReplies?: ReviewReply[];
   /** outbound clicks by signed-in users, used to verify a rating */
   aiVisits?: AiVisit[];
+  /** catalogue additions waiting for (or already through) admin review */
+  contributions?: Contribution[];
+  /** apps and desktop software approved from user requests */
+  customApps?: AppEntry[];
   /** admin-managed roles and their permissions */
   roles?: RoleDefinition[];
   /** admin-created extra community rooms; default AI rooms need no row */

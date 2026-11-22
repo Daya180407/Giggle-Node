@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { toggleAppVisibilityAction } from "@/app/actions";
 import AiLogo from "@/components/AiLogo";
-import { DESKTOP_GROUPS, MOBILE_GROUPS, APP_ENTRIES } from "@/lib/software";
+import { allApps, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
 import { getSiteSettings } from "@/lib/settings";
 import { requireAreaPage } from "@/lib/permissions";
 import { readDb } from "@/lib/store";
@@ -26,7 +26,10 @@ export default async function AdminAppsPage({
     [...MOBILE_GROUPS, ...DESKTOP_GROUPS].map((group) => [group.key, group.label]),
   );
 
-  const entries = APP_ENTRIES.filter((entry) => {
+  const catalogue = allApps(db.customApps);
+  const customSlugs = new Set((db.customApps ?? []).map((entry) => entry.slug));
+
+  const entries = catalogue.filter((entry) => {
     if (kind !== "all" && entry.kind !== kind) return false;
     if (!query) return true;
     return [entry.name, entry.slug, entry.note, groupLabels.get(entry.group) ?? entry.group, entry.platforms.join(" ")]
@@ -45,8 +48,8 @@ export default async function AdminAppsPage({
       page: String(nextPage),
     }).toString()}`;
 
-  const mobileCount = APP_ENTRIES.filter((e) => e.kind === "mobile").length;
-  const desktopCount = APP_ENTRIES.filter((e) => e.kind === "desktop").length;
+  const mobileCount = catalogue.filter((e) => e.kind === "mobile").length;
+  const desktopCount = catalogue.filter((e) => e.kind === "desktop").length;
 
   return (
     <div className="space-y-4">
@@ -99,6 +102,9 @@ export default async function AdminAppsPage({
                     {entry.kind === "mobile" ? "Mobile" : "PC"}
                   </span>
                   {entry.aiSlug ? <span className="chip bg-brand-soft text-brand">AI-backed</span> : null}
+                  {customSlugs.has(entry.slug) ? (
+                    <span className="chip bg-emerald-50 text-emerald-700">From requests</span>
+                  ) : null}
                   {db.appPricing?.[entry.slug]?.plans?.length ? (
                     <span className="chip bg-emerald-50 text-emerald-700">
                       {db.appPricing[entry.slug].plans.length} plans
@@ -111,9 +117,11 @@ export default async function AdminAppsPage({
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1">
-                <Link href={`/admin/apps/${entry.slug}`} className="btn btn-primary !px-2 !py-1 text-xs">
-                  Plans &amp; pricing
-                </Link>
+                {customSlugs.has(entry.slug) ? null : (
+                  <Link href={`/admin/apps/${entry.slug}`} className="btn btn-primary !px-2 !py-1 text-xs">
+                    Plans &amp; pricing
+                  </Link>
+                )}
                 {entry.aiSlug ? (
                   <Link href={`/ai/${entry.aiSlug}`} className="btn btn-ghost !px-2 !py-1 text-xs">
                     AI page

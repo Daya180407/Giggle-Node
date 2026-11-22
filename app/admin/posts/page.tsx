@@ -95,6 +95,7 @@ export default async function AdminPostsPage({
                 · {formatDate(p.createdAt)} · {readingTime(p.content)} min · {p.relatedAiIds.length} AI · {p.author}
               </p>
             </div>
+            {p.html ? <span className="chip bg-emerald-50 text-emerald-700">Custom HTML</span> : null}
             {p.featured ? <span className="chip bg-indigo-50 text-indigo-700">Featured</span> : null}
             {p.sponsored ? <span className="chip bg-amber-50 text-amber-700">Sponsored</span> : null}
             <div className="flex flex-wrap items-center gap-1">

@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { logAdminAction } from "@/lib/admin-log";
-import { APP_ENTRIES } from "@/lib/software";
+import { allApps, APP_ENTRIES } from "@/lib/software";
+import { CONTRIBUTION_LABEL, contributionType } from "@/lib/contributions";
+import { DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
+import type { AppEntry } from "@/lib/apps/types";
 import { activeSubscribers, hasVerifiedUse, recordPriceSnapshot } from "@/lib/community";
 import {
   addCommunityMember,
@@ -885,6 +888,13 @@ export async function savePostAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) redirect("/admin/posts?error=title");
 
+  // A single uploaded HTML file may carry its own <style> block (combined HTML + CSS).
+  const htmlUpload = formData.get("htmlFile");
+  let uploadedHtml = "";
+  if (htmlUpload instanceof File && htmlUpload.size > 0 && htmlUpload.size <= 600_000) {
+    uploadedHtml = await htmlUpload.text();
+  }
+
   const statusRaw = String(formData.get("status") ?? "draft");
   const parsedStatus: PostStatus =
     statusRaw === "published" || statusRaw === "scheduled" ? statusRaw : "draft";
@@ -901,6 +911,7 @@ export async function savePostAction(formData: FormData) {
       slug: uniqueSlug(slugify(String(formData.get("slug") ?? "") || title), taken),
       excerpt: String(formData.get("excerpt") ?? "").trim(),
       content: String(formData.get("content") ?? ""),
+      html: (uploadedHtml || String(formData.get("html") ?? "")).trim().slice(0, 600_000) || null,
       coverEmoji: String(formData.get("coverEmoji") ?? "📰").slice(0, 4) || "📰",
       coverImage: String(formData.get("coverImage") ?? "").trim(),
       type: String(formData.get("type") ?? "news") as PostType,
@@ -2982,6 +2993,224 @@ export async function reviewToolSubmissionAction(formData: FormData) {
   revalidatePath("/admin/submissions");
   if (slugOut) revalidatePath(`/ai/${slugOut}`);
   redirect(`/admin/submissions?saved=${decision === "approve" ? "approved" : "rejected"}`);
+}
+
+/* ==================== catalogue contributions ==================== */
+
+/** Signed-in users send plans, models, pricing and apps here; nothing goes public before review. */
+export async function submitContributionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Please sign in to send this to the editors." };
+
+  const type = contributionType(String(formData.get("type") ?? ""));
+  if (!type || type === "ai") return { ok: false, error: "Choose what you want to add." };
+
+  const db = readDb();
+  const aiId = String(formData.get("aiId") ?? "");
+  const ai = aiId ? db.ai.find((row) => row.id === aiId) : undefined;
+  if ((type === "plan" || type === "model" || type === "pricing") && !ai) {
+    return { ok: false, error: "This listing was not found. Open the page again and retry." };
+  }
+
+  const note = String(formData.get("note") ?? "").trim().slice(0, 900);
+  if (note.length < 8) {
+    return { ok: false, error: "Add a short note so an editor can check it without researching everything." };
+  }
+
+  let title = String(formData.get("title") ?? "").trim().slice(0, 80);
+  if (type === "pricing" && ai) title = `${ai.name} pricing`;
+  if (title.length < 2) {
+    return { ok: false, error: type === "plan" ? "Enter the plan name." : "Enter the name." };
+  }
+
+  const website = normalizeUrl(String(formData.get("website") ?? ""));
+  const sourceUrl = normalizeUrl(String(formData.get("sourceUrl") ?? ""));
+  const priceRaw = String(formData.get("priceMonthly") ?? "").trim();
+  const priceMonthly = Math.min(1000000, Math.max(0, Number(priceRaw) || 0));
+  const priceYearlyRaw = String(formData.get("priceYearly") ?? "").trim();
+  const priceInrRaw = String(formData.get("priceInr") ?? "").trim();
+  const priceTypeRaw = String(formData.get("priceType") ?? "freemium");
+  const priceType: PriceType = priceTypeRaw === "free" || priceTypeRaw === "paid" ? priceTypeRaw : "freemium";
+
+  let category = String(formData.get("category") ?? "").trim();
+  let appKind: "mobile" | "desktop" = "mobile";
+  let group = "";
+  let platforms: string[] = [];
+
+  if (type === "pricing" && !priceRaw) {
+    return { ok: false, error: "Enter the current starting price in USD per month (0 for free)." };
+  }
+
+  if (type === "app") {
+    appKind = String(formData.get("appKind") ?? "") === "desktop" ? "desktop" : "mobile";
+    if (!website) return { ok: false, error: "Enter the official website, for example example.com." };
+    const categories = getCategories(db);
+    if (!categories.some((row) => row.slug === category)) return { ok: false, error: "Please choose a category." };
+    const groups = appKind === "mobile" ? MOBILE_GROUPS : DESKTOP_GROUPS;
+    group = groups.some((row) => row.key === String(formData.get("group") ?? ""))
+      ? String(formData.get("group"))
+      : groups[0]?.key ?? "utility";
+    platforms =
+      appKind === "mobile"
+        ? ["Android", "iOS"]
+        : ["Windows", "macOS", "Linux"];
+  } else {
+    category = ai?.category ?? category;
+  }
+
+  const duplicate = (db.contributions ?? []).find(
+    (row) =>
+      row.status === "pending" &&
+      row.type === type &&
+      row.userId === user.id &&
+      (row.aiId ?? "") === (ai?.id ?? "") &&
+      row.title.toLowerCase() === title.toLowerCase(),
+  );
+  if (duplicate) {
+    return { ok: true, message: "You already sent this one — it is still waiting for an editor." };
+  }
+
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.contributions)) draft.contributions = [];
+    draft.contributions.unshift({
+      id: uid("req"),
+      type,
+      status: "pending",
+      aiId: ai?.id ?? null,
+      aiName: ai?.name,
+      title,
+      website: website || undefined,
+      category: category || undefined,
+      appKind: type === "app" ? appKind : undefined,
+      group: type === "app" ? group : undefined,
+      platforms: type === "app" ? platforms : undefined,
+      priceType: type === "model" || type === "app" ? priceType : undefined,
+      priceMonthly: type === "plan" || type === "pricing" ? priceMonthly : undefined,
+      priceYearly: type === "plan" ? (priceYearlyRaw ? Math.max(0, Number(priceYearlyRaw) || 0) : null) : undefined,
+      priceInr: type === "plan" || type === "pricing" ? (priceInrRaw ? Math.max(0, Number(priceInrRaw) || 0) : null) : undefined,
+      note,
+      sourceUrl: sourceUrl || undefined,
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      reviewNote: "",
+      createdAt: new Date().toISOString(),
+      reviewedAt: null,
+      reviewedBy: null,
+    });
+    pushNotification(draft, {
+      title: `${CONTRIBUTION_LABEL[type]} suggested: ${title}`,
+      body: `${user.name} sent a ${CONTRIBUTION_LABEL[type].toLowerCase()}${ai ? ` for ${ai.name}` : ""}. Review it in Submissions.`,
+      href: "/admin/submissions",
+      kind: "system",
+      audience: "staff",
+    });
+  });
+  revalidatePath("/admin/submissions");
+  if (ai) revalidatePath(`/ai/${ai.slug}`);
+  return { ok: true, message: "Sent to the editors. It stays private until an admin approves it." };
+}
+
+/** Admin decision on a contribution; approving writes straight into the live catalogue. */
+export async function reviewContributionAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  const decision = String(formData.get("decision") ?? "reject");
+  const reviewNote = String(formData.get("reviewNote") ?? "").trim().slice(0, 300);
+  const backRaw = String(formData.get("back") ?? "/admin/submissions");
+  const back = backRaw.startsWith("/admin") ? backRaw : "/admin/submissions";
+  let touchedSlug = "";
+
+  mutateDb((db) => {
+    const row = (db.contributions ?? []).find((item) => item.id === id);
+    if (!row || row.status !== "pending") return;
+    row.reviewedAt = new Date().toISOString();
+    row.reviewedBy = admin.name;
+    row.reviewNote = reviewNote;
+
+    if (decision !== "approve") {
+      row.status = "rejected";
+      logAdminAction(db, admin, "rejected contribution", `${CONTRIBUTION_LABEL[row.type]}: ${row.title}`, row.userEmail);
+      return;
+    }
+
+    const ai = row.aiId ? db.ai.find((item) => item.id === row.aiId) : undefined;
+    if ((row.type === "plan" || row.type === "model" || row.type === "pricing") && !ai) {
+      row.status = "rejected";
+      row.reviewNote = reviewNote || "The listing no longer exists.";
+      return;
+    }
+
+    if (row.type === "plan" && ai) {
+      if (!Array.isArray(ai.plans)) ai.plans = [];
+      ai.plans.push({
+        id: uid("plan"),
+        name: row.title,
+        priceMonthly: row.priceMonthly ?? 0,
+        priceYearly: row.priceYearly ?? null,
+        priceInr: row.priceInr ?? null,
+        note: row.note,
+      });
+      row.resultId = ai.slug;
+      touchedSlug = ai.slug;
+    } else if (row.type === "model" && ai) {
+      const taken = db.models.filter((model) => model.aiId === ai.id).map((model) => model.slug);
+      const slug = uniqueSlug(slugify(row.title), taken);
+      db.models.push({
+        id: uid("mdl"),
+        aiId: ai.id,
+        name: row.title,
+        slug,
+        description: row.note.slice(0, 320),
+        launchDate: row.createdAt.slice(0, 10),
+        bestFor: row.note.slice(0, 60),
+        priceType: row.priceType ?? ai.priceType,
+      });
+      row.resultId = slug;
+      touchedSlug = ai.slug;
+    } else if (row.type === "pricing" && ai) {
+      const beforePrice = Number(ai.planPrice) || 0;
+      ai.planPrice = row.priceMonthly ?? 0;
+      ai.planPriceInr =
+        row.priceInr ?? Math.round(ai.planPrice * (getSiteSettings(db).appearance.usdRate || 88));
+      if (recordPriceSnapshot(db, ai)) notifyPriceWatchers(db, ai, beforePrice);
+      row.resultId = ai.slug;
+      touchedSlug = ai.slug;
+    } else if (row.type === "app") {
+      if (!Array.isArray(db.customApps)) db.customApps = [];
+      const taken = allApps(db.customApps).map((entry) => entry.slug);
+      const slug = uniqueSlug(slugify(row.title), taken);
+      const kind = row.appKind === "desktop" ? "desktop" : "mobile";
+      const entry: AppEntry = {
+        name: row.title,
+        slug,
+        group: row.group || "utility",
+        price: row.priceType ?? "freemium",
+        website: row.website ?? "",
+        note: row.note.slice(0, 200),
+        platforms: row.platforms?.length
+          ? row.platforms
+          : kind === "mobile"
+            ? ["Android", "iOS"]
+            : ["Windows", "macOS", "Linux"],
+        kind,
+        color: "#4F46E5",
+        emoji: kind === "mobile" ? "📱" : "💻",
+      };
+      db.customApps.push(entry);
+      row.resultId = slug;
+    }
+
+    row.status = "approved";
+    logAdminAction(db, admin, "approved contribution", `${CONTRIBUTION_LABEL[row.type]}: ${row.title}`, `Sent by ${row.userEmail}`);
+  });
+
+  await flushPendingWrites();
+  revalidatePath("/admin/submissions");
+  revalidatePath("/");
+  revalidatePath("/admin/apps");
+  if (touchedSlug) revalidatePath(`/ai/${touchedSlug}`);
+  redirect(`${back}?saved=contribution-${decision === "approve" ? "approved" : "rejected"}`);
 }
 
 /* ==================== community: vendor claims ==================== */
