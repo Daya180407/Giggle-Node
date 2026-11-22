@@ -25,7 +25,7 @@ export default function PaidPromo({ items }: { items: PromoItem[] }) {
   if (!items.length) return null;
 
   return (
-    <div className="dark-panel promo-panel relative overflow-hidden rounded-3xl">
+    <div className="dark-panel promo-panel relative overflow-hidden rounded-none">
       <div className="aurora opacity-30" aria-hidden />
       <div className="pointer-events-none absolute inset-0 promo-grid opacity-40" aria-hidden />
 

@@ -188,7 +188,7 @@ export default async function AdminAiListPage({
                       <input type="hidden" name="id" value={s.ai.id} />
                       <DeleteButton
                         label="Delete"
-                        message={`${s.ai.name} aur uske saare models/ratings delete ho jayenge. Pakka?`}
+                        message={`Delete ${s.ai.name} and all of its models and ratings?`}
                       />
                     </form>
                   </div>

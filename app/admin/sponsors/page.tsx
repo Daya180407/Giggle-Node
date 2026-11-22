@@ -31,8 +31,8 @@ export default async function AdminSponsorsPage({
           <p className="eyebrow">Growth</p>
           <h2 className="display mt-1 text-2xl text-ink">Sponsors & manual boost</h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-            Sponsored AI pe “Sponsored” label dikhta hai. Boost 0–1 ke beech hota hai aur AI page pe disclose kiya jata
-            hai — isse ranking formula override nahi hoti, sirf ranking list me position badalti hai.
+            Sponsored AIs show a “Sponsored” label. The boost is between 0 and 1 and is disclosed on the AI page — it
+            does not override the ranking formula, only the position in the ranking list.
           </p>
         </div>
         <span className="chip bg-amber-50 text-amber-700">{db.ai.filter((a) => a.sponsored).length} sponsored</span>

@@ -120,12 +120,12 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
 
       {pricingReport === "sent" ? (
         <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
-          Report bhej di gayi. Admin panel me dikhegi aur price check karke fix kiya jayega.
+          Report sent. It will appear in the admin panel and the price will be checked and fixed.
         </div>
       ) : null}
       {pricingReport === "short" ? (
         <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
-          Report likhne ke liye kam se kam 5 characters likhein.
+          Please enter at least 5 characters for the report.
         </div>
       ) : null}
 
@@ -325,7 +325,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               <div>
                 <h2 className="display text-lg text-ink">Subscription plans</h2>
                 <p className="mt-1 text-xs text-muted">
-                  {ai.name} ke current plans. Prices admin panel se update hote hain.
+                  Current plans for {ai.name}. Prices are updated from the admin panel.
                 </p>
               </div>
               <span className="chip chip-brand">
@@ -353,8 +353,8 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               </div>
             ) : (
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                Detailed plans abhi admin panel se add nahi hue. Starting price {formatMoney(ai, settings.appearance)} —
-                official website par latest plans confirm karein.
+                Detailed plans have not been added from the admin panel yet. Starting price is{" "}
+                {formatMoney(ai, settings.appearance)} — confirm the latest plans on the official website.
               </p>
             )}
             <PricingReport

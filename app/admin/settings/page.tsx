@@ -131,7 +131,7 @@ export default async function AdminSettingsPage({
                 <option value="hi">Hindi (हिन्दी)</option>
               </select>
               <p className="mt-1 text-[11px] text-muted">
-                Sets the page language for browsers and screen readers. Content itself English me rehta hai.
+                Sets the page language for browsers and screen readers. Content itself stays in English.
               </p>
             </div>
           </div>
@@ -426,7 +426,7 @@ export default async function AdminSettingsPage({
       <section className="card p-4">
         <h3 className="text-sm font-bold">Admin password</h3>
         <p className="mt-1 max-w-2xl text-xs text-muted">
-          Apna password yahan se badlein. Aapka current session chalta rahega, agli baar naya password lagega.
+          Change your password here. Your current session stays active; the new password is required next time.
         </p>
         <form action={changePasswordAction} className="mt-3 grid gap-3 sm:grid-cols-3">
           <div>

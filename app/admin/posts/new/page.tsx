@@ -13,7 +13,7 @@ export default async function NewPostPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Naya Post</h2>
         <Link href="/admin/posts" className="text-xs text-brand">
-          ← Wapas
+          ← Back
         </Link>
       </div>
       <div className="card p-4">

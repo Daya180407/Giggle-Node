@@ -108,7 +108,7 @@ export default async function AdminUserDetailPage({
         <section className="card p-4">
           <h3 className="text-sm font-bold">Admin controls</h3>
           <p className="mt-1 text-xs text-muted">
-            Name, email, avatar, role, verified badge, ban status aur password — sab yahan se control karein.
+            Name, email, avatar, role, verified badge, ban status and password — all controlled from here.
           </p>
           <form action={saveUserProfileAction} className="mt-3 space-y-3">
             <input type="hidden" name="id" value={user.id} />
@@ -160,7 +160,7 @@ export default async function AdminUserDetailPage({
                   type="password"
                   minLength={8}
                   autoComplete="new-password"
-                  placeholder="Khali chhodein = unchanged"
+                  placeholder="Leave empty = unchanged"
                   className="field"
                 />
               </div>
@@ -190,8 +190,8 @@ export default async function AdminUserDetailPage({
             {self || !canManageAccess ? (
               <p className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
                 {self
-                  ? "Apna role ya ban status change nahi kar sakte — doosre super admin se karayein."
-                  : "Role, verified badge aur ban sirf super admin change kar sakta hai."}
+                  ? "You cannot change your own role or ban status — ask another super admin."
+                  : "Only a super admin can change the role, verified badge and ban status."}
               </p>
             ) : null}
             <button className="btn btn-primary !py-2 text-xs">Save profile</button>
@@ -228,14 +228,13 @@ export default async function AdminUserDetailPage({
           <section className="card border-rose-200 p-4">
             <h3 className="text-sm font-bold text-rose-700">Danger zone</h3>
             <p className="mt-1 text-[11px] leading-relaxed text-muted">
-              Delete ratings se ranking update ho jayegi. Account delete karne par ratings, bookmarks aur follows bhi
-              hat jayenge.
+              Deleting ratings updates the ranking. Deleting the account also removes its ratings, bookmarks and follows.
             </p>
             <form action={deleteUserRatingsAction} className="mt-2">
               <input type="hidden" name="id" value={user.id} />
               <DeleteButton
                 label={`Delete all ${ratings.length} ratings`}
-                message={`${user.name} ki saari ratings delete ho jayengi. Pakka?`}
+                message={`Delete all ratings by ${user.name}?`}
               />
             </form>
             {!self ? (
@@ -243,7 +242,7 @@ export default async function AdminUserDetailPage({
                 <input type="hidden" name="id" value={user.id} />
                 <DeleteButton
                   label="Delete this account"
-                  message={`${user.name} ka account aur activity permanently delete hogi. Pakka?`}
+                  message={`Permanently delete ${user.name}'s account and activity?`}
                 />
               </form>
             ) : null}

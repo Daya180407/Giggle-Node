@@ -77,7 +77,7 @@ export default function ModelEditor({
                 </div>
                 <label className="flex items-center gap-2 self-end text-sm">
                   <input type="checkbox" name="pin" defaultChecked={m.pin} className="h-4 w-4 accent-indigo-600" />
-                  Model ko top par rakho
+                  Pin this model to the top
                 </label>
               </div>
               <div>
@@ -96,7 +96,7 @@ export default function ModelEditor({
                     defaultChecked={Boolean(m.pricing)}
                     className="h-4 w-4 accent-emerald-600"
                   />
-                  Custom pricing use karein (warna curated/indicative rate)
+                  Use custom pricing (otherwise the curated/indicative rate)
                 </label>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
@@ -172,7 +172,7 @@ export default function ModelEditor({
                   />
                 </div>
                 <p className="mt-1.5 text-[11px] text-muted">
-                  Custom price public page par “admin verified” ke saath dikhta hai. Galat price users report kar sakte hain.
+                  A custom price appears on the public page as “admin verified”. Users can report a wrong price.
                 </p>
               </fieldset>
 
@@ -184,7 +184,7 @@ export default function ModelEditor({
               <input type="hidden" name="aiSlug" value={aiSlug} />
               <DeleteButton
                 label="Delete model"
-                message={`${m.name} aur uski saari ratings delete hongi. Pakka?`}
+                message={`Delete ${m.name} and all of its ratings?`}
               />
             </form>
           </details>

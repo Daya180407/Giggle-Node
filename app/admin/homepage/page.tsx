@@ -32,8 +32,8 @@ export default async function AdminHomepagePage({
           <p className="eyebrow">Growth</p>
           <h2 className="display mt-1 text-2xl text-ink">Homepage & AI Finder</h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-            Trending section, category champions, compare page aur quiz ke sawal yahan se control karein. Banner aur hero
-            text Site Settings me hai.
+            Control the trending section, category champions, compare page and quiz questions here. Banner and hero text
+            live in Site Settings.
           </p>
         </div>
         <Link href="/admin/settings" className="btn btn-ghost text-xs">
@@ -52,7 +52,7 @@ export default async function AdminHomepagePage({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-bold">Trending section</h3>
-              <p className="text-xs text-muted">Khali chhodne par automatic (visits + new ratings) chalta hai.</p>
+              <p className="text-xs text-muted">Leave empty for automatic mode (visits + new ratings).</p>
             </div>
             <span className="chip bg-slate-100 text-slate-500">
               {settings.trendingAiIds.length ? `${settings.trendingAiIds.length} manual` : "Automatic"}
@@ -72,14 +72,14 @@ export default async function AdminHomepagePage({
               </option>
             ))}
           </select>
-          <p className="mt-1 text-[11px] text-muted">Max 4 tools chunein (Ctrl/Cmd se multiple).</p>
+          <p className="mt-1 text-[11px] text-muted">Pick up to 4 tools (Ctrl/Cmd for multiple).</p>
         </section>
 
         <section className="card p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-bold">Compare page defaults</h3>
-              <p className="text-xs text-muted">/compare khulte hi ye tools compare table me dikhenge.</p>
+              <p className="text-xs text-muted">These tools appear in the compare table when /compare opens.</p>
             </div>
             <span className="chip bg-slate-100 text-slate-500">{settings.compareAiIds.length} picked</span>
           </div>
@@ -97,13 +97,13 @@ export default async function AdminHomepagePage({
               </option>
             ))}
           </select>
-          <p className="mt-1 text-[11px] text-muted">Max 3 tools.</p>
+          <p className="mt-1 text-[11px] text-muted">Up to 3 tools.</p>
         </section>
 
         <section className="card p-4">
           <h3 className="text-sm font-bold">Category champions</h3>
           <p className="text-xs text-muted">
-            Default #1 formula se aata hai. Yahan se manually choose karein — public homepage par wahi top dikhega.
+            Defaults to #1 from the formula. Choose one manually here — it will be the top pick on the public homepage.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {categories.map((c) => {
@@ -136,8 +136,8 @@ export default async function AdminHomepagePage({
         <section className="card p-4">
           <h3 className="text-sm font-bold">AI Finder quiz</h3>
           <p className="text-xs text-muted">
-            Teen sawal ke text badlein. Options categories se aate hain, isliye nayi category quiz me automatic add hoti
-            hai.
+            Edit the three question texts. Options come from categories, so a new category is added to the quiz
+            automatically.
           </p>
           <div className="mt-3 space-y-2">
             {settings.quizQuestions.map((q) => (
@@ -166,7 +166,7 @@ export default async function AdminHomepagePage({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-bold">Search keywords</h3>
-            <p className="text-xs text-muted">Public search se aane wale terms — pata chalta hai log kya dhundh rahe hain.</p>
+            <p className="text-xs text-muted">Terms coming from public search — see what people are looking for.</p>
           </div>
           <span className="chip bg-slate-100 text-slate-500">{keywords.length} tracked</span>
         </div>
@@ -179,7 +179,7 @@ export default async function AdminHomepagePage({
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-xs text-muted">Abhi koi search record nahi hua.</p>
+          <p className="mt-2 text-xs text-muted">No searches recorded yet.</p>
         )}
       </section>
 

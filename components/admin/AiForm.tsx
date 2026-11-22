@@ -184,7 +184,7 @@ export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
 
       <PlanFields
         plans={ai?.plans ?? []}
-        hint="Yahan plans add karte hi public AI page aur app listing par plan cards dikhne lagte hain. Price galat hone par users report kar sakte hain aur report admin panel ke Pricing Reports me aati hai."
+        hint="As soon as you add plans here, plan cards appear on the public AI page and app listing. Users can report a wrong price, and reports arrive in Admin → Pricing Reports."
       />
 
       <div>
@@ -211,7 +211,7 @@ export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
               </label>
             ))}
           </div>
-          <p className="mt-1.5 text-[11px] text-muted">Visitor ko batata hai ki tool app hai, PC software hai ya website.</p>
+          <p className="mt-1.5 text-[11px] text-muted">Tells visitors whether the tool is an app, PC software or a website.</p>
         </fieldset>
         <div>
           <label className="label" htmlFor="affiliateUrl">
@@ -225,7 +225,7 @@ export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
             className="field"
           />
           <p className="mt-1 text-[11px] text-muted">
-            Khali chhodne par official website use hogi. Commission link yahan lagayein.
+            Leave empty to use the official website. Add a commission link here.
           </p>
         </div>
       </div>
@@ -233,7 +233,7 @@ export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
       <div className="flex flex-wrap items-center gap-5 rounded-xl border border-line bg-slate-50 p-3">
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="sponsored" defaultChecked={ai?.sponsored} className="h-4 w-4 accent-indigo-600" />
-          Sponsored listing (label dikhega)
+          Sponsored listing (shows a label)
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="featured" defaultChecked={ai?.featured} className="h-4 w-4 accent-indigo-600" />
@@ -241,7 +241,7 @@ export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="hidden" defaultChecked={ai?.hidden} className="h-4 w-4 accent-rose-600" />
-          Hide from public site (ratings safe rahengi)
+          Hide from public site (ratings are kept)
         </label>
         <div className="flex items-center gap-2">
           <label className="text-sm" htmlFor="boost">
@@ -257,7 +257,7 @@ export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
             defaultValue={ai?.boost ?? 0}
             className="field !w-24 !py-1"
           />
-          <span className="text-xs text-muted">0–1 (page pe disclose hota hai)</span>
+          <span className="text-xs text-muted">0–1 (disclosed on the page)</span>
         </div>
       </div>
 

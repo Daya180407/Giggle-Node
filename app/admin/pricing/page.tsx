@@ -52,8 +52,8 @@ export default async function AdminPricingReportsPage({
           <p className="eyebrow">Catalogue</p>
           <h2 className="display mt-1 text-2xl text-ink">Pricing reports</h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-            Users plan ya API/model price galat hone par report bhejte hain. Yahan se sahi price wale edit page par
-            jaakar fix karein, phir report ko “fixed” mark karein.
+            Users report incorrect plan or API/model prices. Open the correct edit page from here, fix the price, then
+            mark the report as “fixed”.
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5 text-[11px]">
@@ -138,7 +138,7 @@ export default async function AdminPricingReportsPage({
             </p>
             <p className="mt-1 text-sm text-slate-600">No pricing reports in this view yet.</p>
             <p className="mt-1 text-xs text-muted">
-              Public AI, model aur app pages par “Price galat hai? Report karein” form se reports aati hain.
+              Reports come from the “Wrong price? Report it” form on public AI, model and app pages.
             </p>
           </div>
         ) : null}

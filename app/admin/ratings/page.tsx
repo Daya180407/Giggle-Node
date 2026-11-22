@@ -190,7 +190,7 @@ export default async function AdminRatingsPage({
               <form action={deleteRatingAction}>
                 <input type="hidden" name="id" value={r.id} />
                 <input type="hidden" name="back" value="/admin/ratings" />
-                <DeleteButton label="Delete" message="Ye rating delete karni hai? Ranking turant update ho jayegi." />
+                <DeleteButton label="Delete" message="Delete this rating? The ranking will update immediately." />
               </form>
             </div>
 

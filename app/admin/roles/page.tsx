@@ -51,8 +51,8 @@ export default async function AdminRolesPage({
           <p className="eyebrow">Community</p>
           <h2 className="display mt-1 text-2xl text-ink">Roles &amp; permissions</h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-            Naya role banayein (Editor, Manager, Support…), uske liye admin sections tick karein, phir Users page se
-            kisi account ko wo role dein. Sirf super admin roles edit kar sakta hai.
+            Create a role (Editor, Manager, Support…), tick the admin sections it can use, then assign it to an account
+            from the Users page. Only a super admin can edit roles.
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5 text-[11px]">
@@ -72,8 +72,8 @@ export default async function AdminRolesPage({
       {error ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
           {error === "system"
-            ? "Built-in roles delete nahi ho sakte. Sirf custom roles delete hote hain."
-            : "Role ka naam zaroori hai."}
+            ? "Built-in roles cannot be deleted. Only custom roles can be removed."
+            : "A role name is required."}
         </div>
       ) : null}
 
@@ -148,7 +148,7 @@ export default async function AdminRolesPage({
                   <input type="hidden" name="id" value={role.id} />
                   <DeleteButton
                     label="Delete this role"
-                    message={`${role.name} delete hoga aur ${users} users "User" ban jayenge. Pakka?`}
+                    message={`Delete ${role.name}? ${users} users will become "User".`}
                   />
                 </form>
               ) : null}
@@ -158,9 +158,9 @@ export default async function AdminRolesPage({
       </div>
 
       <section className="card border-dashed border-indigo-200 p-4">
-        <h3 className="text-sm font-bold">+ Naya role banayein</h3>
+        <h3 className="text-sm font-bold">+ Create a role</h3>
         <p className="mt-1 text-xs text-muted">
-          Example: “Content manager” ko Posts + Categories + Media dein, ya “Support” ko Feedback + Analytics.
+          Example: give “Content manager” Posts + Categories + Media, or “Support” Feedback + Analytics.
         </p>
         <form action={saveRoleAction} className="mt-3 space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">

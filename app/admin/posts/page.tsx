@@ -119,7 +119,7 @@ export default async function AdminPostsPage({
               </form>
               <form action={deletePostAction}>
                 <input type="hidden" name="id" value={p.id} />
-                <DeleteButton message={`“${p.title}” delete karna hai?`} />
+                <DeleteButton message={`Delete “${p.title}”?`} />
               </form>
             </div>
           </div>

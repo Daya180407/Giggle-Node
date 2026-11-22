@@ -32,7 +32,7 @@ export default function PlanFields({
         Subscription plans
       </legend>
       <p className="text-[11px] text-muted">
-        Public page aur app listing par dikhte hain. Khali naam wali row ignore hoti hai. Free plan ke liye price 0 rakhein.
+        Shown on the public page and app listing. Rows with an empty name are ignored. Set the price to 0 for a free plan.
       </p>
       <div className="mt-2 space-y-2">
         {list.slice(0, rowCount).map((plan, index) => (

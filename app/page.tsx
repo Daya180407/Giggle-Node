@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import AdSlot from "@/components/AdSlot";
 import AiCard from "@/components/AiCard";
 import AnimatedStats, { type HomeStat } from "@/components/AnimatedStats";
@@ -208,14 +209,14 @@ export default async function HomePage({
       {pricingReport === "sent" ? (
         <div className="mx-auto mt-3 max-w-7xl px-3 sm:px-5">
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
-            Pricing report bhej di gayi. Admin panel me dikhegi aur price check karke fix kiya jayega.
+            Pricing report sent. It will appear in the admin panel for review and the price will be checked and fixed.
           </div>
         </div>
       ) : null}
       {pricingReport === "short" ? (
         <div className="mx-auto mt-3 max-w-7xl px-3 sm:px-5">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
-            Report likhne ke liye kam se kam 5 characters likhein.
+            Please enter at least 5 characters for the report.
           </div>
         </div>
       ) : null}
@@ -344,7 +345,7 @@ export default async function HomePage({
 
         {/* Paid promotions */}
         {settings.showPromotions ? (
-          <section id="promotions">
+          <section id="promotions" className="relative left-1/2 w-screen -translate-x-1/2">
             <PaidPromo items={paidPicks} />
           </section>
         ) : null}
@@ -424,8 +425,8 @@ export default async function HomePage({
         </section>
 
         {/* Finder CTA */}
-        <section>
-          <div className="dark-panel relative overflow-hidden rounded-3xl p-6 sm:p-10">
+        <section className="relative left-1/2 w-screen -translate-x-1/2">
+          <div className="dark-panel relative overflow-hidden rounded-none p-6 sm:p-10">
             <div className="aurora opacity-40" aria-hidden />
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-xl">
@@ -467,26 +468,27 @@ export default async function HomePage({
                 <Link
                   key={c.slug}
                   href={`/category/${c.slug}`}
-                  className="card card-hover category-tile group relative flex min-h-[128px] flex-col justify-between overflow-hidden rounded-2xl p-3.5 sm:min-h-[142px] sm:p-4"
+                  className="card card-hover category-tile group relative flex min-h-[150px] flex-col items-center justify-center overflow-hidden rounded-2xl p-4 text-center sm:min-h-[162px]"
+                  style={{ "--tint": tint } as CSSProperties}
                 >
                   <span className="category-glow" style={{ background: tint }} aria-hidden />
-                  <span className="relative flex items-start justify-between gap-2">
-                    <span
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border text-lg"
-                      style={{ borderColor: `${tint}40`, background: `${tint}14` }}
-                    >
-                      {c.emoji}
-                    </span>
-                    <span
-                      aria-hidden
-                      className="pt-0.5 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-brand"
-                    >
-                      ↗
-                    </span>
+                  <span
+                    aria-hidden
+                    className="absolute right-3 top-3 text-xs text-slate-400 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand"
+                  >
+                    ↗
                   </span>
-                  <span className="relative mt-6 block min-w-0">
-                    <span className="block truncate text-[13.5px] font-bold text-ink">{c.name}</span>
-                    <span className="mt-0.5 block text-[11px] text-muted">{categoryCounts.get(c.slug) ?? 0} tools</span>
+                  <span
+                    className="relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl border text-xl shadow-sm"
+                    style={{ borderColor: `${tint}55`, background: `${tint}18` }}
+                  >
+                    {c.emoji}
+                  </span>
+                  <span className="relative mt-3 block min-w-0">
+                    <span className="block truncate text-sm font-bold text-ink">{c.name}</span>
+                    <span className="mt-1 block text-[11px] font-medium text-muted">
+                      {categoryCounts.get(c.slug) ?? 0} tools
+                    </span>
                   </span>
                 </Link>
               );

@@ -24,7 +24,7 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
             </Link>
           ) : null}
           <Link href="/admin/posts" className="text-xs text-brand">
-            ← Wapas
+            ← Back
           </Link>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 export default function DeleteButton({
   label = "Delete",
-  message = "Pakka delete karna hai? Ye action undo nahi hoga.",
+  message = "Are you sure? This action cannot be undone.",
   className = "btn btn-ghost !px-2 !py-1 text-xs text-rose-600",
 }: {
   label?: string;

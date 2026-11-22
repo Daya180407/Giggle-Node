@@ -69,7 +69,7 @@ export default async function AdminAppPricingPage({
         <section className="card p-4">
           <h3 className="text-sm font-bold">Plans &amp; pricing</h3>
           <p className="mt-1 text-xs text-muted">
-            Yahan app-specific plans add karein. Khali chhodne par linked AI ke plans use hote hain.
+            Add app-specific plans here. If left empty, the linked AI's plans are used.
           </p>
           <form action={saveAppPricingAction} className="mt-3 space-y-3">
             <input type="hidden" name="slug" value={entry.slug} />
@@ -77,8 +77,8 @@ export default async function AdminAppPricingPage({
               plans={savedPricing?.plans ?? []}
               hint={
                 ai
-                  ? `Fallback: ${ai.name} ke ${ai.plans?.length ?? 0} plans public AI page se use honge.`
-                  : "Is app ka koi linked AI nahi hai, isliye plans yahin se add karna zaroori hai."
+                  ? `Fallback: ${ai.plans?.length ?? 0} plans from ${ai.name} will be used on the public AI page.`
+                  : "This app has no linked AI, so its plans must be added here."
               }
             />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -94,7 +94,7 @@ export default async function AdminAppPricingPage({
                   className="field"
                 />
                 <p className="mt-1 text-[11px] text-muted">
-                  PC software aur API wale apps par dikhta hai. Khali = auto rate from models.
+                  Shown for PC software and API apps. Empty = auto rate from models.
                 </p>
               </div>
               <div>
@@ -141,7 +141,7 @@ export default async function AdminAppPricingPage({
                 Edit {ai.name} plans &amp; models →
               </Link>
               <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                Model-level API pricing aur best-for wahan se control hote hain.
+                Model-level API pricing and best-for are controlled there.
               </p>
             </section>
           ) : null}

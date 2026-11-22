@@ -26,8 +26,8 @@ export default async function AdminCategoriesPage({
         <p className="eyebrow">Catalogue</p>
         <h2 className="display mt-1 text-2xl text-ink">Categories</h2>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-          Naye categories add karein (Health, Finance…), naam ya emoji badlein, ya khali category delete karein. Category
-          jisme AI maujood hai use delete nahi kiya ja sakta — pehle un AI ko doosri category me move karein.
+          Add categories (Health, Finance…), edit the name or emoji, or delete an empty category. A category that still
+          contains AIs cannot be deleted — move those AIs to another category first.
         </p>
       </div>
 
@@ -39,15 +39,15 @@ export default async function AdminCategoriesPage({
       {error ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
           {error === "inuse"
-            ? "Ye category use ho rahi hai. Pehle un AI tools ko doosri category me move karein, phir delete karein."
-            : "Category ka naam zaroori hai (aur slug unique hona chahiye)."}
+            ? "This category is in use. Move those AI tools to another category before deleting it."
+            : "A category name is required, and the slug must be unique."}
         </div>
       ) : null}
 
       <section className="card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-bold">All categories ({categories.length})</h3>
-          <span className="text-[11px] text-muted">Public site aur AI Finder quiz dono yahi list use karte hain</span>
+          <span className="text-[11px] text-muted">Both the public site and the AI Finder quiz use this list</span>
         </div>
         <div className="mt-2 divide-y divide-line">
           {categories.map((c) => {
@@ -105,10 +105,10 @@ export default async function AdminCategoriesPage({
                   <input type="hidden" name="slug" value={c.slug} />
                   {used > 0 ? (
                     <p className="text-[11px] text-muted">
-                      Delete ke liye pehle {used} tools ko doosri category me move karein.
+                      Move the {used} tools to another category before deleting.
                     </p>
                   ) : (
-                    <DeleteButton label="Delete category" message={`“${c.name}” category delete karni hai?`} />
+                    <DeleteButton label="Delete category" message={`Delete the “${c.name}” category?`} />
                   )}
                 </form>
               </details>

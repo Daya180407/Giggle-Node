@@ -350,6 +350,8 @@ Understand the concept before paraphrasing with QuillBot, or you will not rememb
 
 /** Original seeded review strings → English. Only exact matches are replaced. */
 const REVIEW_EN: Record<string, string> = {
+  "Quality zabardast, par price thoda zyada.":
+    "Quality is excellent, but the price is a little high.",
   "Mera daily workflow ka hissa ban gaya hai, time bahut bacha raha hai.":
     "It has become part of my daily workflow and saves me a lot of time.",
   "Output quality achhi hai, par kabhi kabhi extra edit karna padta hai.":

@@ -30,7 +30,7 @@ export default function PromptEditor({
           <form action={deletePromptAction} className="mt-2">
             <input type="hidden" name="id" value={p.id} />
             <input type="hidden" name="aiSlug" value={aiSlug} />
-            <DeleteButton label="Delete prompt" message="Prompt delete karna hai?" />
+            <DeleteButton label="Delete prompt" message="Delete this prompt?" />
           </form>
         </details>
       ))}

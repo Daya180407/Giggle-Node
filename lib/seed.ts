@@ -1572,7 +1572,7 @@ export function buildSeed(): DB {
   // the demo user's own ratings (so edit + lock states are visible immediately)
   const demoRatings: { aiSlug: string; modelIdx: number; stars: number; review: string | null; days: number }[] = [
     { aiSlug: "chatgpt", modelIdx: 0, stars: 5, review: "Mera daily driver. Hindi prompts bhi achhe samajhta hai.", days: 3 },
-    { aiSlug: "midjourney", modelIdx: 0, stars: 4, review: "Quality zabardast, par price thoda zyada.", days: 9 },
+    { aiSlug: "midjourney", modelIdx: 0, stars: 4, review: "Quality is excellent, but the price is a little high.", days: 9 },
   ];
   demoRatings.forEach((r, i) => {
     const model = models.filter((m) => m.aiId === `ai_${r.aiSlug}`)[r.modelIdx];

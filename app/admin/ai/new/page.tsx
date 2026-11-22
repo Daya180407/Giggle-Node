@@ -11,17 +11,17 @@ export default async function NewAiPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Naya AI Add Kijiye</h2>
+        <h2 className="text-lg font-bold">Add a new AI</h2>
         <Link href="/admin/ai" className="text-xs text-brand">
-          ← Wapas
+          ← Back
         </Link>
       </div>
       <div className="card p-4">
         <AiForm allAis={db.ai} />
       </div>
       <p className="text-xs text-muted">
-        AI banane ke baad uske models add kijiye — rating aur ranking model level par hoti hai, isliye bina model ke AI
-        ranking me neeche rahega.
+        After creating an AI, add its models — ratings and ranking happen at model level, so an AI without models will
+        rank lower.
       </p>
     </div>
   );

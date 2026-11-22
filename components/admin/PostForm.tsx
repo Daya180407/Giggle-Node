@@ -12,7 +12,7 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
           Title *
         </label>
         <input id="title" name="title" required defaultValue={post?.title} className="field" />
-        <p className="mt-1 text-xs text-muted">Slug title se automatic ban jayega (khali chhodiye to).</p>
+        <p className="mt-1 text-xs text-muted">The slug is generated from the title automatically (leave it empty).</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -49,7 +49,7 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="scheduledAt">
-            Publish date & time (schedule ke liye)
+            Publish date & time (for scheduled posts)
           </label>
           <input
             id="scheduledAt"
@@ -59,12 +59,12 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
             className="field"
           />
           <p className="mt-1 text-[11px] text-muted">
-            Status “Schedule” + future date = post us waqt apne aap publish ho jayegi.
+            Status “Schedule” + a future date = the post publishes automatically at that time.
           </p>
         </div>
         <label className="flex items-center gap-2 self-end pb-2 text-sm">
           <input type="checkbox" name="featured" defaultChecked={post?.featured} className="h-4 w-4 accent-indigo-600" />
-          Featured post (homepage par bada)
+          Featured post (larger on the homepage)
         </label>
       </div>
 
@@ -91,7 +91,7 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
 
       <div>
         <label className="label" htmlFor="excerpt">
-          Excerpt (card pe dikhega)
+          Excerpt (shown on the card)
         </label>
         <textarea id="excerpt" name="excerpt" rows={2} defaultValue={post?.excerpt} className="field" />
       </div>
@@ -106,17 +106,17 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
           rows={14}
           defaultValue={post?.content}
           className="field font-mono text-xs"
-          placeholder={"## Heading\n\nParagraph likhiye.\n\n- list item 1\n- list item 2"}
+          placeholder={"## Heading\n\nWrite a paragraph.\n\n- list item 1\n- list item 2"}
         />
         <p className="mt-1 text-xs text-muted">
-          Simple markdown: <code>## Heading</code> aur <code>- list item</code> support hai. Blank line se paragraph
-          break hota hai.
+          Simple markdown: <code>## Heading</code> and <code>- list item</code> are supported. A blank line starts a new
+          paragraph.
         </p>
       </div>
 
       <div>
         <label className="label" htmlFor="relatedAiIds">
-          Related AI (Ctrl/Cmd dabakar multiple chuniye)
+          Related AI (hold Ctrl/Cmd to select multiple)
         </label>
         <select
           id="relatedAiIds"
@@ -135,14 +135,14 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
             ))}
         </select>
         <p className="mt-1 text-xs text-muted">
-          Top 10 post me in AI ki live ranking automatic post ke andar aa jayegi, aur AI pages pe ye post “Related
-          Posts” me dikhega.
+          Top 10 posts automatically include these AIs' live ranking, and this post appears as “Related Posts” on
+          those AI pages.
         </p>
       </div>
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="sponsored" defaultChecked={post?.sponsored} className="h-4 w-4 accent-indigo-600" />
-        Sponsored post (label dikhega)
+        Sponsored post (shows a label)
       </label>
 
       <fieldset className="rounded-xl border border-line p-3">
@@ -152,7 +152,7 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
             <label className="label" htmlFor="seoTitle">
               Meta title (max 70)
             </label>
-            <input id="seoTitle" name="seoTitle" defaultValue={post?.seoTitle ?? ""} maxLength={70} className="field" placeholder="Title ke bina bhi chhod sakte hain" />
+            <input id="seoTitle" name="seoTitle" defaultValue={post?.seoTitle ?? ""} maxLength={70} className="field" placeholder="Can be left empty if there is no title" />
           </div>
           <div>
             <label className="label" htmlFor="seoDescription">
@@ -165,7 +165,7 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
               maxLength={170}
               defaultValue={post?.seoDescription ?? ""}
               className="field"
-              placeholder="Search result me dikhne wali line"
+              placeholder="The line shown in search results"
             />
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
 
       <div className="flex gap-2">
         <button className="btn btn-primary">{post ? "Save post" : "Create post"}</button>
-        <span className="self-center text-xs text-muted">Draft me save karke baad me publish kar sakte hain.</span>
+        <span className="self-center text-xs text-muted">Save as a draft and publish later.</span>
       </div>
     </form>
   );

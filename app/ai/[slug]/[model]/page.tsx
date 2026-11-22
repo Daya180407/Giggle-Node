@@ -92,12 +92,12 @@ export default async function ModelPage({ params, searchParams }: Props) {
 
       {pricingReport === "sent" ? (
         <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
-          Report bhej di gayi. Admin price check karke update karega.
+          Report sent. An admin will check the price and update it.
         </div>
       ) : null}
       {pricingReport === "short" ? (
         <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
-          Report likhne ke liye kam se kam 5 characters likhein.
+          Please enter at least 5 characters for the report.
         </div>
       ) : null}
 

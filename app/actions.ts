@@ -1514,7 +1514,7 @@ export async function testAiSearchAction() {
     redirect("/admin/search-ai?tested=missing");
   }
 
-  const result = await classifyWithProvider("sabse achha video banane wala AI kaun sa hai", db, settings);
+  const result = await classifyWithProvider("which is the best AI for making videos", db, settings);
   mutateDb((d) => {
     const current = getSiteSettings(d);
     d.settings = {

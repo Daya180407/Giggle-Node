@@ -784,22 +784,35 @@
     -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 28%, #000 20%, transparent 76%);
     opacity: 0.65;
   }
+  .category-tile {
+    --tint: #8b6cff;
+    background:
+      radial-gradient(130% 100% at 50% -10%, color-mix(in srgb, var(--tint) 17%, transparent) 0%, transparent 64%),
+      linear-gradient(165deg, #ffffff 0%, color-mix(in srgb, var(--tint) 7%, #ffffff) 100%);
+    border-color: color-mix(in srgb, var(--tint) 24%, #e5e8f0);
+    box-shadow: 0 18px 40px -34px color-mix(in srgb, var(--tint) 60%, #0b1220);
+  }
+  .category-tile:hover {
+    border-color: color-mix(in srgb, var(--tint) 52%, #c7d2fe);
+    box-shadow: 0 26px 50px -30px color-mix(in srgb, var(--tint) 50%, #0b1220);
+  }
   .category-glow {
     position: absolute;
-    right: -2.2rem;
-    top: -2.6rem;
-    width: 7.5rem;
-    height: 7.5rem;
+    left: 50%;
+    top: -3rem;
+    width: 8rem;
+    height: 8rem;
     border-radius: 999px;
-    filter: blur(28px);
-    opacity: 0.5;
+    filter: blur(30px);
+    opacity: 0.42;
+    transform: translateX(-50%);
     transition:
       opacity 0.35s ease,
       transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .category-tile:hover .category-glow {
-    opacity: 0.9;
-    transform: scale(1.35);
+    opacity: 0.8;
+    transform: translateX(-50%) scale(1.35);
   }
 }
 
@@ -906,4 +919,10 @@ html[data-theme="dark"] .prose-blog li {
 html[data-theme="dark"] ::selection {
   background: #4338ca;
   color: #fff;
+}
+html[data-theme="dark"] .category-tile {
+  background:
+    radial-gradient(130% 100% at 50% -10%, color-mix(in srgb, var(--tint) 30%, transparent) 0%, transparent 66%),
+    linear-gradient(165deg, #121828 0%, #0b1020 100%);
+  border-color: color-mix(in srgb, var(--tint) 38%, #1e2537);
 }

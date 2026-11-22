@@ -224,7 +224,7 @@ export default async function AdminUsersPage({
                             <input type="hidden" name="id" value={u.id} />
                             <DeleteButton
                               label="Delete"
-                              message={`${u.name} ka account, ratings, bookmarks aur follows permanently delete honge. Pakka?`}
+                              message={`Permanently delete ${u.name}'s account, ratings, bookmarks and follows?`}
                             />
                           </form>
                         </>
