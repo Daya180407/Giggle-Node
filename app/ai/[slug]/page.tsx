@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { toggleBookmarkAction, toggleFollowAction } from "@/app/actions";
+import { toggleBookmarkAction, toggleFollowAction, togglePriceAlertAction } from "@/app/actions";
 import AdSlot from "@/components/AdSlot";
+import { ClaimListingForm, ReviewReplyForm } from "@/components/CommunityForms";
+import EmbedBadge from "@/components/EmbedBadge";
+import RatingTrend from "@/components/RatingTrend";
 import AiCard from "@/components/AiCard";
 import AiQuickRate from "@/components/AiQuickRate";
 import { ApiPricingInline } from "@/components/ApiPricing";
@@ -18,6 +21,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
 import { canAccess, resolveRoles } from "@/lib/roles";
 import { formatPlanPrice } from "@/lib/plans";
+import { myPriceAlert, priceChange, priceHistoryFor, repliesFor, verifiedShare, weeklyRatingTrend } from "@/lib/community";
 import { reportRatingAction } from "@/app/actions";
 import { aiReviews, buildView, publishedPosts, promptsFor, timeAgo } from "@/lib/rank";
 import { getSiteSettings } from "@/lib/settings";
@@ -64,6 +68,17 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
   const bookmarked = Boolean(user && db.bookmarks.some((b) => b.userId === user.id && b.aiId === ai.id));
   const followed = Boolean(user && db.follows.some((f) => f.userId === user.id && f.aiId === ai.id));
   const followers = db.follows.filter((f) => f.aiId === ai.id).length;
+  const verified = verifiedShare(db, ai.id);
+  const trendPoints = weeklyRatingTrend(db, ai.id);
+  const change = priceChange(db, ai.id);
+  const history = priceHistoryFor(db, ai.id).slice(-6);
+  const watching = user ? Boolean(myPriceAlert(db, user.id, ai.id)) : false;
+  const replies = repliesFor(
+    db,
+    reviews.map((row) => row.rating.id),
+  );
+  const isClaimedVendor = Boolean(user && ai.claim && ai.claim.email.toLowerCase() === user.email.toLowerCase());
+  const canReply = Boolean(isClaimedVendor || (user && canAccess(user.role, "ratings", resolveRoles(db.roles))));
 
   const freeAltStat = ai.freeAlternativeId ? view.aiStats.get(ai.freeAlternativeId) : undefined;
   const fallbackFree = [...view.aiStats.values()]
@@ -159,6 +174,12 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
               <span className="text-sm text-muted">({stat.votes.toLocaleString("en-IN")} ratings)</span>
               <Trend trend={stat.trend} />
+              <span
+                className={`chip ${verified.percent >= 50 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
+                title="Ratings from users who opened this tool from GigleNode"
+              >
+                ✓ {verified.percent}% verified
+              </span>
             </div>
           </div>
         </div>
@@ -365,6 +386,61 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             />
           </section>
 
+          {/* Price history & alerts */}
+          <section className="card p-5" id="pricing">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 className="display text-lg text-ink">Price history</h2>
+                <p className="mt-1 text-xs text-muted">
+                  Starting-plan prices recorded whenever they change. Watch this tool to hear about the next one.
+                </p>
+              </div>
+              {change ? (
+                <span
+                  className={`chip ${change.percent < 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"}`}
+                >
+                  {change.percent < 0 ? "▼" : "▲"} {Math.abs(change.percent)}% {change.percent < 0 ? "cheaper" : "pricier"}
+                </span>
+              ) : (
+                <span className="chip bg-slate-100 text-slate-600">Stable</span>
+              )}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              {history.map((snapshot, index) => (
+                <div key={snapshot.id} className="rounded-xl border border-line bg-slate-50/60 px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                    {new Date(snapshot.at).toLocaleDateString("en-IN", { month: "short", year: "2-digit" })}
+                  </p>
+                  <p className="text-sm font-extrabold text-ink">${snapshot.planPrice}</p>
+                  {index === history.length - 1 ? (
+                    <p className="text-[9.5px] font-semibold text-emerald-600">current</p>
+                  ) : null}
+                </div>
+              ))}
+              {history.length === 0 ? <p className="text-xs text-muted">No price recorded yet.</p> : null}
+            </div>
+
+            <form action={togglePriceAlertAction} className="mt-3 flex flex-wrap items-center gap-2">
+              <input type="hidden" name="aiId" value={ai.id} />
+              <input type="hidden" name="back" value={`/ai/${ai.slug}#pricing`} />
+              <button
+                className={`btn !px-3 !py-1.5 text-xs ${
+                  watching ? "bg-brand-soft text-brand border border-indigo-200" : "btn-ghost"
+                }`}
+              >
+                {watching ? "🔔 Watching price" : "🔔 Alert me on price change"}
+              </button>
+              <span className="text-[11px] text-muted">
+                {user
+                  ? watching
+                    ? "You will get an in-app notification and an email when delivery is on."
+                    : `${db.priceAlerts?.filter((row) => row.aiId === ai.id).length ?? 0} people watch this price.`
+                  : "Log in to watch this price."}
+              </span>
+            </form>
+          </section>
+
           {/* About */}
           <section className="card p-5">
             <h2 className="display text-lg text-ink">About {ai.name}</h2>
@@ -485,6 +561,19 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                     </div>
                     <p className="mt-1.5 text-sm text-slate-600">{rating.review}</p>
                     {model ? <p className="mt-1 text-xs text-muted">Rated on {model.name}</p> : null}
+                    {rating.verified ? (
+                      <p className="mt-1 text-[10.5px] font-semibold text-emerald-600">✓ Verified — opened from GigleNode</p>
+                    ) : null}
+                    {(replies.get(rating.id) ?? []).map((reply) => (
+                      <div key={reply.id} className="mt-2 rounded-lg border border-indigo-100 bg-brand-soft/40 p-2">
+                        <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-brand">
+                          Reply from {reply.vendorName}
+                        </p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-slate-700">{reply.body}</p>
+                        <p className="mt-0.5 text-[10px] text-muted">{timeAgo(reply.createdAt)}</p>
+                      </div>
+                    ))}
+                    {canReply ? <ReviewReplyForm ratingId={rating.id} /> : null}
                     <form action={reportRatingAction} className="mt-1.5">
                       <input type="hidden" name="id" value={rating.id} />
                       <input type="hidden" name="back" value={`/ai/${ai.slug}`} />
@@ -497,6 +586,15 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               })}
               {reviews.length === 0 ? <p className="text-sm text-muted">No reviews yet. Be the first to write one.</p> : null}
             </div>
+            {ai.claim ? (
+              <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+                ✓ Claimed listing — replies are published by <strong>{ai.claim.vendorName}</strong>.
+              </p>
+            ) : (
+              <div className="mt-3">
+                <ClaimListingForm aiId={ai.id} aiName={ai.name} />
+              </div>
+            )}
           </section>
 
           {/* Related posts */}
@@ -550,6 +648,17 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           </div>
 
           <Distribution dist={stat.dist} votes={stat.votes} />
+
+          {trendPoints.length ? (
+            <div className="card p-4">
+              <RatingTrend points={trendPoints} />
+              <p className="mt-2 text-[10.5px] leading-relaxed text-muted">
+                Weekly average of every vote across this tool&apos;s models.
+              </p>
+            </div>
+          ) : null}
+
+          <EmbedBadge slug={ai.slug} name={ai.name} />
 
           {settings.adsEnabled && settings.adsClientId && settings.adsSidebarSlot ? (
             <AdSlot clientId={settings.adsClientId} slotId={settings.adsSidebarSlot} variant="sidebar" />

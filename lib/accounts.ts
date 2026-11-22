@@ -1,5 +1,6 @@
 import { applyCatalogue } from "./catalogue/apply";
 import { CATEGORIES } from "./categories";
+import { backfillCommunity } from "./community";
 import { DEMO_ACCOUNTS } from "./demo-accounts";
 import { localizeContentToEnglish } from "./localize-en";
 import { resolveRoles } from "./roles";
@@ -47,6 +48,13 @@ export async function migrateDb(db: DB): Promise<boolean> {
     "pointEvents",
     "changelog",
     "pricingReports",
+    "toolSubmissions",
+    "priceHistory",
+    "priceAlerts",
+    "subscribers",
+    "claimRequests",
+    "reviewReplies",
+    "aiVisits",
   ] as const;
   for (const key of collections) {
     if (!Array.isArray(db[key])) {
@@ -81,6 +89,7 @@ export async function migrateDb(db: DB): Promise<boolean> {
 
   if (applyCatalogue(db)) changed = true;
   if (localizeContentToEnglish(db)) changed = true;
+  if (backfillCommunity(db)) changed = true;
 
   return changed;
 }

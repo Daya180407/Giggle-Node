@@ -14,6 +14,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/blog",
     "/compare",
     "/finder",
+    "/stack",
+    "/submit",
     "/contributors",
     "/my-list",
     "/login",

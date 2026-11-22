@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
+import { NewsletterForm } from "@/components/CommunityForms";
 import { getCategories } from "@/lib/categories";
 import { menuFor, socialsFor } from "@/lib/pages";
 import { getSiteSettings } from "@/lib/settings";
@@ -104,6 +105,21 @@ export default function SiteFooter() {
                   My saved AI
                 </Link>
               </li>
+              <li>
+                <Link href="/stack" className="text-slate-300 transition hover:text-white">
+                  AI stack planner
+                </Link>
+              </li>
+              <li>
+                <Link href="/submit" className="text-slate-300 transition hover:text-white">
+                  Submit a tool
+                </Link>
+              </li>
+              <li>
+                <Link href="/feed.xml" className="text-slate-300 transition hover:text-white">
+                  RSS feed
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -152,10 +168,17 @@ export default function SiteFooter() {
               ))}
             </ul>
           </div>
-          <p className="max-w-sm text-xs leading-relaxed text-slate-500">
-            Sponsored listings are always labelled. Ratings come from verified signed-in users, and the ranking
-            formula is public.
-          </p>
+          <div className="w-full max-w-sm">
+            <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Weekly Top 5</h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-400">
+              The five highest-rated AI tools, every Monday. Confirm once, unsubscribe anytime.
+            </p>
+            <NewsletterForm source="footer" />
+            <p className="mt-3 text-[10.5px] leading-relaxed text-slate-500">
+              Sponsored listings are always labelled. Ratings come from verified signed-in users, and the ranking formula
+              is public.
+            </p>
+          </div>
         </div>
 
         <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">

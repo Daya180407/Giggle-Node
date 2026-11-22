@@ -28,6 +28,7 @@ const CONTROL_GROUPS: {
     label: "Community",
     items: [
       { href: "/admin/ratings", label: "Ratings & Reviews", hint: "Moderate and flag", icon: "★", area: "ratings" },
+      { href: "/admin/submissions", label: "Submissions & Claims", hint: "Tool suggestions, vendors", icon: "📨", area: "catalogue" },
       { href: "/admin/users", label: "Users & Roles", hint: "Accounts and access", icon: "👥", area: "users" },
       { href: "/admin/roles", label: "Roles & Permissions", hint: "Create roles, grant sections", icon: "🔐", area: "users" },
       { href: "/admin/gamification", label: "Gamification", hint: "Points, badges, leaderboard", icon: "🏅", area: "gamification" },

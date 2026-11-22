@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { logAdminAction } from "@/lib/admin-log";
 import { APP_ENTRIES } from "@/lib/software";
+import { activeSubscribers, hasVerifiedUse, recordPriceSnapshot } from "@/lib/community";
 import { getCurrentUser, requestIp } from "@/lib/auth";
 import { CATEGORIES, getCategories, slugifyCategory } from "@/lib/categories";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
@@ -149,6 +150,7 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
       row.stars = stars;
       row.review = review || null;
       row.status = ratingStatus;
+      row.verified = parent ? hasVerifiedUse(d, user.id, parent.id) : Boolean(row.verified);
       row.updatedAt = new Date().toISOString();
       row.lastEditedAt = new Date().toISOString();
       d.rateEvents.push({ ip, at: new Date().toISOString() });
@@ -166,6 +168,7 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
       stars,
       review: review || null,
       status: ratingStatus,
+      verified: parent ? hasVerifiedUse(d, user.id, parent.id) : false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       lastEditedAt: null,
@@ -312,8 +315,10 @@ export async function saveAiAction(formData: FormData) {
     if (id) {
       const ai = db.ai.find((a) => a.id === id);
       if (ai) {
+        const beforePrice = Number(ai.planPrice) || 0;
         Object.assign(ai, payload);
         logAdminAction(db, admin, "updated", `AI: ${name}`, `Category: ${payload.category}`);
+        if (recordPriceSnapshot(db, ai)) notifyPriceWatchers(db, ai, beforePrice);
       }
     } else {
       db.ai.push({
@@ -322,6 +327,7 @@ export async function saveAiAction(formData: FormData) {
         visits: 0,
         createdAt: new Date().toISOString(),
       });
+      recordPriceSnapshot(db, db.ai[db.ai.length - 1]);
       logAdminAction(db, admin, "created", `AI: ${name}`, `Category: ${payload.category}`);
       if (getSiteSettings(db).notificationsAuto) {
         pushNotification(db, {
@@ -352,6 +358,12 @@ export async function deleteAiAction(formData: FormData) {
     db.prompts = db.prompts.filter((p) => p.aiId !== id);
     db.bookmarks = db.bookmarks.filter((b) => b.aiId !== id);
     db.follows = db.follows.filter((f) => f.aiId !== id);
+    db.priceAlerts = (db.priceAlerts ?? []).filter((row) => row.aiId !== id);
+    db.priceHistory = (db.priceHistory ?? []).filter((row) => row.aiId !== id);
+    db.claimRequests = (db.claimRequests ?? []).filter((row) => row.aiId !== id);
+    db.toolSubmissions = (db.toolSubmissions ?? []).filter((row) => row.aiId !== id);
+    db.reviewReplies = (db.reviewReplies ?? []).filter((row) => row.aiId !== id);
+    db.aiVisits = (db.aiVisits ?? []).filter((row) => row.aiId !== id);
     db.ai.forEach((a) => {
       if (a.freeAlternativeId === id) a.freeAlternativeId = null;
     });
@@ -1372,7 +1384,12 @@ export async function queueNewsletterAction() {
     .map((s, i) => `${i + 1}. ${s.ai.name} — ${s.score.toFixed(1)}★ from ${s.votes} votes (${s.ai.priceType})`)
     .join("\n");
   // The outbox keeps 250 rows, so a single manual send is capped below that.
-  const recipients = db.users.filter((u) => !u.banned).slice(0, 240);
+  const recipients = [
+    ...db.users.filter((u) => !u.banned).map((u) => ({ email: u.email, name: u.name })),
+    ...activeSubscribers(db).map((s) => ({ email: s.email, name: s.name || "there" })),
+  ]
+    .filter((row, index, all) => all.findIndex((other) => other.email.toLowerCase() === row.email.toLowerCase()) === index)
+    .slice(0, 240);
 
   mutateDb((d) => {
     const current = getSiteSettings(d);
@@ -2329,4 +2346,421 @@ export async function markNotificationsReadAction() {
   });
   revalidatePath("/notifications");
   redirect("/notifications");
+}
+
+/* ==================== community: tool submissions ==================== */
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isEmail(value: string) {
+  return EMAIL_RE.test(value.trim()) && value.trim().length <= 160;
+}
+
+/** Accepts "example.com" or a full URL and returns a canonical https URL. */
+function normalizeUrl(value: string) {
+  const raw = value.trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    if (!url.hostname.includes(".")) return "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+/** Emails everyone watching this tool when an admin changes its price. */
+function notifyPriceWatchers(db: DB, ai: { id: string; name: string; slug: string; planPrice: number }, previousPrice: number) {
+  const watchers = (db.priceAlerts ?? []).filter((alert) => alert.aiId === ai.id);
+  if (watchers.length === 0) return;
+  const users = new Map(db.users.map((user) => [user.id, user]));
+  const settings = getSiteSettings(db);
+  const direction = ai.planPrice < previousPrice ? "dropped" : "changed";
+  pushNotification(db, {
+    title: `Price ${direction}: ${ai.name}`,
+    body: `The starting plan went from $${previousPrice} to $${ai.planPrice} per month.`,
+    href: `/ai/${ai.slug}#pricing`,
+    kind: "ai",
+  });
+  const stamp = new Date().toISOString();
+  for (const alert of watchers) alert.lastNotifiedAt = stamp;
+  if (!settings.email.enabled) return;
+  for (const alert of watchers) {
+    const user = users.get(alert.userId);
+    if (!user) continue;
+    queueEmail(db, settings.email, {
+      to: user.email,
+      kind: "newsletter",
+      subject: `Price ${direction} on {{site}}: ${ai.name}`,
+      body: `Hi ${user.name},\n\nThe starting plan for ${ai.name} went from $${previousPrice} to $${ai.planPrice} per month.\n\nSee the full pricing history: https://giglenode.com/ai/${ai.slug}#pricing\n\n— The ${settings.siteName} team`,
+          });
+  }
+}
+
+export async function submitToolAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  const website = normalizeUrl(String(formData.get("website") ?? ""));
+  const category = String(formData.get("category") ?? "").trim();
+  const priceTypeRaw = String(formData.get("priceType") ?? "freemium");
+  const priceType: PriceType = priceTypeRaw === "free" || priceTypeRaw === "paid" ? priceTypeRaw : "freemium";
+  const planPrice = Math.min(10000, Math.max(0, Number(formData.get("planPrice") ?? 0) || 0));
+  const description = String(formData.get("description") ?? "").trim().slice(0, 900);
+  const submitterName = String(formData.get("submitterName") ?? "").trim().slice(0, 80);
+  const submitterEmail = String(formData.get("submitterEmail") ?? "").trim().slice(0, 160);
+
+  if (name.length < 2) return { ok: false, error: "Please enter the tool name." };
+  if (!website) return { ok: false, error: "Please enter a valid website, for example example.com." };
+  if (description.length < 20) return { ok: false, error: "Please describe the tool in at least 20 characters." };
+  if (!isEmail(submitterEmail)) return { ok: false, error: "Please enter a valid email address." };
+
+  const db = readDb();
+  const categories = getCategories(db);
+  if (!categories.some((row) => row.slug === category)) return { ok: false, error: "Please choose a category." };
+  const duplicate = (db.toolSubmissions ?? []).find(
+    (row) => row.status === "pending" && row.name.toLowerCase() === name.toLowerCase(),
+  );
+  if (duplicate) return { ok: true, message: "This tool is already in the review queue. Thanks for the nudge!" };
+
+  const user = await getCurrentUser();
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.toolSubmissions)) draft.toolSubmissions = [];
+    draft.toolSubmissions.unshift({
+      id: uid("sub"),
+      name,
+      website,
+      category,
+      priceType,
+      planPrice,
+      description,
+      submitterName: submitterName || user?.name || "Anonymous",
+      submitterEmail,
+      userId: user?.id ?? null,
+      status: "pending",
+      note: "",
+      createdAt: new Date().toISOString(),
+      reviewedAt: null,
+      reviewedBy: null,
+    });
+    pushNotification(draft, {
+      title: `New tool submitted: ${name}`,
+      body: `${submitterName || user?.name || "A visitor"} suggested ${name}. Review it in Submissions.`,
+      href: "/admin/submissions",
+      kind: "system",
+      audience: "staff",
+    });
+  });
+  revalidatePath("/admin/submissions");
+  return { ok: true, message: "Thanks! Your suggestion is in the review queue — we publish verified tools within a few days." };
+}
+
+export async function reviewToolSubmissionAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  const decision = String(formData.get("decision") ?? "reject");
+  let slugOut = "";
+
+  mutateDb((db) => {
+    const row = (db.toolSubmissions ?? []).find((item) => item.id === id);
+    if (!row || row.status !== "pending") return;
+    row.reviewedAt = new Date().toISOString();
+    row.reviewedBy = admin.name;
+    if (decision !== "approve") {
+      row.status = "rejected";
+      logAdminAction(db, admin, "rejected submission", row.name, row.submitterEmail);
+      return;
+    }
+
+    const settings = getSiteSettings(db);
+    const slug = uniqueSlug(slugify(row.name), db.ai.map((a) => a.slug));
+    const aiId = `ai_${slug}`;
+    const category = getCategories(db).find((c) => c.slug === row.category);
+    const created: DB["ai"][number] = {
+      id: aiId,
+      name: row.name,
+      slug,
+      logo: "✦",
+      color: "#4F46E5",
+      website: row.website,
+      category: row.category,
+      priceType: row.priceType,
+      description: row.description,
+      bestFor: [category?.name ?? "General tasks"],
+      pros: ["Suggested by the community and checked by the editors", "Clear pricing published on the official site"],
+      cons: ["New listing — only a few user ratings so far", "Confirm current limits on the official site"],
+      freeAlternativeId: null,
+      sponsored: false,
+      boost: 0,
+      planPrice: row.planPrice,
+      planPriceInr: Math.round(row.planPrice * (settings.appearance.usdRate || 88)),
+      unitCost: 0,
+      visits: 0,
+      createdAt: new Date().toISOString(),
+      plans: [],
+      platforms: ["web"],
+    };
+    db.ai.push(created);
+    db.models.push({
+      id: `md_${slug}_core`,
+      aiId,
+      name: `${row.name} Core`,
+      slug: "core",
+      description: row.description.slice(0, 320),
+      launchDate: new Date().toISOString().slice(0, 10),
+      bestFor: category?.name ?? "General tasks",
+      priceType: row.priceType,
+    });
+    row.status = "approved";
+    row.aiId = aiId;
+    slugOut = slug;
+    recordPriceSnapshot(db, created);
+    if (settings.notificationsAuto) {
+      pushNotification(db, {
+        title: `New AI added: ${row.name}`,
+        body: `${row.name} is now listed under ${category?.name ?? row.category}. Rate it and help the ranking.`,
+        href: `/ai/${slug}`,
+        kind: "ai",
+        auto: true,
+      });
+    }
+    logAdminAction(db, admin, "approved submission", `AI: ${row.name}`, `Suggested by ${row.submitterEmail}`);
+  });
+
+  await flushPendingWrites();
+  revalidatePath("/");
+  revalidatePath("/admin/submissions");
+  if (slugOut) revalidatePath(`/ai/${slugOut}`);
+  redirect(`/admin/submissions?saved=${decision === "approve" ? "approved" : "rejected"}`);
+}
+
+/* ==================== community: vendor claims ==================== */
+
+export async function claimListingAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const aiId = String(formData.get("aiId") ?? "");
+  const vendorName = String(formData.get("vendorName") ?? "").trim().slice(0, 80);
+  const email = String(formData.get("email") ?? "").trim().slice(0, 160);
+  const message = String(formData.get("message") ?? "").trim().slice(0, 500);
+
+  if (vendorName.length < 2) return { ok: false, error: "Please enter your name or company." };
+  if (!isEmail(email)) return { ok: false, error: "Please enter a valid work email." };
+
+  const db = readDb();
+  const ai = db.ai.find((row) => row.id === aiId);
+  if (!ai) return { ok: false, error: "This listing no longer exists." };
+  if (ai.claim) return { ok: false, error: "This listing is already claimed. Contact us if the claim is wrong." };
+  const pending = (db.claimRequests ?? []).find(
+    (row) => row.aiId === aiId && row.status === "pending" && row.email.toLowerCase() === email.toLowerCase(),
+  );
+  if (pending) return { ok: true, message: "Your claim is already in review. We will email you once it is approved." };
+
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.claimRequests)) draft.claimRequests = [];
+    draft.claimRequests.unshift({
+      id: uid("clm"),
+      aiId,
+      aiName: ai.name,
+      vendorName,
+      email,
+      message,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      reviewedAt: null,
+      reviewedBy: null,
+    });
+    pushNotification(draft, {
+      title: `Listing claim: ${ai.name}`,
+      body: `${vendorName} (${email}) wants to claim this listing.`,
+      href: "/admin/submissions",
+      kind: "system",
+      audience: "staff",
+    });
+  });
+  revalidatePath("/admin/submissions");
+  return { ok: true, message: "Claim submitted. Once approved you can reply to reviews from this page." };
+}
+
+export async function reviewClaimAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  const decision = String(formData.get("decision") ?? "reject");
+
+  mutateDb((db) => {
+    const row = (db.claimRequests ?? []).find((item) => item.id === id);
+    if (!row || row.status !== "pending") return;
+    row.reviewedAt = new Date().toISOString();
+    row.reviewedBy = admin.name;
+    const ai = db.ai.find((item) => item.id === row.aiId);
+    if (decision !== "approve" || !ai || ai.claim) {
+      row.status = "rejected";
+      logAdminAction(db, admin, "rejected claim", row.aiName, row.email);
+      return;
+    }
+    row.status = "approved";
+    ai.claim = { vendorName: row.vendorName, email: row.email, at: new Date().toISOString() };
+    for (const other of db.claimRequests ?? []) {
+      if (other.aiId === row.aiId && other.id !== row.id && other.status === "pending") other.status = "rejected";
+    }
+    logAdminAction(db, admin, "approved claim", `AI: ${row.aiName}`, row.vendorName);
+  });
+  await flushPendingWrites();
+  revalidatePath("/admin/submissions");
+  redirect(`/admin/submissions?saved=${decision === "approve" ? "claimed" : "claim-rejected"}`);
+}
+
+export async function replyToReviewAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Please log in to reply." };
+  const ratingId = String(formData.get("ratingId") ?? "");
+  const body = String(formData.get("body") ?? "").trim().slice(0, 600);
+  if (body.length < 10) return { ok: false, error: "Please write at least 10 characters." };
+
+  const db = readDb();
+  const rating = db.ratings.find((row) => row.id === ratingId);
+  if (!rating) return { ok: false, error: "That review no longer exists." };
+  const model = db.models.find((row) => row.id === rating.modelId);
+  const ai = model ? db.ai.find((row) => row.id === model.aiId) : null;
+  if (!ai) return { ok: false, error: "That review no longer exists." };
+
+  const isVendor = Boolean(ai.claim && ai.claim.email.toLowerCase() === user.email.toLowerCase());
+  const isModerator = canAccess(user.role, "ratings", resolveRoles(db.roles));
+  if (!isVendor && !isModerator) {
+    return { ok: false, error: "Only the verified vendor or a GigleNode moderator can reply here." };
+  }
+
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.reviewReplies)) draft.reviewReplies = [];
+    draft.reviewReplies.push({
+      id: uid("rep"),
+      ratingId,
+      aiId: ai.id,
+      vendorName: isVendor ? ai.claim!.vendorName : `${user.name} · GigleNode`,
+      email: user.email,
+      body,
+      createdAt: new Date().toISOString(),
+    });
+  });
+  await flushPendingWrites();
+  revalidatePath(`/ai/${ai.slug}`);
+  return { ok: true, message: isVendor ? "Your reply is published under the review." : "Moderator reply published." };
+}
+
+/* ==================== price alerts & newsletter ==================== */
+
+export async function togglePriceAlertAction(formData: FormData) {
+  const user = await getCurrentUser();
+  const aiId = String(formData.get("aiId") ?? "");
+  const back = String(formData.get("back") ?? "/");
+  if (!user) redirect(`/login?next=${encodeURIComponent(back)}`);
+
+  mutateDb((db) => {
+    if (!Array.isArray(db.priceAlerts)) db.priceAlerts = [];
+    const index = db.priceAlerts.findIndex((row) => row.userId === user.id && row.aiId === aiId);
+    if (index >= 0) db.priceAlerts.splice(index, 1);
+    else db.priceAlerts.push({ id: uid("pal"), userId: user.id, aiId, createdAt: new Date().toISOString(), lastNotifiedAt: null });
+  });
+  await flushPendingWrites();
+  revalidatePath(back);
+  redirect(back);
+}
+
+export type NewsletterState = ActionState & { confirmUrl?: string };
+
+export async function subscribeNewsletterAction(
+  _prev: NewsletterState,
+  formData: FormData,
+): Promise<NewsletterState> {
+  const email = String(formData.get("email") ?? "").trim().slice(0, 160);
+  const source = String(formData.get("source") ?? "footer").slice(0, 40);
+  if (!isEmail(email)) return { ok: false, error: "Please enter a valid email address." };
+
+  const db = readDb();
+  const existing = (db.subscribers ?? []).find((row) => row.email.toLowerCase() === email.toLowerCase());
+  if (existing?.confirmed && !existing.unsubscribedAt) {
+    return { ok: true, message: "You are already subscribed to the weekly Top 5." };
+  }
+
+  const token = existing?.token ?? crypto.randomUUID().replaceAll("-", "");
+  const user = await getCurrentUser();
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.subscribers)) draft.subscribers = [];
+    const row = draft.subscribers.find((item) => item.email.toLowerCase() === email.toLowerCase());
+    if (row) {
+      row.token = token;
+      row.unsubscribedAt = null;
+      row.confirmed = false;
+    } else {
+      draft.subscribers.unshift({
+        id: uid("sub"),
+        email,
+        name: user?.name ?? "",
+        token,
+        confirmed: false,
+        createdAt: new Date().toISOString(),
+        confirmedAt: null,
+        source,
+        unsubscribedAt: null,
+      });
+    }
+    const settings = getSiteSettings(draft);
+    if (settings.email.enabled) {
+      queueEmail(draft, settings.email, {
+        to: email,
+        kind: "newsletter",
+        subject: `Confirm your {{site}} newsletter`,
+        body: `Hi there,\n\nConfirm your subscription to the {{site}} weekly Top 5 AI email:\n{{site}}/newsletter/confirm?token=${token}\n\nIf you did not ask for this, ignore this email.\n\n— The {{site}} team`,
+      });
+    }
+  });
+
+  await flushPendingWrites();
+  revalidatePath("/admin/submissions");
+  return {
+    ok: true,
+    message: "Almost done — confirm your email to start receiving the weekly Top 5.",
+    confirmUrl: `/newsletter/confirm?token=${token}`,
+  };
+}
+
+export async function confirmNewsletterAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "").trim();
+  const db = readDb();
+  const row = (db.subscribers ?? []).find((item) => item.token === token);
+  if (!row) redirect("/newsletter/confirm?error=missing");
+  mutateDb((draft) => {
+    const target = (draft.subscribers ?? []).find((item) => item.token === token);
+    if (!target) return;
+    target.confirmed = true;
+    target.confirmedAt = new Date().toISOString();
+    target.unsubscribedAt = null;
+  });
+  // The redirect may be served by another isolate, so make sure the write landed first.
+  await flushPendingWrites();
+  revalidatePath("/admin/submissions");
+  redirect(`/newsletter/confirm?token=${encodeURIComponent(token)}&done=1`);
+}
+
+export async function unsubscribeNewsletterAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "").trim();
+  const db = readDb();
+  const row = (db.subscribers ?? []).find((item) => item.token === token);
+  if (!row) redirect("/newsletter/unsubscribe?error=missing");
+  mutateDb((draft) => {
+    const target = (draft.subscribers ?? []).find((item) => item.token === token);
+    if (!target) return;
+    target.unsubscribedAt = new Date().toISOString();
+  });
+  await flushPendingWrites();
+  revalidatePath("/admin/submissions");
+  redirect(`/newsletter/unsubscribe?token=${encodeURIComponent(token)}&done=1`);
+}
+
+export async function deleteSubscriberAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  mutateDb((db) => {
+    const row = (db.subscribers ?? []).find((item) => item.id === id);
+    db.subscribers = (db.subscribers ?? []).filter((item) => item.id !== id);
+    if (row) logAdminAction(db, admin, "removed subscriber", row.email, "Newsletter list");
+  });
+  revalidatePath("/admin/submissions");
+  redirect("/admin/submissions?saved=subscriber-removed");
 }

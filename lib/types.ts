@@ -50,6 +50,8 @@ export type Ai = {
   /** sponsorship bookkeeping: amount paid + the day the paid placement ends */
   sponsorAmount?: number | null;
   sponsorUntil?: string | null;
+  /** set when an admin approves a vendor claim for this listing */
+  claim?: { vendorName: string; email: string; at: string } | null;
 };
 
 export type Model = {
@@ -131,7 +133,91 @@ export type Rating = {
   status?: RatingStatus;
   /** how many visitors reported this review */
   reports?: number;
+  /** the reviewer opened this tool from GigleNode before rating it */
+  verified?: boolean;
 };
+
+/* --------------------------- community & growth --------------------------- */
+
+/** A public submission of a new AI tool, held for admin review. */
+export type ToolSubmission = {
+  id: string;
+  name: string;
+  website: string;
+  category: CategorySlug;
+  priceType: PriceType;
+  planPrice: number;
+  description: string;
+  submitterName: string;
+  submitterEmail: string;
+  userId: string | null;
+  status: "pending" | "approved" | "rejected";
+  note: string;
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  /** catalogue id created when the submission was approved */
+  aiId?: string | null;
+};
+
+/** Starting-plan price recorded whenever an admin changes it. */
+export type PriceSnapshot = {
+  id: string;
+  aiId: string;
+  planPrice: number;
+  planPriceInr: number;
+  at: string;
+};
+
+/** A signed-in user asking to be told when a tool's price changes. */
+export type PriceAlert = {
+  id: string;
+  userId: string;
+  aiId: string;
+  createdAt: string;
+  lastNotifiedAt: string | null;
+};
+
+/** Public newsletter subscriber, confirmed through a single-use token link. */
+export type NewsletterSubscriber = {
+  id: string;
+  email: string;
+  name: string;
+  token: string;
+  confirmed: boolean;
+  createdAt: string;
+  confirmedAt: string | null;
+  source: string;
+  unsubscribedAt: string | null;
+};
+
+/** Vendor request to take ownership of a listing. */
+export type ClaimRequest = {
+  id: string;
+  aiId: string;
+  aiName: string;
+  vendorName: string;
+  email: string;
+  message: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+};
+
+/** Public reply from the claimed vendor under a user review. */
+export type ReviewReply = {
+  id: string;
+  ratingId: string;
+  aiId: string;
+  vendorName: string;
+  email: string;
+  body: string;
+  createdAt: string;
+};
+
+/** One outbound click from a signed-in user — the basis of a verified rating. */
+export type AiVisit = { userId: string; aiId: string; at: string };
 
 export type PostStatus = "draft" | "published" | "scheduled";
 export type PostType = "news" | "comparison" | "top10" | "tutorial";
@@ -528,6 +614,16 @@ export type DB = {
   appPricing?: Record<string, AppPricing>;
   /** public reports about wrong plan or API pricing */
   pricingReports?: PricingReport[];
+  /** community submissions waiting for (or already through) moderation */
+  toolSubmissions?: ToolSubmission[];
+  /** starting-plan price snapshots used for the price-drop badge and history */
+  priceHistory?: PriceSnapshot[];
+  priceAlerts?: PriceAlert[];
+  subscribers?: NewsletterSubscriber[];
+  claimRequests?: ClaimRequest[];
+  reviewReplies?: ReviewReply[];
+  /** outbound clicks by signed-in users, used to verify a rating */
+  aiVisits?: AiVisit[];
   /** admin-managed roles and their permissions */
   roles?: RoleDefinition[];
 };

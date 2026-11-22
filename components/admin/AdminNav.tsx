@@ -20,6 +20,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Community",
     items: [
       { href: "/admin/ratings", label: "Ratings & Reviews", icon: "★", area: "ratings" },
+      { href: "/admin/submissions", label: "Submissions & Claims", icon: "📨", area: "catalogue" },
       { href: "/admin/users", label: "Users & Roles", icon: "👥", area: "users" },
       { href: "/admin/roles", label: "Roles & Permissions", icon: "🔐", area: "users" },
       { href: "/admin/gamification", label: "Gamification", icon: "🏅", area: "gamification" },
