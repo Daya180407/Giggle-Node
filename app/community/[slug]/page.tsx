@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${room.title} — Ask, Share & Help`,
     description:
       room.description ||
-      `The GigleNode community room for ${ai.name}. Share problems, ideas, tips, screenshots, voice notes and files with other users. Free to join.`,
+      `The GigleNode community room for ${ai?.name ?? "every AI tool"}. Share problems, ideas, tips, screenshots, voice notes and files with other users. Free to join.`,
     alternates: { canonical: `/community/${room.slug}` },
   };
 }
@@ -52,9 +52,9 @@ export default async function CommunityRoomPage({ params }: Props) {
   const settings = getSiteSettings(db);
   const community = settings.community;
   const kinds = allowedCommunityKinds(community);
-  const roomMessages = communityMessagesForRoom(db, ai.id, room.roomId);
+  const roomMessages = communityMessagesForRoom(db, room.aiId, room.roomId);
   const messages = roomMessages.slice(-100);
-  const stat = buildView(db).aiStats.get(ai.id);
+  const stat = ai ? buildView(db).aiStats.get(ai.id) : undefined;
   const staff = user ? isStaffRole(user.role, resolveRoles(db.roles)) : false;
   const back = `/community/${room.slug}`;
 
@@ -78,27 +78,41 @@ export default async function CommunityRoomPage({ params }: Props) {
 
       <header className="page-hero mt-3">
         <div className="flex flex-wrap items-center gap-3">
-          <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={56} rounded="rounded-2xl" />
+          {ai ? (
+            <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={56} rounded="rounded-2xl" />
+          ) : (
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 text-2xl text-white shadow-sm">
+              🌍
+            </span>
+          )}
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-extrabold sm:text-2xl">{room.title}</h1>
-            {room.roomId && room.description ? (
+            {(room.scope === "universal" || room.roomId) && room.description ? (
               <p className="mt-0.5 text-xs leading-relaxed text-slate-600">{room.description}</p>
             ) : null}
             <p className="mt-0.5 text-xs text-muted">
-              <Link href={`/ai/${ai.slug}`} className="font-semibold text-slate-600 hover:text-brand">
-                {ai.name}
-              </Link>{" "}
-              · {categoryName(ai.category)}
-              {stat ? ` · ${stat.score.toFixed(1)}★ from ${stat.votes.toLocaleString("en-IN")} ratings` : ""}
+              {ai ? (
+                <>
+                  <Link href={`/ai/${ai.slug}`} className="font-semibold text-slate-600 hover:text-brand">
+                    {ai.name}
+                  </Link>{" "}
+                  · {categoryName(ai.category)}
+                  {stat ? ` · ${stat.score.toFixed(1)}★ from ${stat.votes.toLocaleString("en-IN")} ratings` : ""}
+                </>
+              ) : (
+                "All AI tools · one shared room"
+              )}
             </p>
           </div>
-          <Link href={`/ai/${ai.slug}`} className="btn btn-ghost !py-1.5 text-xs">
-            View AI page ↗
-          </Link>
+          {ai ? (
+            <Link href={`/ai/${ai.slug}`} className="btn btn-ghost !py-1.5 text-xs">
+              View AI page ↗
+            </Link>
+          ) : null}
         </div>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-          Ask a question, share a problem or an idea, or help someone else get more from {ai.name}. Free for every
-          signed-in member. Messages are deleted automatically after {community.retentionDays} days.
+          Ask a question, share a problem or an idea, or help someone else get more from {ai ? ai.name : "any AI tool"}.
+          Free for every signed-in member. Messages are deleted automatically after {community.retentionDays} days.
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
           <span className="chip bg-slate-100 text-slate-600">
@@ -190,7 +204,7 @@ export default async function CommunityRoomPage({ params }: Props) {
             <div className="py-8 text-center">
               <p className="text-sm font-semibold text-ink">This room is empty.</p>
               <p className="mt-1 text-xs text-muted">
-                Be the first to ask a question or share something useful about {ai.name}.
+                Be the first to ask a question or share something useful about {ai ? ai.name : "AI tools"}.
               </p>
             </div>
           ) : null}
@@ -201,8 +215,8 @@ export default async function CommunityRoomPage({ params }: Props) {
           {community.enabled ? (
             user ? (
               <CommunityComposer
-                aiId={ai.id}
-                aiName={ai.name}
+                aiId={room.aiId}
+                aiName={ai?.name ?? "any AI"}
                 roomId={room.roomId}
                 kinds={kinds}
                 maxLength={community.maxMessageLength}
@@ -228,7 +242,7 @@ export default async function CommunityRoomPage({ params }: Props) {
           <h2 className="text-sm font-bold text-ink">Room rules</h2>
           <ul className="mt-2 space-y-1 text-[11.5px] leading-relaxed text-slate-600">
             <li>• Be respectful — no spam, hate or personal attacks.</li>
-            <li>• Stay on topic: questions, ideas and tips about {ai.name}.</li>
+            <li>• Stay on topic: questions, ideas and tips about {ai ? ai.name : "AI tools"}.</li>
             <li>• Do not share private data, passwords or someone else&apos;s files.</li>
             <li>• Every {community.retentionDays} days older messages are deleted automatically.</li>
           </ul>

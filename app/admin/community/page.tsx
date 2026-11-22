@@ -49,6 +49,9 @@ export default async function AdminCommunityPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/admin/community/inbox" className="btn btn-ghost text-xs">
+            Moderation inbox
+          </Link>
           <Link href="/admin/settings" className="btn btn-ghost text-xs">
             Community settings
           </Link>

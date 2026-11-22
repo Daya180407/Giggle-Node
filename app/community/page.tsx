@@ -11,6 +11,8 @@ import {
   KIND_LABELS,
   roomSummaryKey,
   sweepCommunityMessages,
+  universalRoom,
+  UNIVERSAL_ROOM_SLUG,
 } from "@/lib/community-chat";
 import { buildView, rankedAis, timeAgo, trendingAis } from "@/lib/rank";
 import { getSiteSettings } from "@/lib/settings";
@@ -41,6 +43,8 @@ export default async function CommunityIndexPage({ searchParams }: Props) {
 
   const trending = trendingAis(view, 6, settings.trendingAiIds);
   const query = q.trim().toLowerCase();
+  const pinned = universalRoom();
+  const pinnedStats = summary.get(pinned.key) ?? { count: 0, lastAt: null };
   const customRooms = communityRoomsFor(db)
     .filter((room) => !room.hidden)
     .flatMap((room) => {
@@ -137,6 +141,32 @@ export default async function CommunityIndexPage({ searchParams }: Props) {
             ) : null}
             <span className="ml-auto text-[11px] text-muted">{rooms.length} rooms</span>
           </form>
+
+          <Link
+            href={`/community/${UNIVERSAL_ROOM_SLUG}`}
+            className="card mt-4 flex flex-wrap items-center gap-3 border-indigo-200 bg-gradient-to-r from-indigo-50/80 via-white to-cyan-50/70 p-4 transition hover:border-brand/50 hover:shadow-md"
+          >
+            <span
+              aria-hidden
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-2xl shadow-sm"
+            >
+              🌍
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="text-sm font-bold text-ink">Everyone community</p>
+                <span className="chip bg-indigo-100 text-indigo-700">📌 Pinned</span>
+              </div>
+              <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-600">
+                One shared room for every AI tool — ask anything, compare tools and help other members.
+              </p>
+              <p className="mt-1 text-[10.5px] text-muted">
+                💬 {pinnedStats.count} {pinnedStats.count === 1 ? "message" : "messages"}
+                {pinnedStats.lastAt ? ` · active ${timeAgo(pinnedStats.lastAt)}` : " · start the conversation"}
+              </p>
+            </div>
+            <span className="btn btn-primary !py-2 text-xs">Join →</span>
+          </Link>
 
           {trending.length > 0 && !query ? (
             <section className="mt-5">

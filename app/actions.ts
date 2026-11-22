@@ -5,7 +5,14 @@ import { redirect } from "next/navigation";
 import { logAdminAction } from "@/lib/admin-log";
 import { APP_ENTRIES } from "@/lib/software";
 import { activeSubscribers, hasVerifiedUse, recordPriceSnapshot } from "@/lib/community";
-import { ATTACHMENT_LIMITS, communityKindAllowed, pruneCommunityMessages } from "@/lib/community-chat";
+import {
+  ATTACHMENT_LIMITS,
+  communityKindAllowed,
+  pruneCommunityMessages,
+  UNIVERSAL_AI_ID,
+  UNIVERSAL_ROOM_ID,
+  UNIVERSAL_ROOM_SLUG,
+} from "@/lib/community-chat";
 import { getCurrentUser, requestIp } from "@/lib/auth";
 import { CATEGORIES, getCategories, slugifyCategory } from "@/lib/categories";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
@@ -649,15 +656,19 @@ export async function postCommunityMessageAction(_prev: ActionState, formData: F
   if (!community.enabled) return { ok: false, error: "The community is paused by the administrator right now." };
 
   const aiId = String(formData.get("aiId") ?? "").trim();
-  const ai = db.ai.find((row) => row.id === aiId && !row.hidden);
-  if (!ai) return { ok: false, error: "AI not found." };
+  const isUniversal = aiId === UNIVERSAL_AI_ID;
 
   // An admin-created room must exist, belong to this AI and still be public.
   const roomIdRaw = String(formData.get("roomId") ?? "").trim();
   let room: CommunityRoom | null = null;
-  if (roomIdRaw) {
-    room = (db.communityRooms ?? []).find((row) => row.id === roomIdRaw && row.aiId === ai.id && !row.hidden) ?? null;
-    if (!room) return { ok: false, error: "This community room is not available." };
+  if (isUniversal) {
+    if (roomIdRaw !== UNIVERSAL_ROOM_ID) return { ok: false, error: "This community room is not available." };
+  } else {
+    if (!db.ai.some((row) => row.id === aiId && !row.hidden)) return { ok: false, error: "AI not found." };
+    if (roomIdRaw) {
+      room = (db.communityRooms ?? []).find((row) => row.id === roomIdRaw && row.aiId === aiId && !row.hidden) ?? null;
+      if (!room) return { ok: false, error: "This community room is not available." };
+    }
   }
 
   const rawKind = String(formData.get("kind") ?? "text");
@@ -694,8 +705,8 @@ export async function postCommunityMessageAction(_prev: ActionState, formData: F
     if (!Array.isArray(draft.communityMessages)) draft.communityMessages = [];
     draft.communityMessages.push({
       id: uid("cm"),
-      aiId: ai.id,
-      roomId: room?.id ?? null,
+      aiId: isUniversal ? UNIVERSAL_AI_ID : aiId,
+      roomId: isUniversal ? UNIVERSAL_ROOM_ID : room?.id ?? null,
       userId: user.id,
       userName: user.name,
       avatar: user.avatar,
@@ -707,7 +718,10 @@ export async function postCommunityMessageAction(_prev: ActionState, formData: F
     pruneCommunityMessages(draft, getSiteSettings(draft).community.retentionDays);
   });
 
-  revalidatePath(`/community/${room?.slug ?? ai.slug}`);
+  const targetSlug = isUniversal
+    ? UNIVERSAL_ROOM_SLUG
+    : room?.slug ?? db.ai.find((row) => row.id === aiId)?.slug ?? "";
+  revalidatePath(`/community/${targetSlug}`);
   revalidatePath("/community");
   return { ok: true, message: "Posted. Thanks for helping the community!" };
 }
@@ -792,7 +806,8 @@ export async function deleteCommunityRoomAction(formData: FormData) {
 export async function deleteCommunityMessageAction(formData: FormData) {
   const user = await getCurrentUser();
   const backRaw = String(formData.get("back") ?? "/community");
-  const back = backRaw.startsWith("/community") ? backRaw : "/community";
+  const back =
+    backRaw.startsWith("/community") || backRaw.startsWith("/admin/community") ? backRaw : "/community";
   if (!user) redirect(`/login?next=${encodeURIComponent(back)}`);
 
   const id = String(formData.get("id") ?? "");

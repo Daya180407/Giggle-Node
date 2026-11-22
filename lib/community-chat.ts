@@ -20,6 +20,11 @@ import type { Ai, CommunityMessage, CommunityMessageKind, CommunityRoom, Communi
 export const MAX_MESSAGES_PER_ROOM = 250;
 export const MAX_MESSAGES_TOTAL = 2000;
 
+/** One shared room for every AI, pinned at the top of the community index. */
+export const UNIVERSAL_ROOM_SLUG = "everyone";
+export const UNIVERSAL_AI_ID = "__all__";
+export const UNIVERSAL_ROOM_ID = "__universal__";
+
 /** Byte caps for the three attachment kinds. Checked again on the server. */
 export const ATTACHMENT_LIMITS: Record<Exclude<CommunityMessageKind, "text">, number> = {
   image: 300_000,
@@ -45,6 +50,8 @@ export type RoomRef = {
   description: string;
   /** null for the AI's default room */
   roomId: string | null;
+  /** universal rooms are not tied to a single AI */
+  scope: "universal" | "ai";
   hidden: boolean;
   createdAt: string | null;
 };
@@ -75,8 +82,23 @@ export function defaultRoomFor(ai: Ai): RoomRef {
     title: `${ai.name} community`,
     description: description.length > 180 ? `${description.slice(0, 177)}…` : description,
     roomId: null,
+    scope: "ai",
     hidden: false,
     createdAt: ai.createdAt ?? null,
+  };
+}
+
+export function universalRoom(): RoomRef {
+  return {
+    key: roomSummaryKey(UNIVERSAL_AI_ID, UNIVERSAL_ROOM_ID),
+    aiId: UNIVERSAL_AI_ID,
+    slug: UNIVERSAL_ROOM_SLUG,
+    title: "Everyone community",
+    description: "One room for every AI tool — ask anything, compare tools and help other members.",
+    roomId: UNIVERSAL_ROOM_ID,
+    scope: "universal",
+    hidden: false,
+    createdAt: null,
   };
 }
 
@@ -88,7 +110,8 @@ export function communityRoomsFor(db: DB, aiId?: string): CommunityRoom[] {
  * Public lookup by URL slug. An admin room wins only when it is not hidden;
  * otherwise the slug is treated as an AI slug (the default room).
  */
-export function findCommunityRoom(db: DB, slug: string): { ai: Ai; room: RoomRef } | null {
+export function findCommunityRoom(db: DB, slug: string): { ai: Ai | null; room: RoomRef } | null {
+  if (slug === UNIVERSAL_ROOM_SLUG) return { ai: null, room: universalRoom() };
   const custom = (db.communityRooms ?? []).find((row) => row.slug === slug && !row.hidden);
   if (custom) {
     const ai = db.ai.find((row) => row.id === custom.aiId && !row.hidden);
@@ -102,6 +125,7 @@ export function findCommunityRoom(db: DB, slug: string): { ai: Ai; room: RoomRef
           title: custom.title,
           description: custom.description,
           roomId: custom.id,
+          scope: "ai",
           hidden: false,
           createdAt: custom.createdAt,
         },
@@ -208,6 +232,20 @@ export function sweepCommunityMessages(): void {
   mutateDb((draft) => {
     pruneCommunityMessages(draft, getSiteSettings(draft).community.retentionDays);
   });
+}
+
+/** Human-readable room label for the admin moderation inbox. */
+export function describeCommunityMessage(db: DB, message: CommunityMessage): { label: string; href: string } {
+  if (message.aiId === UNIVERSAL_AI_ID) {
+    return { label: "Everyone community", href: `/community/${UNIVERSAL_ROOM_SLUG}` };
+  }
+  const ai = db.ai.find((row) => row.id === message.aiId);
+  const aiName = ai?.name ?? "Unknown AI";
+  if (message.roomId) {
+    const room = (db.communityRooms ?? []).find((row) => row.id === message.roomId);
+    if (room) return { label: `${aiName} · ${room.title}`, href: `/community/${room.slug}` };
+  }
+  return { label: `${aiName} · default room`, href: ai ? `/community/${ai.slug}` : "/community" };
 }
 
 export function humanBytes(bytes: number): string {

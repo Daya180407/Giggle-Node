@@ -21,6 +21,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/ratings", label: "Ratings & Reviews", icon: "★", area: "ratings" },
       { href: "/admin/community", label: "Community Rooms", icon: "🗨️", area: "catalogue" },
+      { href: "/admin/community/inbox", label: "Community Inbox", icon: "📥", area: "catalogue" },
       { href: "/admin/prompts", label: "Prompt Library", icon: "💬", area: "catalogue" },
       { href: "/admin/submissions", label: "Submissions & Claims", icon: "📨", area: "catalogue" },
       { href: "/admin/users", label: "Users & Roles", icon: "👥", area: "users" },

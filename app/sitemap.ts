@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { readDb } from "@/lib/store";
 import { getCategories } from "@/lib/categories";
 import { publishedPosts } from "@/lib/rank";
+import { UNIVERSAL_ROOM_SLUG } from "@/lib/community-chat";
 
 // Rooms, posts and AI listings are edited at runtime, so the sitemap must not be
 // frozen into the build output.
@@ -51,6 +52,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const visibleAiIds = new Set(db.ai.filter((ai) => !ai.hidden).map((ai) => ai.id));
   const communitySlugs = [
+    UNIVERSAL_ROOM_SLUG,
     ...db.ai.filter((ai) => !ai.hidden).map((ai) => ai.slug),
     ...(db.communityRooms ?? [])
       .filter((room) => !room.hidden && visibleAiIds.has(room.aiId))

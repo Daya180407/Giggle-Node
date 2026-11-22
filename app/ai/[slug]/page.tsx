@@ -23,6 +23,7 @@ import { categoryName } from "@/lib/categories";
 import { canAccess, resolveRoles } from "@/lib/roles";
 import { formatPlanPrice } from "@/lib/plans";
 import { myPriceAlert, priceChange, priceHistoryFor, repliesFor, verifiedShare, weeklyRatingTrend } from "@/lib/community";
+import { communityMessagesForRoom, UNIVERSAL_ROOM_SLUG } from "@/lib/community-chat";
 import { reportRatingAction } from "@/app/actions";
 import { aiReviews, buildView, isVerifiedPrompt, publishedPosts, promptsFor, timeAgo } from "@/lib/rank";
 import { getSiteSettings } from "@/lib/settings";
@@ -67,6 +68,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
     ? db.ratings.filter((r) => r.userId === user.id && (modelIds.has(r.modelId ?? "") || r.aiId === ai.id))
     : [];
   const prompts = promptsFor(db, ai.id);
+  const communityPosts = settings.community.enabled ? communityMessagesForRoom(db, ai.id, null).length : 0;
   const reviews = aiReviews(db, ai.id, 8);
   const posts = publishedPosts(db).filter((p) => p.relatedAiIds.includes(ai.id)).slice(0, 3);
   const bookmarked = Boolean(user && db.bookmarks.some((b) => b.userId === user.id && b.aiId === ai.id));
@@ -253,6 +255,29 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           allowRatings={settings.allowRatings}
         />
       </div>
+
+      {settings.community.enabled ? (
+        <div className="card mt-4 flex flex-wrap items-center justify-between gap-3 border-indigo-100 bg-gradient-to-r from-indigo-50/70 via-white to-cyan-50/60 p-4">
+          <div className="min-w-0">
+            <p className="eyebrow">Community</p>
+            <p className="mt-1 text-sm font-bold text-ink">Join the {ai.name} community</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              {communityPosts > 0
+                ? `${communityPosts} ${communityPosts === 1 ? "message" : "messages"} from members`
+                : "Be the first to post"}{" "}
+              · ask a question, share a fix or help another user. Free.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/community/${ai.slug}`} className="btn btn-primary !py-2 text-xs">
+              💬 Join the community
+            </Link>
+            <Link href={`/community/${UNIVERSAL_ROOM_SLUG}`} className="btn btn-ghost !py-2 text-xs">
+              Everyone room →
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-6">
