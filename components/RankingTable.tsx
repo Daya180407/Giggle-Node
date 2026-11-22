@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AiLogo, PriceBadge, SponsoredTag, Stars, Trend } from "@/components/ui";
+import { formatVotes } from "@/lib/format";
 import type { AiStat } from "@/lib/rank";
 
 const MEDALS = ["medal-1", "medal-2", "medal-3"];
@@ -32,14 +33,14 @@ export default function RankingTable({ stats }: { stats: AiStat[] }) {
               <span className="rounded-full bg-amber-50 px-1.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">
                 ★ {s.score.toFixed(1)}
               </span>
-              <span className="text-xs text-muted">({s.votes.toLocaleString("en-US")})</span>
+              <span className="text-xs text-muted">({formatVotes(s.votes)})</span>
             </div>
           </div>
 
           <div className="hidden w-28 shrink-0 sm:block">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-ink">{s.score.toFixed(1)}</span>
-              <span className="text-muted">{s.votes.toLocaleString("en-US")}</span>
+              <span className="text-muted">{formatVotes(s.votes)}</span>
             </div>
             <div className="score-bar mt-1.5">
               <span style={{ width: `${Math.max(6, Math.min(100, (s.score / 5) * 100))}%` }} />

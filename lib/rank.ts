@@ -92,10 +92,47 @@ export function buildView(db: DB): View {
     modelsByAi.set(m.aiId, list);
   }
 
-  type Acc = { votes: number; wSum: number; wStars: number; dist: number[]; recentVotes: number; recentStars: number; last7: number };
+  type Acc = {
+    votes: number;
+    wSum: number;
+    wStars: number;
+    dist: number[];
+    recentVotes: number;
+    recentStars: number;
+    last7: number;
+    /** real rating rows only, used for the trend arrow */
+    realVotes: number;
+    realStars: number;
+  };
   const acc = new Map<string, Acc>();
   for (const m of db.models) {
-    acc.set(m.id, { votes: 0, wSum: 0, wStars: 0, dist: [0, 0, 0, 0, 0], recentVotes: 0, recentStars: 0, last7: 0 });
+    acc.set(m.id, {
+      votes: 0,
+      wSum: 0,
+      wStars: 0,
+      dist: [0, 0, 0, 0, 0],
+      recentVotes: 0,
+      recentStars: 0,
+      last7: 0,
+      realVotes: 0,
+      realStars: 0,
+    });
+  }
+
+  // Demo totals count as old, full-weight votes, so a seeded 4.9★ average is
+  // not pulled toward the directory average by the 50-vote prior. Real votes
+  // keep landing on top of them.
+  for (const m of db.models) {
+    const demoVotes = Math.max(0, Math.round(m.demoVotes ?? 0));
+    const demoStars = Math.max(0, Math.min(5, m.demoStars ?? 0));
+    const a = acc.get(m.id);
+    if (!a || demoVotes === 0 || demoStars === 0) continue;
+    a.votes += demoVotes;
+    a.wSum += demoVotes;
+    a.wStars += demoVotes * demoStars;
+    const spread = [1, 2, 3, 4, 5].map((stars) => Math.exp(-Math.pow(stars - demoStars, 2) / 0.8));
+    const spreadTotal = spread.reduce((sum, n) => sum + n, 0);
+    for (let i = 0; i < 5; i++) a.dist[i] += Math.round((spread[i] / spreadTotal) * demoVotes);
   }
 
   for (const r of ratings) {
@@ -106,6 +143,8 @@ export function buildView(db: DB): View {
     const ageDays = Math.max(0, (now - new Date(r.createdAt).getTime()) / 86400000);
     const w = recencyWeight(r.createdAt, now);
     a.votes += 1;
+    a.realVotes += 1;
+    a.realStars += r.stars;
     a.wSum += w;
     a.wStars += w * r.stars;
     a.dist[Math.min(5, Math.max(1, r.stars)) - 1] += 1;
@@ -143,8 +182,17 @@ export function buildView(db: DB): View {
           ? (a.votes / (a.votes + PRIOR_VOTES)) * avg + (PRIOR_VOTES / (a.votes + PRIOR_VOTES)) * globalAvg
           : globalAvg;
       const recentAvg = a.recentVotes > 0 ? a.recentStars / a.recentVotes : avg;
+      // Trend compares real recent votes with the model's own real average, so
+      // demo totals do not turn every arrow into a downward one.
+      const realAvg = a.realVotes > 0 ? a.realStars / a.realVotes : 0;
       const trend: Trend =
-        a.votes === 0 ? "flat" : recentAvg > avg + 0.06 ? "up" : recentAvg < avg - 0.06 ? "down" : "flat";
+        a.realVotes === 0 || a.recentVotes === 0
+          ? "flat"
+          : recentAvg > realAvg + 0.06
+            ? "up"
+            : recentAvg < realAvg - 0.06
+              ? "down"
+              : "flat";
       const modelStat: ModelStat = {
         model,
         ai,

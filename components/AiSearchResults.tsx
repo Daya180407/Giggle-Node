@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { reportAiSearchAction, toggleBookmarkAction } from "@/app/actions";
 import { AiLogo, PriceBadge, Stars } from "@/components/ui";
+import { formatVotes } from "@/lib/format";
 
 type Card = {
   id: string;
@@ -160,7 +161,7 @@ export default function AiSearchResults({ query }: { query: string }) {
                 {main.sponsored ? <span className="chip bg-slate-100 text-slate-500">Sponsored</span> : null}
               </div>
               <p className="text-xs text-muted">
-                {main.categoryName} · {main.votes.toLocaleString("en-IN")} ratings
+                {main.categoryName} · {formatVotes(main.votes)} ratings
               </p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <Stars value={main.score} size={18} />
@@ -255,7 +256,7 @@ export default function AiSearchResults({ query }: { query: string }) {
               </div>
               <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-600">{card.description}</p>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-[11px] text-muted">{card.votes} ratings</span>
+                <span className="text-[11px] text-muted">{formatVotes(card.votes)} ratings</span>
                 <ResultActions card={card} back={back} />
               </div>
             </article>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AiLogo, PriceBadge, Stars } from "@/components/ui";
+import { formatVotes } from "@/lib/format";
 import type { PriceType } from "@/lib/types";
 
 export type FinderOption = {
@@ -156,7 +157,7 @@ export default function FinderQuiz({
                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                       <Stars value={row.score} size={15} />
                       <span className="text-xs font-semibold">{row.score.toFixed(1)}</span>
-                      <span className="text-xs text-muted">({row.votes.toLocaleString("en-US")} votes)</span>
+                      <span className="text-xs text-muted">({formatVotes(row.votes)} votes)</span>
                       <PriceBadge price={row.priceType} />
                     </div>
                     <p className="mt-0.5 truncate text-xs text-muted">{row.bestFor}</p>

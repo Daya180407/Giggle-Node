@@ -7,6 +7,7 @@ import PricingReport from "@/components/PricingReport";
 import RatingWidget from "@/components/RatingWidget";
 import { AiLogo, PriceBadge, Stars, Trend } from "@/components/ui";
 import { getApiPricing } from "@/lib/api-pricing";
+import { formatVotes } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
 import { canAccess, resolveRoles } from "@/lib/roles";
@@ -119,7 +120,7 @@ export default async function ModelPage({ params, searchParams }: Props) {
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Stars value={stat.score} size={22} />
               <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
-              <span className="text-sm text-muted">({stat.votes} votes)</span>
+              <span className="text-sm text-muted">({formatVotes(stat.votes)} people rated)</span>
               <Trend trend={stat.trend} />
               <PriceBadge price={model.priceType} />
             </div>
@@ -162,7 +163,7 @@ export default async function ModelPage({ params, searchParams }: Props) {
           </div>
           <div>
             <dt className="text-muted">Total votes</dt>
-            <dd className="font-semibold">{stat.votes}</dd>
+            <dd className="font-semibold">{formatVotes(stat.votes)}</dd>
           </div>
         </dl>
 

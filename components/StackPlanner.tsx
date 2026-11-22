@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { formatVotes } from "@/lib/format";
 
 export type PlannerTool = {
   slug: string;
@@ -150,7 +151,7 @@ export default function StackPlanner({ tools, categories }: { tools: PlannerTool
                   {tool.name}
                 </Link>
                 <p className="text-[11px] text-muted">
-                  {tool.score.toFixed(1)} ★ · {tool.votes} votes · {tool.priceType}
+                  {tool.score.toFixed(1)} ★ · {formatVotes(tool.votes)} votes · {tool.priceType}
                 </p>
               </div>
               <div className="text-right">

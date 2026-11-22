@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import CompareBuilder from "@/components/CompareBuilder";
 import { AiLogo, PriceBadge, Stars, Trend } from "@/components/ui";
 import { formatMoney } from "@/lib/analytics";
+import { formatVotes } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
 import { buildView, type AiStat } from "@/lib/rank";
@@ -60,7 +61,7 @@ function buildRows(appearance: SiteSettings["appearance"]): { label: string; ren
       </span>
     ),
   },
-  { label: "Total votes", render: (s) => `${s.votes.toLocaleString("en-IN")} ratings` },
+  { label: "Total votes", render: (s) => `${formatVotes(s.votes)} ratings` },
   { label: "Price", render: (s) => <PriceBadge price={s.ai.priceType} /> },
   {
     label: "Free plan",
@@ -264,7 +265,8 @@ export default async function ComparePage({ params }: Props) {
             <div className="card mt-4 border-indigo-100 bg-brand-soft/40 p-4">
               <h2 className="text-sm font-bold">Verdict</h2>
               <p className="mt-1 text-sm text-slate-700">
-                On weighted rating, <strong>{best.ai.name}</strong> leads ({best.score.toFixed(1)} ★, {best.votes} votes).
+                On weighted rating, <strong>{best.ai.name}</strong> leads ({best.score.toFixed(1)} ★,{" "}
+                {formatVotes(best.votes)} votes).
                 If you need a free option, start with{" "}
                 {stats.find((s) => s.ai.priceType !== "paid")?.ai.name ?? best.ai.name}. Compare each tool's best use
                 case first — rating is one factor, not the whole answer.

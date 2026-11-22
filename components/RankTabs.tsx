@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AiLogo, PriceBadge, SponsoredTag, Stars, Trend } from "@/components/ui";
+import { formatVotes } from "@/lib/format";
 import type { PriceType } from "@/lib/types";
 
 export type RankRow = {
@@ -113,7 +114,7 @@ export default function RankTabs({ tabs }: { tabs: RankTab[] }) {
                     <p className="mt-0.5 truncate text-[11px] text-muted sm:text-xs">{row.bestFor}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
                       <Stars value={row.score} size={14} />
-                      <span className="text-[10.5px] text-muted">{row.votes.toLocaleString("en-US")} votes</span>
+                      <span className="text-[10.5px] text-muted">{formatVotes(row.votes)} votes</span>
                       <PriceBadge price={row.priceType} />
                     </div>
                   </div>
@@ -121,7 +122,7 @@ export default function RankTabs({ tabs }: { tabs: RankTab[] }) {
                   <div className="hidden w-32 shrink-0 sm:block">
                     <div className="flex items-baseline justify-between gap-1 text-xs">
                       <span className="text-sm font-extrabold text-ink">{row.score.toFixed(1)}</span>
-                      <span className="text-[10px] text-muted">{row.votes.toLocaleString("en-US")}</span>
+                      <span className="text-[10px] text-muted">{formatVotes(row.votes)}</span>
                     </div>
                     <div className="score-bar mt-1.5">
                       <span style={{ width: `${Math.max(6, Math.min(100, (row.score / 5) * 100))}%` }} />

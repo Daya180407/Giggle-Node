@@ -1,3 +1,4 @@
+import { formatVotes } from "@/lib/format";
 import { buildView } from "@/lib/rank";
 import { readDb } from "@/lib/store";
 
@@ -39,7 +40,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   <text x="30" y="39" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="20" text-anchor="middle" fill="#ffffff">★</text>
   <text x="60" y="27" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#64748b">${escapeXml(ai.name.slice(0, 22))}</text>
   <text x="60" y="47" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="20" font-weight="700" fill="#0f172a">${score}<tspan font-size="11" font-weight="500" fill="#64748b"> / 5</tspan></text>
-  <text x="150" y="47" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" fill="#64748b">${votes.toLocaleString("en-IN")} votes</text>
+  <text x="150" y="47" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" fill="#64748b">${formatVotes(votes)} votes</text>
   <text x="150" y="27" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="9" font-weight="700" letter-spacing="0.08em" fill="#94a3b8">GIGLENODE</text>
 </svg>`;
 

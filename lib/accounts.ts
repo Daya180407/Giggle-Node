@@ -2,6 +2,7 @@ import { applyCatalogue } from "./catalogue/apply";
 import { CATEGORIES } from "./categories";
 import { backfillCommunity } from "./community";
 import { DEMO_ACCOUNTS } from "./demo-accounts";
+import { applyDemoRatings } from "./demo-ratings";
 import { localizeContentToEnglish } from "./localize-en";
 import { resolveRoles } from "./roles";
 import { DEFAULT_SITE_SETTINGS } from "./settings";
@@ -88,6 +89,7 @@ export async function migrateDb(db: DB): Promise<boolean> {
   }
 
   if (applyCatalogue(db)) changed = true;
+  if (applyDemoRatings(db)) changed = true;
   if (localizeContentToEnglish(db)) changed = true;
   if (backfillCommunity(db)) changed = true;
 

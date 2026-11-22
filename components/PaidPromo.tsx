@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AiLogo from "@/components/AiLogo";
 import { PriceBadge, Stars } from "@/components/ui";
+import { formatVotes } from "@/lib/format";
 
 export type PromoItem = {
   slug: string;
@@ -71,7 +72,7 @@ export default function PaidPromo({ items }: { items: PromoItem[] }) {
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Stars value={item.score} size={15} />
               <span className="text-xs font-bold text-white">{item.score.toFixed(1)}</span>
-              <span className="text-[11px] text-slate-400">({item.votes.toLocaleString("en-US")})</span>
+              <span className="text-[11px] text-slate-400">({formatVotes(item.votes)})</span>
               <PriceBadge price="paid" />
             </div>
 

@@ -71,6 +71,10 @@ export type Model = {
   editorRating?: number | null;
   /** admin-entered API price; overrides the curated/estimated rate */
   pricing?: ModelPricing | null;
+  /** demo aggregate rating blended into the weighted score like old votes */
+  demoStars?: number | null;
+  /** demo aggregate vote count shown as "5M+ people rated" */
+  demoVotes?: number | null;
 };
 
 /** A public subscription plan, edited by admins for an AI or a catalogue app. */

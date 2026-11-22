@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { toggleBookmarkAction } from "@/app/actions";
 import { AiLogo, PriceBadge, SponsoredTag, Stars, Trend } from "@/components/ui";
+import { formatVotes } from "@/lib/format";
 import type { AiStat } from "@/lib/rank";
 import { categoryName } from "@/lib/categories";
 
@@ -64,7 +65,7 @@ export default function AiCard({
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <Stars value={stat.score} size={16} />
         <span className="text-sm font-bold text-ink">{stat.score.toFixed(1)}</span>
-        <span className="text-xs text-muted">({stat.votes.toLocaleString("en-US")})</span>
+        <span className="text-xs text-muted">({formatVotes(stat.votes)})</span>
         <Trend trend={stat.trend} />
       </div>
 

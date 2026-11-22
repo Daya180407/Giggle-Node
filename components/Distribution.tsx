@@ -1,3 +1,4 @@
+import { formatVotes } from "@/lib/format";
 import { distribution } from "@/lib/rank";
 
 export default function Distribution({ dist, votes }: { dist: number[]; votes: number }) {
@@ -6,7 +7,7 @@ export default function Distribution({ dist, votes }: { dist: number[]; votes: n
     <div className="card p-5">
       <div className="flex items-baseline justify-between">
         <h3 className="text-base font-bold">Rating Distribution</h3>
-        <span className="text-xs text-muted">{votes.toLocaleString("en-IN")} votes</span>
+        <span className="text-xs text-muted">{formatVotes(votes)} votes</span>
       </div>
       <div className="mt-3 space-y-2">
         {rows.map((row) => (
@@ -19,7 +20,7 @@ export default function Distribution({ dist, votes }: { dist: number[]; votes: n
               />
             </div>
             <span className="w-12 shrink-0 text-right font-medium text-slate-600">{row.percent}%</span>
-            <span className="hidden w-10 shrink-0 text-right text-muted sm:block">{row.count}</span>
+            <span className="hidden w-10 shrink-0 text-right text-muted sm:block">{formatVotes(row.count)}</span>
           </div>
         ))}
       </div>

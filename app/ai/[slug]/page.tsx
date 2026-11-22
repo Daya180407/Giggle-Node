@@ -18,6 +18,7 @@ import PromptSubmitForm from "@/components/PromptSubmitForm";
 import ShareButton from "@/components/ShareButton";
 import { AiLogo, PriceBadge, SectionHead, SponsoredTag, Stars, Trend } from "@/components/ui";
 import { formatMoney } from "@/lib/analytics";
+import { formatVotes } from "@/lib/format";
 import { getApiPricing } from "@/lib/api-pricing";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
@@ -186,7 +187,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Stars value={stat.score} size={22} />
               <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
-              <span className="text-sm text-muted">({stat.votes.toLocaleString("en-IN")} ratings)</span>
+              <span className="text-sm text-muted">({formatVotes(stat.votes)} people rated)</span>
               <Trend trend={stat.trend} />
               <span
                 className={`chip ${verified.percent >= 50 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
@@ -196,8 +197,8 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               </span>
             </div>
             <p className="mt-1 text-[11px] text-muted">
-              Overall rating · {stat.aiVotes} overall {stat.aiVotes === 1 ? "vote" : "votes"} + {stat.modelVotes} model{" "}
-              {stat.modelVotes === 1 ? "vote" : "votes"}
+              Overall rating · {formatVotes(stat.aiVotes)} overall {stat.aiVotes === 1 ? "vote" : "votes"} +{" "}
+              {formatVotes(stat.modelVotes)} model {stat.modelVotes === 1 ? "vote" : "votes"}
             </p>
           </div>
         </div>
