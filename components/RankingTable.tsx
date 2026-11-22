@@ -28,7 +28,7 @@ export default function RankingTable({ stats }: { stats: AiStat[] }) {
             </div>
             <p className="truncate text-xs text-muted">{s.ai.bestFor.join(" · ")}</p>
             <div className="mt-1 flex items-center gap-1.5 sm:hidden">
-              <Stars value={s.score} size={12} />
+              <Stars value={s.score} size={15} />
               <span className="rounded-full bg-amber-50 px-1.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">
                 ★ {s.score.toFixed(1)}
               </span>

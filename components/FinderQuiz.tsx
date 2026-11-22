@@ -154,7 +154,7 @@ export default function FinderQuiz({
                       {row.name}
                     </Link>
                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                      <Stars value={row.score} size={12} />
+                      <Stars value={row.score} size={15} />
                       <span className="text-xs font-semibold">{row.score.toFixed(1)}</span>
                       <span className="text-xs text-muted">({row.votes.toLocaleString("en-US")} votes)</span>
                       <PriceBadge price={row.priceType} />

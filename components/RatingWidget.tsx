@@ -76,7 +76,7 @@ export default function RatingWidget({
       {existing && !editing ? (
         <div className="mt-3">
           <div className="flex items-center gap-2">
-            <Stars value={existing.stars} size={18} />
+            <Stars value={existing.stars} size={22} />
             <span className="text-sm font-semibold text-ink">{existing.stars}.0 / 5</span>
           </div>
           {existing.review ? <p className="mt-2 text-sm leading-relaxed text-slate-600">“{existing.review}”</p> : null}
@@ -106,7 +106,7 @@ export default function RatingWidget({
                   aria-label={`${n} star${n === 1 ? "" : "s"}`}
                   onMouseEnter={() => setHover(n)}
                   onClick={() => setStars(n)}
-                  className={`text-2xl leading-none transition ${
+                  className={`text-3xl leading-none transition ${
                     (hover || stars) >= n ? "text-star" : "text-slate-300"
                   } hover:scale-110`}
                 >

@@ -62,7 +62,7 @@ export default function AiCard({
       <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-slate-600">{ai.description}</p>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <Stars value={stat.score} size={13} />
+        <Stars value={stat.score} size={16} />
         <span className="text-sm font-bold text-ink">{stat.score.toFixed(1)}</span>
         <span className="text-xs text-muted">({stat.votes.toLocaleString("en-US")})</span>
         <Trend trend={stat.trend} />

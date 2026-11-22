@@ -148,7 +148,7 @@ export default async function PostPage({ params }: Props) {
                     {s.ai.name}
                   </Link>
                   <div className="flex items-center gap-1.5">
-                    <Stars value={s.score} size={11} />
+                    <Stars value={s.score} size={14} />
                     <span className="text-xs text-muted">{s.score.toFixed(1)} ({s.votes})</span>
                   </div>
                 </div>

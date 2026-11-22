@@ -308,7 +308,8 @@ export default async function HomePage({
         </div>
       ) : null}
 
-      <div className="mx-auto max-w-7xl space-y-14 px-4 pb-6 pt-12 sm:px-6 sm:pt-14 lg:space-y-16">
+      <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 sm:pt-14">
+        <div className="space-y-14 lg:space-y-16">
         {/* Category champions */}
         <section id="champions">
           <SectionHead
@@ -343,12 +344,18 @@ export default async function HomePage({
           </div>
         </section>
 
-        {/* Paid promotions */}
-        {settings.showPromotions ? (
-          <section id="promotions" className="relative left-1/2 w-screen -translate-x-1/2">
-            <PaidPromo items={paidPicks} />
-          </section>
-        ) : null}
+        </div>
+      </div>
+
+      {/* Paid promotions */}
+      {settings.showPromotions ? (
+        <section id="promotions" className="pt-14 lg:pt-16">
+          <PaidPromo items={paidPicks} />
+        </section>
+      ) : null}
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="space-y-14 pt-14 lg:space-y-16 lg:pt-16">
 
         {/* Trending */}
         <section>
@@ -424,8 +431,11 @@ export default async function HomePage({
           </div>
         </section>
 
-        {/* Finder CTA */}
-        <section className="relative left-1/2 w-screen -translate-x-1/2">
+        </div>
+      </div>
+
+      {/* Finder CTA */}
+      <section className="relative pt-14 lg:pt-16">
           <div className="dark-panel relative overflow-hidden rounded-none p-6 sm:p-10">
             <div className="aurora opacity-40" aria-hidden />
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -454,6 +464,7 @@ export default async function HomePage({
           </div>
         </section>
 
+      <div className="mx-auto max-w-7xl px-4 pb-6 pt-14 sm:px-6 lg:pt-16">
         {/* Categories */}
         <section>
           <SectionHead

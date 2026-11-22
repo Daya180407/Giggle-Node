@@ -117,7 +117,7 @@ export default async function ModelPage({ params, searchParams }: Props) {
             <h1 className="text-2xl font-extrabold sm:text-3xl">{model.name}</h1>
             <p className="mt-1 text-sm text-muted">Best for: {model.bestFor}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Stars value={stat.score} size={18} />
+              <Stars value={stat.score} size={22} />
               <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
               <span className="text-sm text-muted">({stat.votes} votes)</span>
               <Trend trend={stat.trend} />
@@ -224,7 +224,7 @@ export default async function ModelPage({ params, searchParams }: Props) {
                     {reviewer?.verified ? (
                       <span className="chip bg-emerald-50 text-emerald-700">✓ verified</span>
                     ) : null}
-                    <Stars value={rating.stars} size={12} />
+                    <Stars value={rating.stars} size={15} />
                     {rating.lastEditedAt ? (
                       <span className="chip bg-slate-100 text-slate-500">edited</span>
                     ) : null}

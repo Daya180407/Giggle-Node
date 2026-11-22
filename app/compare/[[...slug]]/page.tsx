@@ -48,7 +48,7 @@ function buildRows(appearance: SiteSettings["appearance"]): { label: string; ren
     label: "Weighted rating",
     render: (s) => (
       <span className="flex items-center gap-1.5">
-        <Stars value={s.score} size={13} />
+        <Stars value={s.score} size={16} />
         <strong>{s.score.toFixed(1)}</strong>
         <Trend trend={s.trend} />
       </span>

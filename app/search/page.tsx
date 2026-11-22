@@ -130,7 +130,7 @@ export default async function SearchPage({
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Stars value={m.score} size={12} />
+                      <Stars value={m.score} size={15} />
                       <span className="text-xs font-semibold">{m.score.toFixed(1)}</span>
                     </div>
                     <span className="hidden sm:block">

@@ -112,7 +112,7 @@ export default function RankTabs({ tabs }: { tabs: RankTab[] }) {
                     </div>
                     <p className="mt-0.5 truncate text-[11px] text-muted sm:text-xs">{row.bestFor}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
-                      <Stars value={row.score} size={11} />
+                      <Stars value={row.score} size={14} />
                       <span className="text-[10.5px] text-muted">{row.votes.toLocaleString("en-US")} votes</span>
                       <PriceBadge price={row.priceType} />
                     </div>

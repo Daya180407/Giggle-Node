@@ -69,7 +69,7 @@ export default function PaidPromo({ items }: { items: PromoItem[] }) {
             <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-slate-300">{item.bestFor}</p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Stars value={item.score} size={12} />
+              <Stars value={item.score} size={15} />
               <span className="text-xs font-bold text-white">{item.score.toFixed(1)}</span>
               <span className="text-[11px] text-slate-400">({item.votes.toLocaleString("en-US")})</span>
               <PriceBadge price="paid" />

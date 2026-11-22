@@ -116,7 +116,7 @@ export default async function ProfilePage() {
                     </p>
                     {r.review ? <p className="mt-1 line-clamp-2 text-xs text-slate-600">“{r.review}”</p> : null}
                   </div>
-                  <Stars value={r.stars} size={13} />
+                  <Stars value={r.stars} size={16} />
                   <Link href={`/ai/${ai.slug}/${model.slug}`} className="btn btn-ghost !px-2.5 !py-1 text-xs">
                     {r.lastEditedAt ? "Locked" : "Edit"}
                   </Link>

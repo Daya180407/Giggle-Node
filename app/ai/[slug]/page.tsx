@@ -155,7 +155,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               <span>{followers} followers</span>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Stars value={stat.score} size={18} />
+              <Stars value={stat.score} size={22} />
               <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
               <span className="text-sm text-muted">({stat.votes.toLocaleString("en-IN")} ratings)</span>
               <Trend trend={stat.trend} />
@@ -262,7 +262,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
-                            <Stars value={m.score} size={12} />
+                            <Stars value={m.score} size={15} />
                             <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
                           </div>
                           <p className="mt-0.5 text-[10px] text-muted">{m.votes} votes</p>
@@ -412,7 +412,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                     {freeAlternative.ai.name}
                   </Link>
                   <div className="mt-0.5 flex items-center gap-1.5">
-                    <Stars value={freeAlternative.score} size={12} />
+                    <Stars value={freeAlternative.score} size={15} />
                     <span className="text-xs font-semibold">{freeAlternative.score.toFixed(1)}</span>
                     <PriceBadge price={freeAlternative.ai.priceType} />
                   </div>
@@ -480,7 +480,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                       {reviewer?.verified ? (
                         <span className="chip bg-emerald-50 text-emerald-700">✓ verified</span>
                       ) : null}
-                      <Stars value={rating.stars} size={12} />
+                      <Stars value={rating.stars} size={15} />
                       <span className="ml-auto text-xs text-muted">{timeAgo(rating.updatedAt)}</span>
                     </div>
                     <p className="mt-1.5 text-sm text-slate-600">{rating.review}</p>
@@ -520,7 +520,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                 <p className="text-xs text-muted">Weighted score</p>
                 <p className="text-3xl font-extrabold">{stat.score.toFixed(1)}</p>
               </div>
-              <Stars value={stat.score} size={16} />
+              <Stars value={stat.score} size={19} />
             </div>
             <p className="mt-1 text-xs text-muted">
               {stat.votes.toLocaleString("en-IN")} votes · {stat.trend === "up" ? "trend up" : stat.trend === "down" ? "trend down" : "stable"}

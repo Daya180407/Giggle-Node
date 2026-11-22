@@ -5,7 +5,7 @@ export { default as AiLogo } from "@/components/AiLogo";
 
 export function Stars({
   value,
-  size = 15,
+  size = 18,
   className = "",
 }: {
   value: number;

@@ -264,7 +264,7 @@ export default function AppShowcase({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
-        {average ? <Stars value={average} size={12} /> : <span className="text-[11px] text-muted">Official app icons</span>}
+        {average ? <Stars value={average} size={15} /> : <span className="text-[11px] text-muted">Official app icons</span>}
         <p className="text-[11px] text-muted">
           AI-backed apps link to live ratings. Standalone tools link to their official site or store listing.
         </p>

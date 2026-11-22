@@ -163,7 +163,7 @@ export default function AiSearchResults({ query }: { query: string }) {
                 {main.categoryName} · {main.votes.toLocaleString("en-IN")} ratings
               </p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <Stars value={main.score} size={15} />
+                <Stars value={main.score} size={18} />
                 <span className="text-sm font-bold">{main.score.toFixed(1)}</span>
                 <span className="text-xs text-muted">weighted score</span>
               </div>
