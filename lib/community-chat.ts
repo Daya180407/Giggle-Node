@@ -20,7 +20,10 @@ import type { Ai, CommunityMessage, CommunityMessageKind, CommunityRoom, Communi
 export const MAX_MESSAGES_PER_ROOM = 250;
 export const MAX_MESSAGES_TOTAL = 2000;
 
-/** One shared room for every AI, pinned at the top of the community index. */
+/**
+ * One open discussion room where any AI can be the topic, pinned at the top of
+ * the community index. It keeps its own messages; it never merges the AI rooms.
+ */
 export const UNIVERSAL_ROOM_SLUG = "everyone";
 export const UNIVERSAL_AI_ID = "__all__";
 export const UNIVERSAL_ROOM_ID = "__universal__";
@@ -94,7 +97,8 @@ export function universalRoom(): RoomRef {
     aiId: UNIVERSAL_AI_ID,
     slug: UNIVERSAL_ROOM_SLUG,
     title: "Everyone community",
-    description: "One room for every AI tool — ask anything, compare tools and help other members.",
+    description:
+      "An open room to talk about any AI tool — ask questions, compare tools and help each other. This room keeps its own conversation.",
     roomId: UNIVERSAL_ROOM_ID,
     scope: "universal",
     hidden: false,
@@ -237,7 +241,7 @@ export function sweepCommunityMessages(): void {
 /** Human-readable room label for the admin moderation inbox. */
 export function describeCommunityMessage(db: DB, message: CommunityMessage): { label: string; href: string } {
   if (message.aiId === UNIVERSAL_AI_ID) {
-    return { label: "Everyone community", href: `/community/${UNIVERSAL_ROOM_SLUG}` };
+    return { label: "Everyone community · any AI", href: `/community/${UNIVERSAL_ROOM_SLUG}` };
   }
   const ai = db.ai.find((row) => row.id === message.aiId);
   const aiName = ai?.name ?? "Unknown AI";

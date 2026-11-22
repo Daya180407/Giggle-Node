@@ -214,29 +214,12 @@ export default function CommunityComposer({
   const needsAttachment = kind !== "text";
   const error = localError ?? state.error;
   const message = state.ok ? state.message : undefined;
+  const imageInputId = `community-image-${aiId}`;
+  const fileInputId = `community-file-${aiId}`;
 
   return (
-    <div>
-      <div className="mb-2 flex flex-wrap items-center gap-1.5">
-        {available.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => switchKind(option)}
-            aria-pressed={kind === option}
-            className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-              kind === option
-                ? "border-indigo-200 bg-brand-soft text-brand"
-                : "border-line bg-white text-slate-600 hover:border-indigo-200 hover:text-brand"
-            }`}
-          >
-            <span aria-hidden>{KIND_META[option].icon}</span> {KIND_META[option].label}
-          </button>
-        ))}
-        <span className="ml-auto text-[10.5px] text-muted">Free · please be respectful</span>
-      </div>
-
-      <form ref={formRef} action={formAction} className="space-y-2">
+    <div className="mx-auto max-w-lg">
+      <form ref={formRef} action={formAction}>
         <input type="hidden" name="aiId" value={aiId} />
         {roomId ? <input type="hidden" name="roomId" value={roomId} /> : null}
         <input type="hidden" name="kind" value={kind} />
@@ -249,98 +232,154 @@ export default function CommunityComposer({
           </>
         ) : null}
 
-        <label className="sr-only" htmlFor={`community-body-${aiId}`}>
-          Message
-        </label>
-        <textarea
-          id={`community-body-${aiId}`}
-          name="body"
-          rows={3}
-          maxLength={maxLength}
-          placeholder={
-            needsAttachment
-              ? `Add a caption for your ${KIND_META[kind].label.toLowerCase()} (optional)…`
-              : `Share a problem, an idea or anything about ${aiName}…`
-          }
-          className="field min-h-20 w-full resize-y !py-2 text-sm"
-        />
+        {available.length > 1 ? (
+          <div className="mb-1.5 flex items-center gap-1">
+            {available.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => switchKind(option)}
+                aria-pressed={kind === option}
+                aria-label={`Attach ${KIND_META[option].label.toLowerCase()}`}
+                title={KIND_META[option].label}
+                className={`grid h-8 w-8 place-items-center rounded-full border text-sm transition ${
+                  kind === option
+                    ? "border-[#00a884] bg-[#d9fdd3] text-[#075e54]"
+                    : "border-[#d1d7db] bg-white text-[#54656f] hover:border-[#00a884]/50"
+                }`}
+              >
+                <span aria-hidden>{KIND_META[option].icon}</span>
+              </button>
+            ))}
+            <span className="ml-auto hidden text-[10px] text-[#667781] sm:inline">Free · please be respectful</span>
+          </div>
+        ) : null}
 
         {kind === "image" ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+            <label
+              htmlFor={imageInputId}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#d1d7db] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#075e54] shadow-sm transition hover:border-[#00a884]/60"
+            >
+              🖼️ {attachment ? "Change photo" : "Choose photo"}
+            </label>
             <input
               ref={imageInputRef}
+              id={imageInputId}
               type="file"
               accept="image/*"
               onChange={(event) => void pickImage(event.target.files?.[0])}
-              className="text-xs text-slate-600 file:mr-2 file:rounded-full file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand"
+              className="sr-only"
             />
-            <span className="text-[10.5px] text-muted">Auto-compressed · max {humanSize(LIMITS.image)}</span>
+            <span className="text-[10px] text-[#667781]">Auto-compressed · max {humanSize(LIMITS.image)}</span>
           </div>
         ) : null}
 
         {kind === "file" ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+            <label
+              htmlFor={fileInputId}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#d1d7db] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#075e54] shadow-sm transition hover:border-[#00a884]/60"
+            >
+              📎 {attachment ? "Change file" : "Choose file"}
+            </label>
             <input
               ref={fileInputRef}
+              id={fileInputId}
               type="file"
               onChange={(event) => void pickFile(event.target.files?.[0])}
-              className="text-xs text-slate-600 file:mr-2 file:rounded-full file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand"
+              className="sr-only"
             />
-            <span className="text-[10.5px] text-muted">Max {humanSize(LIMITS.file)}</span>
+            <span className="text-[10px] text-[#667781]">Max {humanSize(LIMITS.file)}</span>
           </div>
         ) : null}
 
         {kind === "voice" ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
             {recording ? (
               <button
                 type="button"
                 onClick={stopRecording}
-                className="btn !border !border-rose-200 !bg-rose-50 !px-3 !py-1.5 text-xs text-rose-600"
+                className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-rose-600"
               >
-                <span className="live-dot mr-1.5" aria-hidden /> Stop recording
+                <span className="live-dot" aria-hidden /> Stop recording
               </button>
             ) : (
-              <button type="button" onClick={() => void startRecording()} className="btn btn-ghost !px-3 !py-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => void startRecording()}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#d1d7db] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#075e54] shadow-sm transition hover:border-[#00a884]/60"
+              >
                 🎙️ Record voice note
               </button>
             )}
-            <span className="text-[10.5px] text-muted">Up to 45 seconds · max {humanSize(LIMITS.voice)}</span>
+            <span className="text-[10px] text-[#667781]">Up to 45 seconds · max {humanSize(LIMITS.voice)}</span>
           </div>
         ) : null}
 
         {attachment ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-slate-50/70 p-2">
+          <div className="mb-1.5 flex items-center gap-2 rounded-xl border border-[#d1d7db] bg-white p-1.5 shadow-sm">
             {kind === "image" ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={attachment.dataUrl} alt={attachment.name} className="h-14 w-14 rounded-lg border border-line object-cover" />
+              <img src={attachment.dataUrl} alt={attachment.name} className="h-11 w-11 rounded-lg object-cover" />
             ) : null}
-            {kind === "voice" ? <audio controls src={attachment.dataUrl} className="h-9 max-w-full" /> : null}
-            <span className="min-w-0 flex-1 truncate text-[11px] text-slate-600">
+            {kind === "voice" ? <audio controls src={attachment.dataUrl} className="h-8 max-w-[55%]" /> : null}
+            <span className="min-w-0 flex-1 truncate text-[11px] text-[#54656f]">
               {attachment.name} · {humanSize(attachment.size)}
             </span>
-            <button type="button" onClick={resetAttachment} className="text-[11px] font-semibold text-rose-600 hover:underline">
-              Remove
+            <button
+              type="button"
+              onClick={resetAttachment}
+              aria-label="Remove attachment"
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[#667781] transition hover:bg-rose-50 hover:text-rose-600"
+            >
+              ✕
             </button>
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-end gap-1.5">
+          <div className="min-w-0 flex-1 rounded-[1.35rem] bg-white px-3 py-1 shadow-sm">
+            <label className="sr-only" htmlFor={`community-body-${aiId}`}>
+              Message
+            </label>
+            <textarea
+              id={`community-body-${aiId}`}
+              name="body"
+              rows={1}
+              maxLength={maxLength}
+              placeholder={
+                needsAttachment
+                  ? `Add a caption for your ${KIND_META[kind].label.toLowerCase()} (optional)…`
+                  : `Message ${aiName}…`
+              }
+              className="field-sizing-content max-h-28 min-h-[26px] w-full resize-none border-0 bg-transparent py-1.5 text-[13.5px] leading-relaxed text-[#111b21] outline-none placeholder:text-[#8696a0]"
+            />
+          </div>
           <button
             type="submit"
             disabled={pending || recording || (needsAttachment && !attachment)}
-            className="btn btn-primary !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label={pending ? "Posting message" : "Send message"}
+            title="Send message"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#00a884] text-white shadow-sm transition hover:bg-[#008f72] disabled:cursor-not-allowed disabled:bg-[#9fb3ad]"
           >
-            {pending ? "Posting…" : "Post to community"}
+            {pending ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden />
+            ) : (
+              <svg width="19" height="19" viewBox="0 0 20 20" fill="none" aria-hidden>
+                <path d="M2.2 9.3l14.6-6.8c.6-.3 1.2.3.9.9l-6.8 14.6c-.3.6-1.2.5-1.3-.2l-.8-5.4-5.4-.8c-.7-.1-.8-1-.2-1.3z" fill="currentColor" />
+              </svg>
+            )}
           </button>
-          <span className="text-[10.5px] text-muted">
-            {needsAttachment && !attachment ? `Choose a ${KIND_META[kind].label.toLowerCase()} to post.` : "Messages delete automatically."}
-          </span>
         </div>
+
+        {needsAttachment && !attachment ? (
+          <p className="mt-1 text-[10px] text-[#667781]">Choose a {KIND_META[kind].label.toLowerCase()} to post.</p>
+        ) : null}
       </form>
 
-      {error ? <p className="mt-2 text-xs font-medium text-rose-600">{error}</p> : null}
-      {message ? <p className="mt-2 text-xs font-medium text-emerald-600">{message}</p> : null}
+      {error ? <p className="mt-1.5 text-[11px] font-medium text-rose-600">{error}</p> : null}
+      {message ? <p className="mt-1.5 text-[11px] font-medium text-emerald-700">{message}</p> : null}
     </div>
   );
 }

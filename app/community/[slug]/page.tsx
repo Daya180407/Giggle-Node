@@ -1,9 +1,9 @@
-import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { deleteCommunityMessageAction } from "@/app/actions";
 import CommunityAd from "@/components/CommunityAd";
+import CommunityChatScroll from "@/components/CommunityChatScroll";
 import CommunityComposer from "@/components/CommunityComposer";
 import { AiLogo } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
@@ -16,7 +16,7 @@ import {
   KIND_LABELS,
   sweepCommunityMessages,
 } from "@/lib/community-chat";
-import { buildView, timeAgo } from "@/lib/rank";
+import { buildView } from "@/lib/rank";
 import { isStaffRole, resolveRoles } from "@/lib/roles";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
@@ -35,9 +35,38 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${room.title} — Ask, Share & Help`,
     description:
       room.description ||
-      `The GigleNode community room for ${ai?.name ?? "every AI tool"}. Share problems, ideas, tips, screenshots, voice notes and files with other users. Free to join.`,
+      `The GigleNode community room for ${ai?.name ?? "any AI tool"}. Share problems, ideas, tips, screenshots, voice notes and files with other users. Free to join.`,
     alternates: { canonical: `/community/${room.slug}` },
   };
+}
+
+const CLOCK = new Intl.DateTimeFormat("en-IN", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+  timeZone: "Asia/Kolkata",
+});
+
+function clockTime(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "" : CLOCK.format(date);
+}
+
+const SENDER_TONES = ["#0b7d6b", "#8e44ad", "#b45309", "#1d4ed8", "#be123c", "#0f766e", "#6d28d9"];
+
+function senderTone(seed: string): string {
+  let hash = 0;
+  for (const char of seed) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) | 0;
+  return SENDER_TONES[Math.abs(hash) % SENDER_TONES.length];
+}
+
+function DeliveredTicks() {
+  return (
+    <svg width="15" height="11" viewBox="0 0 16 12" fill="none" aria-hidden className="shrink-0 text-[#53bdeb]">
+      <path d="M1 6.5l2.6 2.6L9 3.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.4 9.1l.6.6 6.2-6.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 export default async function CommunityRoomPage({ params }: Props) {
@@ -67,188 +96,205 @@ export default async function CommunityRoomPage({ params }: Props) {
   const adEvery = Math.max(3, community.adEvery);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <nav className="text-xs text-muted" aria-label="Breadcrumb">
-        <Link href="/community" className="hover:text-brand">
-          Community
-        </Link>
-        <span className="mx-1.5">/</span>
-        <span className="text-slate-600">{room.title}</span>
-      </nav>
-
-      <header className="page-hero mt-3">
-        <div className="flex flex-wrap items-center gap-3">
+    <div className="mx-auto max-w-3xl px-0 pb-8 pt-3 sm:px-4 sm:pt-5">
+      <div className="chat-shell flex h-[72vh] max-h-[780px] min-h-[480px] flex-col">
+        <header className="flex items-center gap-2 bg-[#075e54] px-2 py-2 text-white sm:px-3">
+          <Link
+            href="/community"
+            aria-label="Back to community rooms"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full transition hover:bg-white/10"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <path d="M12.5 4L6.5 10l6 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
           {ai ? (
-            <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={56} rounded="rounded-2xl" />
+            <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={40} rounded="rounded-full" />
           ) : (
-            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 text-2xl text-white shadow-sm">
-              🌍
-            </span>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15 text-xl">🌍</span>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-extrabold sm:text-2xl">{room.title}</h1>
-            {(room.scope === "universal" || room.roomId) && room.description ? (
-              <p className="mt-0.5 text-xs leading-relaxed text-slate-600">{room.description}</p>
-            ) : null}
-            <p className="mt-0.5 text-xs text-muted">
-              {ai ? (
-                <>
-                  <Link href={`/ai/${ai.slug}`} className="font-semibold text-slate-600 hover:text-brand">
-                    {ai.name}
-                  </Link>{" "}
-                  · {categoryName(ai.category)}
-                  {stat ? ` · ${stat.score.toFixed(1)}★ from ${stat.votes.toLocaleString("en-IN")} ratings` : ""}
-                </>
-              ) : (
-                "All AI tools · one shared room"
-              )}
+            <h1 className="truncate text-[15px] font-semibold leading-tight">{room.title}</h1>
+            <p className="truncate text-[11px] leading-tight text-white/75">
+              {ai ? `${ai.name} · ${categoryName(ai.category)} · ` : "Any AI tool · "}
+              {roomMessages.length} {roomMessages.length === 1 ? "message" : "messages"}
+              {stat ? ` · ${stat.score.toFixed(1)}★` : ""}
             </p>
           </div>
-          {ai ? (
-            <Link href={`/ai/${ai.slug}`} className="btn btn-ghost !py-1.5 text-xs">
-              View AI page ↗
-            </Link>
-          ) : null}
-        </div>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-          Ask a question, share a problem or an idea, or help someone else get more from {ai ? ai.name : "any AI tool"}.
-          Free for every signed-in member. Messages are deleted automatically after {community.retentionDays} days.
+          <Link
+            href={ai ? `/ai/${ai.slug}` : "/community"}
+            aria-label={ai ? `Open ${ai.name} page` : "Community rooms"}
+            title={ai ? `Open ${ai.name} page` : "Community rooms"}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full transition hover:bg-white/10"
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <circle cx="10" cy="10" r="7.4" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10 9v4.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <circle cx="10" cy="6.4" r="0.9" fill="currentColor" />
+            </svg>
+          </Link>
+        </header>
+
+        <p className="border-b border-[#e6d98f] bg-[#fdf4c5] px-3 py-1.5 text-center text-[10.5px] leading-snug text-[#54656f]">
+          🔒 Free for every signed-in member · messages delete after {community.retentionDays} days
         </p>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="chip bg-slate-100 text-slate-600">
-            💬 {roomMessages.length} {roomMessages.length === 1 ? "message" : "messages"}
-          </span>
-          <span className="chip bg-emerald-50 text-emerald-700">Free</span>
-          <span className="chip bg-amber-50 text-amber-700">Auto-delete · {community.retentionDays} days</span>
-          {kinds.length ? (
-            <span className="chip bg-slate-100 text-slate-600">
-              {kinds.map((kind) => KIND_LABELS[kind]).join(" · ")}
-            </span>
-          ) : null}
-        </div>
-      </header>
 
-      {!community.enabled ? (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
-          The community is paused by the administrator. You can read the history, but new posts are closed.
-        </div>
-      ) : null}
+        <CommunityChatScroll>
 
-      <section className="card mt-4 overflow-hidden">
-        <div className="max-h-[65vh] space-y-3 overflow-y-auto p-4">
-          {messages.map((message, index) => (
-            <Fragment key={message.id}>
-              <article className="rounded-2xl border border-line bg-white p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-[11px] font-bold text-white">
-                    {message.avatar || message.userName.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className="text-sm font-semibold text-ink">{message.userName}</span>
-                  <span className="text-[10.5px] text-muted">{timeAgo(message.createdAt)}</span>
-                  {user && (user.id === message.userId || staff) ? (
-                    <form action={deleteCommunityMessageAction} className="ml-auto">
-                      <input type="hidden" name="id" value={message.id} />
-                      <input type="hidden" name="back" value={back} />
-                      <button className="text-[10.5px] font-medium text-muted transition hover:text-rose-600">
-                        Delete
-                      </button>
-                    </form>
-                  ) : null}
+          {messages.map((message, index) => {
+            const own = user?.id === message.userId;
+            return (
+              <div key={message.id} className="mb-2">
+                <div className={`flex items-end gap-1.5 ${own ? "justify-end" : "justify-start"}`}>
+                  {own ? null : (
+                    <span
+                      className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-teal-600 to-emerald-500 text-[11px] font-bold text-white shadow-sm"
+                      aria-hidden
+                    >
+                      {message.avatar || message.userName.slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                  <article
+                    className={`max-w-[86%] px-2.5 pb-1 pt-1.5 sm:max-w-[76%] ${
+                      own ? "chat-bubble-out" : "chat-bubble-in"
+                    }`}
+                  >
+                    {own ? null : (
+                      <p className="text-[12px] font-semibold leading-tight" style={{ color: senderTone(message.userId) }}>
+                        {message.userName}
+                      </p>
+                    )}
+
+                    {message.body ? (
+                      <p className="mt-0.5 whitespace-pre-line break-words text-[13.5px] leading-[1.4] text-[#111b21]">
+                        {message.body}
+                      </p>
+                    ) : null}
+
+                    {message.attachment && message.kind === "image" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={message.attachment.dataUrl}
+                        alt={message.attachment.name}
+                        loading="lazy"
+                        className="mt-1 max-h-64 w-auto rounded-lg border border-black/5"
+                      />
+                    ) : null}
+
+                    {message.attachment && message.kind === "voice" ? (
+                      <audio controls preload="none" src={message.attachment.dataUrl} className="mt-1 w-60 max-w-full" />
+                    ) : null}
+
+                    {message.attachment && message.kind === "file" ? (
+                      <a
+                        href={message.attachment.dataUrl}
+                        download={message.attachment.name}
+                        className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-lg bg-black/5 px-2 py-1.5 text-[11.5px] font-semibold text-[#111b21] transition hover:bg-black/10"
+                      >
+                        📎 <span className="truncate">{message.attachment.name}</span>
+                        <span className="text-[10px] font-normal text-[#667781]">
+                          {humanBytes(message.attachment.size)}
+                        </span>
+                      </a>
+                    ) : null}
+
+                    <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[10px] leading-none text-[#667781]">
+                      {user && (own || staff) ? (
+                        <form action={deleteCommunityMessageAction} className="flex items-center">
+                          <input type="hidden" name="id" value={message.id} />
+                          <input type="hidden" name="back" value={back} />
+                          <button
+                            className="font-medium text-[#667781] transition hover:text-rose-600"
+                            aria-label={`Delete message from ${message.userName}`}
+                          >
+                            Delete
+                          </button>
+                        </form>
+                      ) : null}
+                      <span>{clockTime(message.createdAt)}</span>
+                      {own ? <DeliveredTicks /> : null}
+                    </div>
+                  </article>
                 </div>
 
-                {message.body ? (
-                  <p className="mt-1.5 whitespace-pre-line break-words text-sm leading-relaxed text-slate-700">
-                    {message.body}
-                  </p>
+                {(index + 1) % adEvery === 0 && index + 1 < messages.length ? (
+                  <div className="my-2 flex justify-center px-2">
+                    <div className="w-full max-w-sm">
+                      <CommunityAd
+                        clientId={clientId}
+                        slotId={inlineSlot}
+                        houseText={houseText}
+                        houseHref={houseHref}
+                        variant="inline"
+                      />
+                    </div>
+                  </div>
                 ) : null}
-
-                {message.attachment && message.kind === "image" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={message.attachment.dataUrl}
-                    alt={message.attachment.name}
-                    loading="lazy"
-                    className="mt-2 max-h-72 w-auto rounded-xl border border-line"
-                  />
-                ) : null}
-
-                {message.attachment && message.kind === "voice" ? (
-                  <audio controls preload="none" src={message.attachment.dataUrl} className="mt-2 w-full max-w-sm" />
-                ) : null}
-
-                {message.attachment && message.kind === "file" ? (
-                  <a
-                    href={message.attachment.dataUrl}
-                    download={message.attachment.name}
-                    className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-lg border border-line bg-slate-50 px-2.5 py-1.5 text-[11.5px] font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-brand"
-                  >
-                    📎 <span className="truncate">{message.attachment.name}</span>
-                    <span className="text-[10px] font-normal text-muted">{humanBytes(message.attachment.size)}</span>
-                  </a>
-                ) : null}
-              </article>
-
-              {(index + 1) % adEvery === 0 && index + 1 < messages.length ? (
-                <CommunityAd
-                  clientId={clientId}
-                  slotId={inlineSlot}
-                  houseText={houseText}
-                  houseHref={houseHref}
-                  variant="inline"
-                />
-              ) : null}
-            </Fragment>
-          ))}
+              </div>
+            );
+          })}
 
           {messages.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm font-semibold text-ink">This room is empty.</p>
-              <p className="mt-1 text-xs text-muted">
-                Be the first to ask a question or share something useful about {ai ? ai.name : "AI tools"}.
-              </p>
+            <div className="flex justify-center py-10">
+              <div className="max-w-sm rounded-xl bg-[#fdf4c5]/95 px-4 py-3 text-center shadow-sm">
+                <p className="text-[13px] font-semibold text-[#111b21]">This room is empty.</p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-[#54656f]">
+                  Be the first to ask a question or share something useful about {ai ? ai.name : "any AI tool"}.
+                </p>
+              </div>
             </div>
           ) : null}
-        </div>
+        </CommunityChatScroll>
 
-        <div className="space-y-2 border-t border-line bg-slate-50/40 p-3">
-          <CommunityAd clientId={clientId} slotId={topSlot} houseText={houseText} houseHref={houseHref} />
+        <div className="border-t border-[#d1d7db] bg-[#f0f2f5] px-2 pb-2 pt-2 sm:px-3">
+          <div className="mx-auto mb-2 max-w-lg">
+            <CommunityAd clientId={clientId} slotId={topSlot} houseText={houseText} houseHref={houseHref} />
+          </div>
           {community.enabled ? (
             user ? (
               <CommunityComposer
                 aiId={room.aiId}
-                aiName={ai?.name ?? "any AI"}
+                aiName={ai?.name ?? "any AI tool"}
                 roomId={room.roomId}
                 kinds={kinds}
                 maxLength={community.maxMessageLength}
               />
             ) : (
-              <div className="rounded-xl border border-dashed border-line bg-white p-3">
-                <p className="text-xs text-slate-600">
-                  Log in to post in this room. Posting is free and open to every member.
+              <div className="mx-auto flex max-w-lg flex-wrap items-center justify-between gap-2 rounded-2xl bg-white px-3 py-2.5 shadow-sm">
+                <p className="text-[12px] leading-snug text-[#54656f]">
+                  Log in free to join this chat. Your account works in every room.
                 </p>
-                <Link href={`/login?next=${encodeURIComponent(back)}`} className="btn btn-primary mt-2 !py-1.5 text-xs">
-                  Log in to join
+                <Link
+                  href={`/login?next=${encodeURIComponent(back)}`}
+                  className="rounded-full bg-[#00a884] px-4 py-1.5 text-[12px] font-semibold text-white transition hover:bg-[#008f72]"
+                >
+                  Log in
                 </Link>
               </div>
             )
           ) : (
-            <p className="text-xs font-medium text-amber-700">Posting is closed while the community is paused.</p>
+            <p className="mx-auto max-w-lg rounded-xl bg-[#fdf4c5] px-3 py-2 text-center text-[11.5px] font-medium text-[#7a6a1f]">
+              Posting is closed while the community is paused.
+            </p>
           )}
         </div>
-      </section>
+      </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="card p-4">
-          <h2 className="text-sm font-bold text-ink">Room rules</h2>
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+        <section className="rounded-xl border border-line bg-white p-3.5">
+          <h2 className="flex items-center gap-1.5 text-[13px] font-bold text-ink">📋 Group rules</h2>
           <ul className="mt-2 space-y-1 text-[11.5px] leading-relaxed text-slate-600">
             <li>• Be respectful — no spam, hate or personal attacks.</li>
-            <li>• Stay on topic: questions, ideas and tips about {ai ? ai.name : "AI tools"}.</li>
+            <li>• Stay on topic: questions, ideas and tips about {ai ? ai.name : "any AI tool"}.</li>
+            {ai ? null : (
+              <li>• This is an open any-AI room. Its messages stay here and are not a feed of the individual AI rooms.</li>
+            )}
             <li>• Do not share private data, passwords or someone else&apos;s files.</li>
             <li>• Every {community.retentionDays} days older messages are deleted automatically.</li>
           </ul>
-        </div>
-        <div className="card p-4">
-          <h2 className="text-sm font-bold text-ink">What you can share</h2>
+        </section>
+        <section className="rounded-xl border border-line bg-white p-3.5">
+          <h2 className="flex items-center gap-1.5 text-[13px] font-bold text-ink">📎 What you can share</h2>
           <p className="mt-1 text-[11.5px] leading-relaxed text-slate-600">
             {kinds.length
               ? `The administrator allows: ${kinds.map((kind) => KIND_LABELS[kind]).join(", ")}. Attachments are size-limited and photos are compressed before posting.`
@@ -257,7 +303,7 @@ export default async function CommunityRoomPage({ params }: Props) {
           <p className="mt-2 text-[11px] text-muted">
             Community is free and always non-popup. Ads stay inline, never over the chat.
           </p>
-        </div>
+        </section>
       </div>
     </div>
   );

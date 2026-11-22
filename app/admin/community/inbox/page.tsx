@@ -114,7 +114,7 @@ export default async function AdminCommunityInboxPage({
         />
         <select name="ai" defaultValue={ai} className="field !w-auto !py-2 text-xs" aria-label="Filter by AI">
           <option value="all">All AIs</option>
-          <option value="everyone">Everyone community</option>
+          <option value="everyone">Everyone community (any AI)</option>
           {aiOptions.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}

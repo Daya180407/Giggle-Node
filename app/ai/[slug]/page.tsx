@@ -273,7 +273,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               💬 Join the community
             </Link>
             <Link href={`/community/${UNIVERSAL_ROOM_SLUG}`} className="btn btn-ghost !py-2 text-xs">
-              Everyone room →
+              Any-AI room →
             </Link>
           </div>
         </div>
