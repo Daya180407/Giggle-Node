@@ -42,7 +42,7 @@
     /* 18px base keeps body copy, tables and labels comfortably readable. */
     font-size: 112.5%;
     scroll-behavior: smooth;
-    scroll-padding-top: 5rem;
+    scroll-padding-top: 8rem;
   }
   body {
     color: var(--color-ink);
@@ -64,6 +64,21 @@
   img,
   svg {
     max-width: 100%;
+  }
+  /* Tables must fit their card. Long names, emails and URLs wrap instead of
+     pushing the table past the container, where the card/body clipped them. */
+  table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    overflow-wrap: anywhere;
+  }
+  table .chip,
+  table .btn {
+    white-space: normal;
   }
   a {
     color: inherit;

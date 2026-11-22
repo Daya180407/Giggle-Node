@@ -105,7 +105,7 @@ export default function StackPlanner({ tools, categories }: { tools: PlannerTool
         </div>
         {selected.length === 0 ? <p className="mt-3 text-xs text-muted">Pick at least one category.</p> : null}
 
-        <div className="mt-4 rounded-xl border border-line bg-slate-50/70 p-3">
+        <div className="mt-4 border-t border-line pt-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Your stack</p>
           <p className="mt-1 text-xl font-extrabold text-ink">
             ${total}
@@ -158,7 +158,7 @@ export default function StackPlanner({ tools, categories }: { tools: PlannerTool
                 <p className="text-[10px] text-muted">{tool.price === 0 ? "no card needed" : "per month"}</p>
               </div>
               {pick.skipped ? (
-                <p className="w-full rounded-lg bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
+                <p className="w-full border-l-2 border-amber-300 pl-2 text-[11px] leading-relaxed text-amber-800">
                   Best pick here is ${tool.price} — over the remaining budget. Raise the budget or drop another category.
                 </p>
               ) : null}

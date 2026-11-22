@@ -193,7 +193,7 @@ export default function AiSearchResults({ query }: { query: string }) {
             </Link>
           </div>
 
-          <details className="mt-3 rounded-xl border border-line bg-slate-50/60 p-3">
+          <details className="mt-3 border-t border-line pt-3">
             <summary className="cursor-pointer text-xs font-semibold text-slate-600">
             Wrong answer? Report it to the team
             </summary>

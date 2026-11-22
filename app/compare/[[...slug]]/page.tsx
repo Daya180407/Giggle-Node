@@ -50,8 +50,11 @@ function buildRows(appearance: SiteSettings["appearance"]): { label: string; ren
   {
     label: "Weighted rating",
     render: (s) => (
-      <span className="flex items-center gap-1.5">
-        <Stars value={s.score} size={16} />
+      <span className="flex flex-wrap items-center gap-1.5">
+        {/* Phones cannot fit five stars in a tool column; the score still shows. */}
+        <span className="hidden sm:inline-flex">
+          <Stars value={s.score} size={16} />
+        </span>
         <strong>{s.score.toFixed(1)}</strong>
         <Trend trend={s.trend} />
       </span>
@@ -173,14 +176,20 @@ export default async function ComparePage({ params }: Props) {
       {stats.length >= 2 ? (
         <>
           <div className="card mt-5">
-            <table className="w-full break-words text-[12px] sm:text-sm">
+            <table className="w-full table-fixed text-[12px] sm:text-sm">
+              <colgroup>
+                <col className="w-[20%]" />
+                {stats.map((s) => (
+                  <col key={s.ai.id} />
+                ))}
+              </colgroup>
               <thead>
                 <tr className="border-b border-line bg-slate-50/70">
-                  <th className="p-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 sm:p-3 sm:text-xs">
+                  <th className="p-1.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 sm:p-3 sm:text-xs">
                     Compare
                   </th>
                   {stats.map((s) => (
-                    <th key={s.ai.id} className="p-2 text-left sm:p-3">
+                    <th key={s.ai.id} className="p-1.5 text-left sm:p-3">
                       <Link href={`/ai/${s.ai.slug}`} className="flex flex-wrap items-center gap-1.5 font-bold hover:text-brand">
                         <AiLogo slug={s.ai.slug} logo={s.ai.logo} color={s.ai.color} size={32} rounded="rounded-lg" />
                         {s.ai.name}
@@ -192,7 +201,7 @@ export default async function ComparePage({ params }: Props) {
               <tbody className="divide-y divide-line">
                 {rows.map((row) => (
                   <tr key={row.label}>
-                    <th className="p-2 text-left align-top text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 sm:p-3 sm:text-xs">
+                    <th className="p-1.5 text-left align-top text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 sm:p-3 sm:text-xs">
                       {row.label}
                     </th>
                     {stats.map((s) => {
@@ -200,7 +209,7 @@ export default async function ComparePage({ params }: Props) {
                       return (
                         <td
                           key={s.ai.id}
-                          className={`p-2 align-top text-slate-700 sm:p-3 ${
+                          className={`p-1.5 align-top text-slate-700 sm:p-3 ${
                             won ? "bg-emerald-50/50 shadow-[inset_2px_0_0_#6ee7b7]" : ""
                           }`}
                         >
@@ -229,7 +238,7 @@ export default async function ComparePage({ params }: Props) {
               </div>
               <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {winnerRows.map((row) => (
-                  <div key={row.label} className="rounded-xl border border-line bg-slate-50/60 p-2.5">
+                  <div key={row.label} className="border-l-2 border-line pl-2.5">
                     <p className="text-[9.5px] font-bold uppercase tracking-[0.12em] text-slate-400">{row.label}</p>
                     <Link
                       href={`/ai/${row.stat.ai.slug}`}

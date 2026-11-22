@@ -133,11 +133,11 @@ export default function FinderQuiz({
             </button>
           </div>
 
-          <ol className="mt-5 space-y-3">
+          <ol className="mt-5 divide-y divide-line">
             {results.map((row, i) => (
               <li
                 key={row.slug}
-                className="anim-rise rounded-2xl border border-line bg-white p-3.5 transition hover:border-indigo-200 hover:shadow-sm sm:p-4"
+                className="anim-rise py-3.5 sm:py-4"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
                 <div className="flex flex-wrap items-center gap-3">

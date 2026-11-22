@@ -73,11 +73,11 @@ How much do you need? ({unitLabel})
         </span>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-1">
         {rows.map((row, i) => (
           <div
             key={row.slug}
-            className={`flex items-center gap-2 rounded-xl border p-2 ${i === 0 ? "border-green-200 bg-green-50/60" : "border-line"}`}
+            className={`flex items-center gap-2 border-l-2 py-1.5 pl-2 ${i === 0 ? "border-green-300" : "border-line"}`}
           >
             <AiLogo slug={row.slug} logo={row.logo} color={row.color} size={32} rounded="rounded-lg" />
             <div className="min-w-0 flex-1">

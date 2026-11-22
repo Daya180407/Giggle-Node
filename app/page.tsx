@@ -357,7 +357,7 @@ export default async function HomePage({
               </span>
             }
           />
-          <div className="card overflow-hidden p-4 sm:p-6">
+          <div className="pt-1">
             <ChampionPodium categories={champions} />
           </div>
         </section>

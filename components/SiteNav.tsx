@@ -5,15 +5,17 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { logoutAction } from "@/app/auth-actions";
 
+// Items are revealed as the header gains room: the full row plus search and
+// account buttons only fits above ~1700px, so nothing is clipped before that.
 const NAV = [
   { href: "/category/all", label: "Rankings" },
   { href: "/compare", label: "Compare" },
-  { href: "/finder", label: "AI Finder" },
   { href: "/prompts", label: "Prompts" },
   { href: "/community", label: "Community" },
-  { href: "/stack", label: "Stack planner" },
-  { href: "/blog", label: "Blog" },
-  { href: "/contributors", label: "Contributors" },
+  { href: "/finder", label: "AI Finder", narrow: true },
+  { href: "/blog", label: "Blog", narrow: true },
+  { href: "/stack", label: "Stack planner", wide: true },
+  { href: "/contributors", label: "Contributors", wide: true },
 ];
 
 export type HeaderUser = { id: string; name: string; avatar: string; role: string } | null;
@@ -36,7 +38,7 @@ export default function SiteNav({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const navItems = [...NAV, ...extraNav];
+  const navItems: { href: string; label: string; narrow?: boolean; wide?: boolean }[] = [...NAV, ...extraNav];
 
   useEffect(() => {
     setOpen(false);
@@ -51,7 +53,9 @@ export default function SiteNav({
             <Link
               key={item.href}
               href={item.href}
-              className={`relative whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium transition ${
+              className={`relative whitespace-nowrap rounded-full px-2 py-2 text-sm font-medium transition ${
+                item.wide ? "hidden 2xl:flex" : item.narrow ? "hidden xl:flex" : "flex"
+              } ${
                 active
                   ? "bg-ink text-white shadow-sm"
                   : "text-slate-600 hover:bg-slate-100 hover:text-ink"
@@ -131,18 +135,6 @@ export default function SiteNav({
                 {user.role === "admin" ? "Admin" : user.name.split(" ")[0]}
               </span>
             </Link>
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                title="Log out"
-                aria-label="Log out"
-                className="grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-slate-500 transition hover:border-rose-200 hover:text-rose-600"
-              >
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <path d="M8 4H5v12h3M12.5 6.5L16 10l-3.5 3.5M16 10H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </form>
           </div>
         ) : (
           <Link href="/login" className="btn btn-primary !px-4 !py-2">
@@ -156,7 +148,7 @@ export default function SiteNav({
           aria-expanded={open}
           aria-controls="mobile-menu"
           aria-label={open ? "Close menu" : "Open menu"}
-          className="grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-slate-700 lg:hidden"
+          className="grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-slate-700 2xl:hidden"
         >
           {open ? (
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -173,7 +165,7 @@ export default function SiteNav({
       {open ? (
         <div
           id="mobile-menu"
-          className="absolute inset-x-0 top-full z-50 border-b border-line bg-white px-4 pb-5 pt-3 shadow-2xl shadow-slate-900/10 lg:hidden"
+          className="absolute inset-x-0 top-full z-50 border-b border-line bg-white px-4 pb-5 pt-3 shadow-2xl shadow-slate-900/10 2xl:hidden"
         >
           <div className="mx-auto grid max-w-7xl gap-1.5">
             {navItems.map((item, i) => (

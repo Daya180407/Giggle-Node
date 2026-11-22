@@ -96,7 +96,7 @@ export default function ApiPricing({ pricing, detail = false }: { pricing: ApiPr
       </div>
 
       {pricing.note ? (
-        <p className="mt-3 rounded-lg border border-line bg-slate-50/70 px-2.5 py-2 text-[11px] leading-relaxed text-slate-600">
+        <p className="mt-3 border-l-2 border-line pl-2.5 text-[11px] leading-relaxed text-slate-600">
           {pricing.note}
         </p>
       ) : null}

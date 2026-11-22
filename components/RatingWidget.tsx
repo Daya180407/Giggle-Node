@@ -98,7 +98,7 @@ export default function RatingWidget({
             Last updated {timeAgo(existing.lastEditedAt ?? existing.updatedAt)}
           </p>
           {locked ? (
-            <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            <p className="mt-2 border-l-2 border-line pl-3 text-xs text-slate-500">
               You can edit once every 24 hours. Please try again later.
             </p>
           ) : (
@@ -171,7 +171,7 @@ export default function RatingWidget({
         <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{state.error}</p>
       ) : null}
       {state.ok && state.message ? (
-        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{state.message}</p>
+        <p className="mt-3 border-l-2 border-emerald-300 pl-3 text-sm text-emerald-700">{state.message}</p>
       ) : null}
     </div>
   );

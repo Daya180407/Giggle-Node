@@ -26,7 +26,7 @@ export default function PromptSubmitForm({
   }, [state, router]);
 
   return (
-    <details className="mt-3 rounded-xl border border-dashed border-line p-3">
+    <details className="mt-3 border-t border-line pt-3">
       <summary className="cursor-pointer text-sm font-semibold text-ink">
         + Add your own prompt{options ? "" : ` for ${aiName ?? "this AI"}`}
       </summary>

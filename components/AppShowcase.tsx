@@ -216,7 +216,7 @@ export default function AppShowcase({
           );
 
           const className =
-            "app-card anim-rise group flex flex-col rounded-xl border border-line bg-white p-3 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md";
+            "app-card anim-rise group flex flex-col rounded-xl p-3 transition hover:-translate-y-0.5 hover:bg-slate-50";
 
           return (
             <div key={`${tab}-${item.slug}`} className={className} style={{ animationDelay: `${i * 30}ms` }}>

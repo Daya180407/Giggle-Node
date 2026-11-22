@@ -123,7 +123,7 @@ export default async function PromptsLibraryPage({ searchParams }: Props) {
             aiId={selectedAi?.id}
           />
         ) : (
-          <div className="mt-3 rounded-xl border border-dashed border-line bg-slate-50/60 p-3">
+          <div className="mt-3 border-t border-line pt-3">
             <p className="text-xs text-slate-600">
               Log in to add your own prompt. Prompts added by the site team show a verified tick.
             </p>

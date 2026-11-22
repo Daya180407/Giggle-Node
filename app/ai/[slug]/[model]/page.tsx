@@ -213,9 +213,9 @@ export default async function ModelPage({ params, searchParams }: Props) {
 
           <section className="card p-5">
             <h2 className="display text-lg text-ink">Reviews for this model</h2>
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 divide-y divide-line">
               {reviews.map(({ rating, user: reviewer }) => (
-                <div key={rating.id} className="rounded-xl border border-line p-3">
+                <div key={rating.id} className="py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-soft text-xs font-bold text-brand">
                       {reviewer?.avatar ?? "U"}

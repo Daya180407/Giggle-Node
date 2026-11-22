@@ -43,8 +43,8 @@ export default function CompareBuilder({ options }: { options: CompareOption[] }
             <button
               key={o.slug}
               onClick={() => toggle(o.slug)}
-              className={`flex items-center gap-2 rounded-xl border p-2 text-left transition ${
-                active ? "border-brand bg-brand-soft" : "border-line hover:border-indigo-200"
+              className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition ${
+                active ? "bg-brand-soft text-brand" : "hover:bg-slate-50"
               }`}
             >
               <AiLogo slug={o.slug} logo={o.logo} color={o.color} size={32} rounded="rounded-lg" />

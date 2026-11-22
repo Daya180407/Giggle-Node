@@ -18,7 +18,7 @@ export default function PricingReport({
   compact?: boolean;
 }) {
   return (
-    <details className={compact ? "mt-2" : "mt-4 rounded-xl border border-line bg-slate-50/60 p-3"}>
+    <details className={compact ? "mt-2" : "mt-4 border-t border-line pt-3"}>
       <summary
         className={`cursor-pointer text-[11px] font-semibold text-muted transition hover:text-rose-600 ${
           compact ? "list-none" : ""

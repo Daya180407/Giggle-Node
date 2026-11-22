@@ -237,7 +237,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
         </div>
 
         {ai.sponsored ? (
-          <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+          <p className="mt-3 border-l-2 border-line pl-3 text-xs leading-relaxed text-slate-500">
             Sponsored placement. This never changes the ranking formula
             {ai.boost > 0 ? ` (manual editor boost: +${ai.boost.toFixed(2)}).` : "."}
           </p>
@@ -293,7 +293,56 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               <span className="chip chip-brand">{models.length} models · every model rated separately</span>
             </div>
             <div>
-              <table className="w-full break-words text-left text-xs sm:text-sm" aria-label="Models and API pricing">
+              {/* Phones: one stacked card per model — five columns cannot fit a phone screen. */}
+              <ul className="divide-y divide-line sm:hidden">
+                {models.map((m) => (
+                  <li key={m.model.id} className="p-3.5">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <Link
+                        href={`/ai/${ai.slug}/${m.model.slug}`}
+                        className="min-w-0 font-semibold hover:text-brand"
+                      >
+                        {m.model.name}
+                      </Link>
+                      <PriceBadge price={m.model.priceType} />
+                    </div>
+                    <p className="mt-1 text-[13px] leading-relaxed text-slate-600">{m.model.bestFor}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <Stars value={m.score} size={15} />
+                      <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
+                      <span className="text-[11px] text-muted">{m.votes} votes</span>
+                    </div>
+                    <div className="mt-2">
+                      <ApiPricingInline pricing={getApiPricing(ai, m.model)} />
+                    </div>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      <Link
+                        href={`/ai/${ai.slug}/${m.model.slug}#rate`}
+                        className="btn btn-primary !px-2.5 !py-1 text-xs"
+                      >
+                        ★ Rate
+                      </Link>
+                      <Link
+                        href={`/ai/${ai.slug}/${m.model.slug}`}
+                        className="btn btn-ghost !px-2.5 !py-1 text-xs"
+                      >
+                        Details →
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <table
+                className="hidden w-full table-fixed text-left text-xs sm:table sm:text-sm"
+                aria-label="Models and API pricing"
+              >
+                <colgroup>
+                  <col className="w-[19%]" />
+                  <col className="w-[25%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[16%]" />
+                </colgroup>
                 <thead className="bg-slate-50/80 text-[10px] uppercase tracking-[0.12em] text-muted">
                   <tr>
                     <th className="px-2 py-2.5 font-semibold sm:px-4">Model</th>
@@ -323,7 +372,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                           {m.model.bestFor}
                         </td>
                         <td className="px-2 py-2.5 sm:px-4">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <Stars value={m.score} size={15} />
                             <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
                           </div>
@@ -333,7 +382,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                           <ApiPricingInline pricing={pricing} />
                         </td>
                         <td className="px-2 py-2.5 text-right sm:px-4">
-                          <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:justify-end">
+                          <div className="flex flex-wrap items-center justify-end gap-1">
                             <Link
                               href={`/ai/${ai.slug}/${m.model.slug}#rate`}
                               className="btn btn-primary !px-2.5 !py-1 text-xs"
@@ -397,7 +446,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             {ai.plans?.length ? (
               <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                 {ai.plans.map((plan) => (
-                  <div key={plan.id} className="rounded-xl border border-line bg-slate-50/60 p-3">
+                  <div key={plan.id} className="border-l-2 border-line pl-3">
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="text-sm font-bold text-ink">{plan.name}</p>
                       <p className="text-sm font-extrabold text-brand">
@@ -449,7 +498,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
 
             <div className="mt-3 flex flex-wrap items-end gap-2">
               {history.map((snapshot, index) => (
-                <div key={snapshot.id} className="rounded-xl border border-line bg-slate-50/60 px-3 py-2">
+                <div key={snapshot.id} className="border-l-2 border-line pl-3">
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                     {new Date(snapshot.at).toLocaleDateString("en-IN", { month: "short", year: "2-digit" })}
                   </p>
@@ -493,7 +542,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-green-100 bg-green-50/50 p-3">
+              <div className="border-l-2 border-green-200 pl-3">
                 <h3 className="text-sm font-bold text-green-700">Pros</h3>
                 <ul className="mt-2 space-y-1.5 text-sm text-slate-600">
                   {ai.pros.map((p) => (
@@ -504,7 +553,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                   ))}
                 </ul>
               </div>
-              <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-3">
+              <div className="border-l-2 border-rose-200 pl-3">
                 <h3 className="text-sm font-bold text-rose-600">Cons</h3>
                 <ul className="mt-2 space-y-1.5 text-sm text-slate-600">
                   {ai.cons.map((c) => (
@@ -522,7 +571,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           <section className="card p-5">
             <h2 className="display text-lg text-ink">Free alternative</h2>
             {freeAlternative ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-line p-3">
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
                 <AiLogo slug={freeAlternative.ai.slug} logo={freeAlternative.ai.logo} color={freeAlternative.ai.color} size={50} />
                 <div className="min-w-0 flex-1">
                   <Link href={`/ai/${freeAlternative.ai.slug}`} className="font-semibold hover:text-brand">
@@ -567,11 +616,11 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                 </Link>
               </div>
             </div>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 divide-y divide-line">
               {prompts.map((p) => {
                 const verifiedPrompt = isVerifiedPrompt(p);
                 return (
-                  <div key={p.id} className="rounded-xl border border-line p-3">
+                  <div key={p.id} className="py-3">
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm font-semibold">
                         <span className="truncate">{p.title}</span>
@@ -603,7 +652,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             {user ? (
               <PromptSubmitForm aiId={ai.id} aiName={ai.name} />
             ) : (
-              <div className="mt-3 rounded-xl border border-dashed border-line bg-slate-50/60 p-3">
+              <div className="mt-3 border-t border-line pt-3">
                 <p className="text-xs text-slate-600">
                   Have a prompt that works well for {ai.name}? Add it to the library — log in first.
                 </p>
@@ -627,11 +676,11 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                 </Link>
               ) : null}
             </div>
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 divide-y divide-line">
               {reviews.map(({ rating, user: reviewer }) => {
                 const model = db.models.find((m) => m.id === rating.modelId);
                 return (
-                  <div key={rating.id} className="rounded-xl border border-line p-3">
+                  <div key={rating.id} className="py-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-soft text-xs font-bold text-brand">
                         {reviewer?.avatar ?? "U"}
@@ -651,7 +700,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                       <p className="mt-1 text-[10.5px] font-semibold text-emerald-600">✓ Verified — opened from GigleNode</p>
                     ) : null}
                     {(replies.get(rating.id) ?? []).map((reply) => (
-                      <div key={reply.id} className="mt-2 rounded-lg border border-indigo-100 bg-brand-soft/40 p-2">
+                      <div key={reply.id} className="mt-2 border-l-2 border-brand pl-3">
                         <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-brand">
                           Reply from {reply.vendorName}
                         </p>
@@ -673,7 +722,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               {reviews.length === 0 ? <p className="text-sm text-muted">No reviews yet. Be the first to write one.</p> : null}
             </div>
             {ai.claim ? (
-              <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+              <p className="mt-3 border-l-2 border-line pl-3 text-[11px] leading-relaxed text-slate-600">
                 ✓ Claimed listing — replies are published by <strong>{ai.claim.vendorName}</strong>.
               </p>
             ) : (
