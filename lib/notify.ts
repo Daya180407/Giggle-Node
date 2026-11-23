@@ -67,6 +67,8 @@ export function queueEmail(
     kind: EmailMessage["kind"];
     subject: string;
     body: string;
+    /** verification mail must go out again with a fresh token, even on the same day */
+    force?: boolean;
   },
 ): EmailMessage {
   if (!Array.isArray(db.emailOutbox)) db.emailOutbox = [];
@@ -81,9 +83,11 @@ export function queueEmail(
   };
   // One queued message per address + kind per day keeps the outbox bounded.
   const dayAgo = Date.now() - 86400000;
-  const duplicate = db.emailOutbox.find(
-    (m) => m.to.toLowerCase() === row.to.toLowerCase() && m.kind === row.kind && +new Date(m.createdAt) > dayAgo,
-  );
+  const duplicate = input.force
+    ? undefined
+    : db.emailOutbox.find(
+        (m) => m.to.toLowerCase() === row.to.toLowerCase() && m.kind === row.kind && +new Date(m.createdAt) > dayAgo,
+      );
   if (duplicate) return duplicate;
 
   db.emailOutbox.unshift(row);

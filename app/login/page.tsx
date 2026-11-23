@@ -18,9 +18,9 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; reset?: string }>;
+  searchParams: Promise<{ next?: string; reset?: string; verify?: string }>;
 }) {
-  const { next = "/", reset } = await searchParams;
+  const { next = "/", reset, verify } = await searchParams;
   const user = await getCurrentUser();
   if (user) redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
   const settings = getSiteSettings(readDb());
@@ -37,6 +37,16 @@ export default async function LoginPage({
         {reset === "1" ? (
           <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
             Your password has been updated. Log in with the new password.
+          </p>
+        ) : null}
+
+        {verify ? (
+          <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-800">
+            That verification link is invalid or has expired.{" "}
+            <Link href="/verify-email" className="font-semibold underline">
+              Request a new one
+            </Link>
+            .
           </p>
         ) : null}
 
@@ -63,6 +73,13 @@ export default async function LoginPage({
             Create your own account to keep ratings and saved tools under your name.
           </p>
         </div>
+
+        <p className="mt-3 text-center text-xs text-muted">
+          Waiting for a verification email?{" "}
+          <Link href="/verify-email" className="font-semibold text-brand hover:underline">
+            Resend the link
+          </Link>
+        </p>
 
         <p className="mt-4 text-center text-xs text-muted">
           <Link href="/" className="hover:text-brand">

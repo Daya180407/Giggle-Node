@@ -11,7 +11,9 @@ export async function GET() {
   }
 
   const db = readDb();
-  const safeUsers = db.users.map(({ passwordHash, resetTokenHash, resetTokenExpiresAt, ...safe }) => safe);
+      const safeUsers = db.users.map(
+      ({ passwordHash, resetTokenHash, resetTokenExpiresAt, verifyTokenHash, verifyTokenExpiresAt, ...safe }) => safe,
+    );
   // Owner logins are separate accounts; their hashes never leave the server.
   const safeOwners = (db.ownerAccounts ?? []).map(({ passwordHash, ...safe }) => safe);
   const settings = getSiteSettings(db);

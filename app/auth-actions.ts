@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   clearSession,
@@ -10,13 +11,20 @@ import {
   verifyCredentials,
 } from "@/lib/auth";
 import { hashPassword, randomToken, sha256Hex } from "@/lib/crypto";
-import { mailerConfigured } from "@/lib/mailer";
+import { deliverEmails, mailerConfigured } from "@/lib/mailer";
 import { queueEmail, renderTemplate } from "@/lib/notify";
 import { getSiteSettings } from "@/lib/settings";
-import { flushPendingWrites, mutateDb, refreshDb, uid } from "@/lib/store";
-import type { DB, User } from "@/lib/types";
+import { flushPendingWrites, mutateDb, readDb, refreshDb, uid } from "@/lib/store";
+import type { AuthEvent, DB, User } from "@/lib/types";
 
-export type AuthState = { ok: boolean; error?: string; message?: string; resetLink?: string };
+export type AuthState = {
+  ok: boolean;
+  error?: string;
+  message?: string;
+  resetLink?: string;
+  /** only when email delivery is not configured, so the flow stays testable */
+  verifyLink?: string;
+};
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 8;
@@ -26,6 +34,9 @@ const RESET_WINDOW_MS = 60 * 60 * 1000;
 const RESET_MAX_REQUESTS = 3;
 const RESET_TTL_MS = 60 * 60 * 1000;
 const EVENT_TTL_MS = 24 * 60 * 60 * 1000;
+const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+const VERIFY_WINDOW_MS = 60 * 60 * 1000;
+const VERIFY_MAX_REQUESTS = 3;
 
 /** Only same-origin relative paths, so `//evil.com` cannot be used as an open redirect. */
 function safeNext(value: string): string {
@@ -33,12 +44,75 @@ function safeNext(value: string): string {
   return value;
 }
 
+/** Absolute origin for links inside email, taken from the request the user came from. */
+async function siteOrigin(): Promise<string> {
+  const headerList = await headers();
+  const proto = headerList.get("x-forwarded-proto") ?? "https";
+  const host = headerList.get("host") ?? "giglenode.com";
+  return `${proto}://${host}`;
+}
+
+/** Fresh single-use magic link for a new account (valid for 24 hours). */
+async function issueVerifyLink(user: User): Promise<string> {
+  const token = randomToken();
+  const tokenHash = await sha256Hex(token);
+  const expiresAt = new Date(Date.now() + VERIFY_TTL_MS).toISOString();
+  mutateDb((d) => {
+    const target = d.users.find((u) => u.id === user.id);
+    if (target) {
+      target.emailVerified = false;
+      target.verifyTokenHash = tokenHash;
+      target.verifyTokenExpiresAt = expiresAt;
+    }
+  });
+  return token;
+}
+
+/** Queue the verification mail and deliver it right away when Resend is configured. */
+async function sendVerifyMail(user: User, token: string, next: string): Promise<void> {
+  const link = `${await siteOrigin()}/verify-email/${token}?next=${encodeURIComponent(next)}`;
+  mutateDb((d) => {
+    const current = getSiteSettings(d);
+    queueEmail(d, current.email, {
+      to: user.email,
+      kind: "verify",
+      subject: renderTemplate("Verify your {{site}} email", { site: current.siteName }),
+      body: renderTemplate(
+        `Hi {{name}},\n\nOpen this link to finish creating your {{site}} account:\n\n${link}\n\nThe link works once and expires in 24 hours. If you did not sign up, ignore this email.\n\n— The {{site}} team`,
+        { name: user.name, site: current.siteName },
+      ),
+      force: true,
+    });
+  });
+  await flushPendingWrites();
+  if (!mailerConfigured()) return;
+
+  const queued = (readDb().emailOutbox ?? []).filter(
+    (m) => m.status === "queued" && m.kind === "verify" && m.to.toLowerCase() === user.email.toLowerCase(),
+  );
+  if (queued.length === 0) return;
+  const results = await deliverEmails(queued);
+  mutateDb((d) => {
+    for (const result of results) {
+      const row = d.emailOutbox?.find((m) => m.id === result.id);
+      if (!row) continue;
+      if (result.ok) {
+        row.status = "sent";
+        row.sentAt = new Date().toISOString();
+      } else {
+        row.status = "failed";
+        row.error = (result.error ?? "Delivery failed").slice(0, 220);
+      }
+    }
+  });
+}
+
 function pruneAuthEvents(db: DB) {
   const cutoff = Date.now() - EVENT_TTL_MS;
   db.authEvents = db.authEvents.filter((event) => +new Date(event.at) > cutoff);
 }
 
-function countEvents(db: DB, kind: "login" | "reset", ip: string, windowMs: number): number {
+function countEvents(db: DB, kind: AuthEvent["kind"], ip: string, windowMs: number): number {
   const cutoff = Date.now() - windowMs;
   return db.authEvents.filter((e) => e.kind === kind && e.ip === ip && +new Date(e.at) > cutoff).length;
 }
@@ -71,6 +145,12 @@ export async function loginAction(_prev: AuthState, formData: FormData): Promise
       pruneAuthEvents(d);
     });
     return { ok: false, error: "Incorrect email or password." };
+  }
+  if (user.emailVerified === false) {
+    return {
+      ok: false,
+      error: "Verify your email first — open the magic link we sent when you signed up, or request a new one on the verify-email page.",
+    };
   }
 
   await startSession(user.id);
@@ -114,6 +194,7 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
     role: "user",
     createdAt: new Date().toISOString(),
     passwordHash,
+    emailVerified: false,
   };
   const user = mutateDb((d) => {
     if (!d.users.some((u) => u.id === created.id || u.email.toLowerCase() === email)) {
@@ -126,24 +207,49 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
 
   await flushPendingWrites();
 
-  const settings = getSiteSettings(db);
-  if (settings.email.enabled && settings.email.welcome) {
-    const template = settings.email.templates.welcome;
-    mutateDb((d) => {
-      const current = getSiteSettings(d);
-      queueEmail(d, current.email, {
-        to: created.email,
-        kind: "welcome",
-        subject: template.subject,
-        body: renderTemplate(template.body, { name: created.name, site: current.siteName }),
-      });
-    });
-    await flushPendingWrites();
+  // Account is created but signed out until the emailed magic link is opened.
+  const token = await issueVerifyLink(user);
+  await sendVerifyMail(user, token, next);
+
+  revalidatePath("/");
+  return {
+    ok: true,
+    message: mailerConfigured()
+      ? `Almost done — open the verification link we emailed to ${created.email} to finish creating your account.`
+      : `Almost done — open the verification link below to finish creating ${created.email}.`,
+    verifyLink: mailerConfigured() ? undefined : `/verify-email/${token}?next=${encodeURIComponent(next)}`,
+  };
+}
+
+/* --------------------------- resend verification --------------------------- */
+
+export async function resendVerificationAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
+  if (!EMAIL_RE.test(email)) return { ok: false, error: "Please enter a valid email address." };
+
+  const ip = await requestIp();
+  const db = await refreshDb();
+  if (countEvents(db, "verify", ip, VERIFY_WINDOW_MS) >= VERIFY_MAX_REQUESTS) {
+    return { ok: false, error: "Too many verification emails. Please try again in an hour." };
   }
 
-  await startSession(user.id);
-  revalidatePath("/");
-  redirect(next);
+  const user = db.users.find((u) => u.email.toLowerCase() === email && u.emailVerified === false);
+  let verifyLink: string | undefined;
+  if (user) {
+    const token = await issueVerifyLink(user);
+    await sendVerifyMail(user, token, "/profile");
+    verifyLink = mailerConfigured() ? undefined : `/verify-email/${token}?next=%2Fprofile`;
+  }
+  mutateDb((d) => {
+    d.authEvents.push({ ip, at: new Date().toISOString(), kind: "verify" });
+    pruneAuthEvents(d);
+  });
+
+  return {
+    ok: true,
+    message: "If that email is waiting for verification, a fresh link is on its way (valid for 24 hours).",
+    verifyLink,
+  };
 }
 
 /* --------------------------- forgot password --------------------------- */

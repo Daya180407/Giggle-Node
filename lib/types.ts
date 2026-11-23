@@ -576,13 +576,17 @@ export type User = {
   passwordHash?: string;
   resetTokenHash?: string;
   resetTokenExpiresAt?: string;
+  /** false = signed up but the email link was never opened; missing = verified (legacy accounts) */
+  emailVerified?: boolean;
+  verifyTokenHash?: string;
+  verifyTokenExpiresAt?: string;
 };
 
 export type RateEvent = { ip: string; at: string };
 export type AuthEvent = {
   ip: string;
   at: string;
-  kind: "login" | "reset" | "signup" | "owner-login" | "owner-claim";
+  kind: "login" | "reset" | "signup" | "verify" | "owner-login" | "owner-claim";
   /** login name or email the attempt was aimed at, for per-account throttling */
   who?: string;
 };
@@ -627,7 +631,7 @@ export type EmailMessage = {
   to: string;
   subject: string;
   body: string;
-  kind: "welcome" | "rating-thanks" | "newsletter" | "test";
+  kind: "welcome" | "rating-thanks" | "newsletter" | "verify" | "test";
   createdAt: string;
   status: "queued" | "sent" | "failed";
   error?: string;

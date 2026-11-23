@@ -7,6 +7,24 @@ import { signupAction, type AuthState } from "@/app/auth-actions";
 export default function SignupForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(signupAction, { ok: false });
 
+  // The account exists only after the magic link is opened, so signup ends here.
+  if (state.ok && state.message) {
+    return (
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+        <p className="font-semibold">Check your email</p>
+        <p className="mt-1 text-[13px] leading-relaxed">{state.message}</p>
+        {state.verifyLink ? (
+          <Link href={state.verifyLink} className="btn btn-primary mt-3 w-full !py-2 text-xs">
+            Open the verification link
+          </Link>
+        ) : null}
+        <p className="mt-3 text-[11px] leading-relaxed text-emerald-800">
+          The link works once and expires in 24 hours. Nothing is charged and you can close this tab.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="next" value={next} />
@@ -64,6 +82,10 @@ export default function SignupForm({ next }: { next: string }) {
       <button className="btn btn-primary w-full" disabled={pending}>
         {pending ? "Creating your account…" : "Create account"}
       </button>
+
+      <p className="text-center text-[11px] leading-relaxed text-muted">
+        We email a one-time verification link before the account becomes active.
+      </p>
 
       <p className="text-center text-xs text-muted">
         Already have an account?{" "}
