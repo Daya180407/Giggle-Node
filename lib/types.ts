@@ -54,6 +54,11 @@ export type Ai = {
   sponsorUntil?: string | null;
   /** set when an admin approves a vendor claim for this listing */
   claim?: { vendorName: string; email: string; at: string } | null;
+  /**
+   * Official email domains the admin accepted for owner verification, e.g.
+   * ["claude.ai", "anthropic.com"]. Empty means "use the listing website".
+   */
+  ownerDomains?: string[];
 };
 
 export type Model = {
@@ -130,6 +135,18 @@ export type ArenaVote = {
   aId: string;
   bId: string;
   winnerId: string;
+  at: string;
+};
+
+/** A quick "was this helpful?" answer. Separate from the 1–5 star rating. */
+export type HelpfulVote = {
+  id: string;
+  aiId: string;
+  /** null for the whole AI listing; set for one model inside it. */
+  modelId: string | null;
+  helpful: boolean;
+  /** one vote per signed-in user, or per IP for a visitor without an account. */
+  voter: string;
   at: string;
 };
 
@@ -234,6 +251,107 @@ export type ReviewReply = {
   createdAt: string;
 };
 
+/* ------------------------------- AI owners ------------------------------- */
+
+/**
+ * A separate login for the team that runs an AI. Deliberately not a `User`:
+ * owners have no site role, no admin access and their own session cookie.
+ * The account is created by an admin only after a domain-email proof.
+ */
+export type OwnerAccount = {
+  id: string;
+  /** admin-set login name, unique, lowercase */
+  username: string;
+  displayName: string;
+  /** official company address the proof mail came from */
+  email: string;
+  passwordHash: string;
+  /** short text shown when no picture is uploaded (initials) */
+  initials: string;
+  /** R2 object key; the public URL is /api/owner/avatar/<id>?v=<avatarVersion> */
+  avatarKey?: string | null;
+  avatarVersion?: number;
+  /** owner must pick a new password before using the dashboard */
+  mustChangePassword?: boolean;
+  status: "active" | "banned";
+  /** live = edits apply at once; review = edits wait for admin approval */
+  tier: "live" | "review";
+  /** bumped on ban / password reset so old sessions stop working */
+  sessionVersion: number;
+  verifiedAt: string | null;
+  verifiedFrom: string | null;
+  bannedAt?: string | null;
+  lastLoginAt?: string | null;
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+};
+
+/** Which AI listings an owner login may edit. One row per granted listing. */
+export type AiOwner = {
+  id: string;
+  ownerId: string;
+  aiId: string;
+  grantedAt: string;
+  grantedBy: string;
+};
+
+/** A company asking for ownership; admin verifies the proof mail, then creates the login. */
+export type OwnerRequest = {
+  id: string;
+  aiId: string;
+  aiName: string;
+  applicantName: string;
+  company: string;
+  email: string;
+  /** email domain that must appear as the sender of the proof mail */
+  expectedDomain: string;
+  /** short code the applicant emails to the site inbox */
+  proofCode: string;
+  message: string;
+  status: "pending" | "verified" | "rejected";
+  /** exact sender the admin saw in the inbox */
+  proofFromEmail?: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  ownerId?: string | null;
+  note?: string;
+};
+
+/** What an owner is allowed to change on their own listing. */
+export type OwnerChangeKind = "plans" | "price" | "model" | "post";
+export type OwnerChangeStatus = "pending" | "applied" | "reverted" | "rejected" | "deleted";
+
+/**
+ * Audit row for every owner edit. `before`/`after` hold the complete entity
+ * snapshot, so an admin revert restores the exact previous state and nothing
+ * is lost when an owner is banned or an account is deleted.
+ */
+export type OwnerChange = {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  aiId: string;
+  aiName: string;
+  kind: OwnerChangeKind;
+  /** ai id, model id or post id the change touches */
+  targetId: string;
+  title: string;
+  summary: string;
+  before: unknown;
+  after: unknown;
+  status: OwnerChangeStatus;
+  /** set when the owner supplied a pricing source link */
+  sourceUrl?: string;
+  createdAt: string;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+  note?: string;
+  /** soft delete: the row stays for the audit trail */
+  deletedAt?: string | null;
+};
+
 /** One outbound click from a signed-in user — the basis of a verified rating. */
 export type AiVisit = { userId: string; aiId: string; at: string };
 
@@ -307,6 +425,9 @@ export type Post = {
   views?: number;
   /** a complete HTML + CSS file uploaded by an admin; rendered instead of content */
   html?: string | null;
+  /** owner-authored draft: which owner account wrote it */
+  ownerId?: string | null;
+  ownerName?: string;
 };
 
 export type Prompt = {
@@ -421,7 +542,8 @@ export type AdminArea =
   | "notifications"
   | "search"
   | "security"
-  | "settings";
+  | "settings"
+  | "owners";
 
 export type RoleDefinition = {
   id: string;
@@ -451,7 +573,13 @@ export type User = {
 };
 
 export type RateEvent = { ip: string; at: string };
-export type AuthEvent = { ip: string; at: string; kind: "login" | "reset" | "signup" };
+export type AuthEvent = {
+  ip: string;
+  at: string;
+  kind: "login" | "reset" | "signup" | "owner-login" | "owner-claim";
+  /** login name or email the attempt was aimed at, for per-account throttling */
+  who?: string;
+};
 
 export type QuizQuestion = { id: "work" | "budget" | "level"; question: string };
 
@@ -783,4 +911,14 @@ export type DB = {
   communityMembers?: CommunityMember[];
   /** blind arena picks, the basis of the community win-rate table */
   arenaVotes?: ArenaVote[];
+  /** anonymous yes/no "was this helpful?" signals, not part of the ranking */
+  helpfulVotes?: HelpfulVote[];
+  /** owner logins, kept apart from site users */
+  ownerAccounts?: OwnerAccount[];
+  /** owner -> AI ownership grants */
+  aiOwners?: AiOwner[];
+  /** ownership requests waiting for a domain-email proof check */
+  ownerRequests?: OwnerRequest[];
+  /** full audit trail of owner edits with before/after snapshots */
+  ownerChanges?: OwnerChange[];
 };

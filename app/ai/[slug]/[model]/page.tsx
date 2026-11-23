@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import ApiPricing from "@/components/ApiPricing";
 import Distribution from "@/components/Distribution";
+import HelpfulWidget from "@/components/HelpfulWidget";
 import PricingReport from "@/components/PricingReport";
 import RatingWidget from "@/components/RatingWidget";
 import { AiLogo, PriceBadge, Stars, Trend } from "@/components/ui";
@@ -10,6 +11,7 @@ import { getApiPricing } from "@/lib/api-pricing";
 import { formatVotes } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
+import { helpfulScore, myHelpfulVote } from "@/lib/helpful";
 import { canAccess, resolveRoles } from "@/lib/roles";
 import { formatPlanPrice } from "@/lib/plans";
 import { reportRatingAction } from "@/app/actions";
@@ -52,6 +54,8 @@ export default async function ModelPage({ params, searchParams }: Props) {
   const stat = view.modelStats.get(model.id)!;
   const apiPricing = getApiPricing(ai, model);
   const existing = user ? db.ratings.find((r) => r.userId === user.id && r.modelId === model.id) ?? null : null;
+  const helpful = helpfulScore(db, ai.id, model.id);
+  const myHelpful = myHelpfulVote(db, ai.id, model.id, user?.id ?? null);
   const reviews = modelReviews(db, model.id, 8);
   const siblings = (view.modelsByAi.get(ai.id) ?? [])
     .filter((m) => m.id !== model.id)
@@ -211,6 +215,15 @@ export default async function ModelPage({ params, searchParams }: Props) {
               </div>
             )}
           </div>
+
+          <HelpfulWidget
+            aiId={ai.id}
+            modelId={model.id}
+            useful={helpful.useful}
+            notUseful={helpful.notUseful}
+            myVote={myHelpful}
+            label={model.name}
+          />
 
           <section className="card p-5">
             <h2 className="display text-lg text-ink">Reviews for this model</h2>

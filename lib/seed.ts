@@ -1603,5 +1603,9 @@ export function buildSeed(): DB {
     authEvents: [],
     settings: { ...DEFAULT_SITE_SETTINGS },
     adminLog: [],
+    ownerAccounts: [],
+    aiOwners: [],
+    ownerRequests: [],
+    ownerChanges: [],
   };
 }

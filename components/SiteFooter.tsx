@@ -116,6 +116,16 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/owner/claim" className="text-slate-300 transition hover:text-white">
+                  Claim an AI listing
+                </Link>
+              </li>
+              <li>
+                <Link href="/owner/login" className="text-slate-300 transition hover:text-white">
+                  AI owner login
+                </Link>
+              </li>
+              <li>
                 <Link href="/feed.xml" className="text-slate-300 transition hover:text-white">
                   RSS feed
                 </Link>

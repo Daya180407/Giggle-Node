@@ -9,6 +9,7 @@ import EmbedBadge from "@/components/EmbedBadge";
 import RatingTrend from "@/components/RatingTrend";
 import AiCard from "@/components/AiCard";
 import AiQuickRate from "@/components/AiQuickRate";
+import HelpfulWidget from "@/components/HelpfulWidget";
 import { ApiPricingInline } from "@/components/ApiPricing";
 import CopyButton from "@/components/CopyButton";
 import Distribution from "@/components/Distribution";
@@ -23,6 +24,7 @@ import { formatVotes } from "@/lib/format";
 import { getApiPricing } from "@/lib/api-pricing";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
+import { helpfulScore, myHelpfulVote } from "@/lib/helpful";
 import { canAccess, resolveRoles } from "@/lib/roles";
 import { formatPlanPrice } from "@/lib/plans";
 import { myPriceAlert, priceChange, priceHistoryFor, repliesFor, verifiedShare, weeklyRatingTrend } from "@/lib/community";
@@ -88,7 +90,10 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
     reviews.map((row) => row.rating.id),
   );
   const myRequests = user ? myContributions(db, user.id, ai.id).slice(0, 6) : [];
+  const helpful = helpfulScore(db, ai.id);
+  const myHelpful = myHelpfulVote(db, ai.id, null, user?.id ?? null);
   const isClaimedVendor = Boolean(user && ai.claim && ai.claim.email.toLowerCase() === user.email.toLowerCase());
+  const ownedByOwner = (db.aiOwners ?? []).some((row) => row.aiId === ai.id);
   const canReply = Boolean(isClaimedVendor || (user && canAccess(user.role, "ratings", resolveRoles(db.roles))));
 
   const freeAltStat = ai.freeAlternativeId ? view.aiStats.get(ai.freeAlternativeId) : undefined;
@@ -234,6 +239,15 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             💬 Community
           </Link>
           <ShareButton title={`${ai.name} — GigleNode rating`} />
+          {ownedByOwner ? (
+            <Link href="/owner/login" className="btn btn-ghost">
+              🏢 Owner login
+            </Link>
+          ) : (
+            <Link href="/owner/claim" className="btn btn-ghost">
+              🏢 Claim ownership
+            </Link>
+          )}
           {user && canAccess(user.role, "catalogue", resolveRoles(db.roles)) ? (
             <Link href={`/admin/ai/${ai.slug}`} className="btn btn-ghost">
               ✎ Admin edit
@@ -258,6 +272,16 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           existingRatings={myRatings}
           isLoggedIn={Boolean(user)}
           allowRatings={settings.allowRatings}
+        />
+      </div>
+
+      <div className="mt-4">
+        <HelpfulWidget
+          aiId={ai.id}
+          useful={helpful.useful}
+          notUseful={helpful.notUseful}
+          myVote={myHelpful}
+          label={ai.name}
         />
       </div>
 
@@ -418,19 +442,25 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
                   Which model is best for what?
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                <ul className="mt-1.5 divide-y divide-line/70">
                   {models.map((m) => (
-                    <Link
-                      key={m.model.id}
-                      href={`/ai/${ai.slug}/${m.model.slug}`}
-                      className="chip border border-line bg-white text-slate-600 transition hover:border-indigo-200 hover:text-brand"
-                    >
-                      <strong className="font-semibold">{m.model.bestFor || "General use"}</strong>
-                      <span aria-hidden>→</span>
-                      {m.model.name} · {m.score.toFixed(1)}★
-                    </Link>
+                    <li key={m.model.id}>
+                      <Link
+                        href={`/ai/${ai.slug}/${m.model.slug}`}
+                        className="group flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-1.5 text-[11.5px] leading-relaxed transition hover:text-brand"
+                      >
+                        <span className="min-w-0 break-words font-semibold text-slate-700 group-hover:text-brand">
+                          {m.model.bestFor || "General use"}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-1 text-slate-500">
+                          <span aria-hidden className="text-muted">→</span>
+                          <span className="font-medium group-hover:text-brand">{m.model.name}</span>
+                          <span className="font-semibold text-amber-600">{m.score.toFixed(1)}★</span>
+                        </span>
+                      </Link>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             ) : null}
           </section>
@@ -769,6 +799,13 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             ) : (
               <div className="mt-3">
                 <ClaimListingForm aiId={ai.id} aiName={ai.name} />
+                <p className="mt-2 text-[11px] leading-relaxed text-muted">
+                  Run {ai.name}?{" "}
+                  <Link href="/owner/claim" className="font-semibold text-brand hover:underline">
+                    Claim the owner dashboard
+                  </Link>{" "}
+                  to edit plans, pricing, models and posts — verified by a mail from your company domain.
+                </p>
               </div>
             )}
           </section>

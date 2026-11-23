@@ -238,6 +238,59 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
   return { ok: true, message: savedMessage };
 }
 
+/* --------------------------- helpful signal --------------------------- */
+
+const MAX_HELPFUL_VOTES = 50000;
+
+/**
+ * Anonymous "was this helpful?" answer. Signed-in users vote once per target;
+ * a visitor without an account votes once per IP. Answers can be changed, and
+ * they never feed the weighted 1–5 rating or the ranking formula.
+ */
+export async function markHelpfulAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const aiId = String(formData.get("aiId") ?? "").trim();
+  const modelIdRaw = String(formData.get("modelId") ?? "").trim();
+  const raw = String(formData.get("answer") ?? "");
+  const helpful = raw === "yes" ? true : raw === "no" ? false : null;
+  if (!aiId || helpful === null) return { ok: false, error: "Choose yes or no first." };
+
+  const db = readDb();
+  const ai = db.ai.find((row) => row.id === aiId && !row.hidden);
+  if (!ai) return { ok: false, error: "AI not found." };
+  const model = modelIdRaw ? db.models.find((row) => row.id === modelIdRaw && row.aiId === ai.id) : undefined;
+  if (modelIdRaw && !model) return { ok: false, error: "Model not found." };
+
+  const [user, ip] = await Promise.all([getCurrentUser(), requestIp()]);
+  const voter = user ? `user:${user.id}` : `ip:${ip}`;
+  const targetModelId = model?.id ?? null;
+
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.helpfulVotes)) draft.helpfulVotes = [];
+    const existing = draft.helpfulVotes.find(
+      (row) => row.voter === voter && row.aiId === ai.id && row.modelId === targetModelId,
+    );
+    if (existing) {
+      existing.helpful = helpful;
+      existing.at = new Date().toISOString();
+      return;
+    }
+    draft.helpfulVotes.push({
+      id: uid("hv"),
+      aiId: ai.id,
+      modelId: targetModelId,
+      helpful,
+      voter,
+      at: new Date().toISOString(),
+    });
+    if (draft.helpfulVotes.length > MAX_HELPFUL_VOTES) {
+      draft.helpfulVotes.splice(0, draft.helpfulVotes.length - MAX_HELPFUL_VOTES);
+    }
+  });
+
+  revalidatePath(model ? `/ai/${ai.slug}/${model.slug}` : `/ai/${ai.slug}`);
+  return { ok: true, message: helpful ? "Thanks — counted as useful." : "Thanks — noted." };
+}
+
 /* ------------------------- bookmark / follow ------------------------- */
 
 export async function toggleBookmarkAction(formData: FormData) {

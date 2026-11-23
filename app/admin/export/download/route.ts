@@ -12,6 +12,8 @@ export async function GET() {
 
   const db = readDb();
   const safeUsers = db.users.map(({ passwordHash, resetTokenHash, resetTokenExpiresAt, ...safe }) => safe);
+  // Owner logins are separate accounts; their hashes never leave the server.
+  const safeOwners = (db.ownerAccounts ?? []).map(({ passwordHash, ...safe }) => safe);
   const settings = getSiteSettings(db);
   const safeSettings = { ...settings, aiSearch: { ...settings.aiSearch, apiKey: "" } };
   const payload = {
@@ -51,6 +53,10 @@ export async function GET() {
     aiVisits: db.aiVisits ?? [],
     toolSubmissions: db.toolSubmissions ?? [],
     pricingReports: db.pricingReports ?? [],
+    ownerAccounts: safeOwners,
+    aiOwners: db.aiOwners ?? [],
+    ownerRequests: db.ownerRequests ?? [],
+    ownerChanges: db.ownerChanges ?? [],
   };
 
   const filename = `giglenode-backup-${new Date().toISOString().slice(0, 10)}.json`;
