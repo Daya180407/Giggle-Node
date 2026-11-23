@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const PLACEHOLDERS = [
@@ -26,6 +26,12 @@ export default function HeroSearch() {
 
   useEffect(() => setMounted(true), []);
 
+  /** Anchor the portalled menu to the input, even while the page scrolls. */
+  const placeMenu = useCallback(() => {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (rect) setAnchor({ top: rect.bottom + 8, left: rect.left, width: rect.width });
+  }, []);
+
   useEffect(() => {
     if (value) return;
     const timer = window.setInterval(() => setIndex((i) => (i + 1) % PLACEHOLDERS.length), 3400);
@@ -45,6 +51,7 @@ export default function HeroSearch() {
         .then((response) => (response.ok ? response.json() : { suggestions: [] }))
         .then((payload: { suggestions?: Suggestion[] }) => {
           setSuggestions(payload.suggestions ?? []);
+          placeMenu();
           setOpen(true);
         })
         .catch(() => {
@@ -55,7 +62,7 @@ export default function HeroSearch() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [value]);
+  }, [value, placeMenu]);
 
   /**
    * The hero clips its background (`overflow: hidden`) and its wrappers animate
@@ -64,19 +71,14 @@ export default function HeroSearch() {
    */
   useEffect(() => {
     if (!open) return;
-    const place = () => {
-      const rect = wrapRef.current?.getBoundingClientRect();
-      if (rect) setAnchor({ top: rect.bottom + 8, left: rect.left, width: rect.width });
-    };
-    place();
-    const close = () => setOpen(false);
-    window.addEventListener("scroll", close, { passive: true });
-    window.addEventListener("resize", place);
+    placeMenu();
+    window.addEventListener("scroll", placeMenu, { passive: true });
+    window.addEventListener("resize", placeMenu);
     return () => {
-      window.removeEventListener("scroll", close);
-      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", placeMenu);
+      window.removeEventListener("resize", placeMenu);
     };
-  }, [open, suggestions]);
+  }, [open, suggestions, placeMenu]);
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
