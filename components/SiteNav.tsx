@@ -168,7 +168,7 @@ export default function SiteNav({
       {open ? (
         <div
           id="mobile-menu"
-          className="absolute inset-x-0 top-full z-50 border-b border-line bg-white px-4 pb-5 pt-3 shadow-2xl shadow-slate-900/10 2xl:hidden"
+          className="absolute inset-x-0 top-full z-50 max-h-[calc(100dvh-4.5rem)] overflow-y-auto overscroll-contain border-b border-line bg-white px-4 pb-5 pt-3 shadow-2xl shadow-slate-900/10 2xl:hidden"
         >
           <div className="mx-auto grid max-w-7xl gap-1.5">
             {navItems.map((item, i) => (
