@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AiLogo, PriceBadge } from "@/components/ui";
-import { nextRound, type ArenaContender, type ArenaPool, type ArenaRecord, type ArenaRound } from "@/lib/arena";
+import { roundInPool, type ArenaContender, type ArenaPool, type ArenaRecord, type ArenaRound } from "@/lib/arena";
 import { categoryName } from "@/lib/categories";
 import type { PriceType } from "@/lib/types";
 
@@ -106,7 +106,15 @@ export default function ArenaBoard({ pools, records, totalVotes, initialRound: o
 
   function nextPair() {
     if (pools.length === 0) return;
-    setRound(nextRound(pools, localRecords));
+    // Stay in the same category: a next matchup inside this job is what the
+    // visitor asked for, and the category chips are how they switch jobs.
+    setRound(roundInPool(pools, round.pool, localRecords));
+    setPicked(null);
+  }
+
+  function choosePool(index: number) {
+    if (pools.length === 0 || index === round.pool) return;
+    setRound(roundInPool(pools, index, localRecords));
     setPicked(null);
   }
 
@@ -173,12 +181,35 @@ export default function ArenaBoard({ pools, records, totalVotes, initialRound: o
           </span>
         </div>
 
+        <div
+          className="mb-2.5 flex flex-wrap gap-1.5"
+          role="group"
+          aria-label="Choose the category to compare inside"
+        >
+          {pools.map((option, i) => (
+            <button
+              key={option.category}
+              type="button"
+              onClick={() => choosePool(i)}
+              aria-pressed={i === round.pool}
+              className={`chip border transition ${
+                i === round.pool
+                  ? "border-ink bg-ink text-white"
+                  : "border-line bg-white text-slate-600 hover:border-indigo-300 hover:text-ink"
+              }`}
+            >
+              {option.label}
+              <span className={i === round.pool ? "text-white/60" : "text-slate-400"}>{option.contenders.length}</span>
+            </button>
+          ))}
+        </div>
+
         <div className="mb-3 rounded-2xl border border-line bg-slate-50/80 px-3.5 py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Same job · same category</p>
           <p className="mt-1 text-sm font-bold text-ink">Which {pool.label} tool would you open first?</p>
           <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
-            Both cards come from {pool.label}, so the pick compares like with like. Names, logos and scores stay hidden
-            until you choose.
+            Both cards come from {pool.label}, so the pick compares like with like. Pick another category above to
+            switch jobs — a pair never mixes two categories. Names, logos and scores stay hidden until you choose.
           </p>
         </div>
 

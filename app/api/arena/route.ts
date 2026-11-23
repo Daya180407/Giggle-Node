@@ -27,9 +27,14 @@ export async function POST(request: Request) {
   }
 
   const db = readDb();
-  const known = new Set(db.ai.map((ai) => ai.id));
-  if (!known.has(aId) || !known.has(bId)) {
+  const categoryOf = new Map(db.ai.map((ai) => [ai.id, ai.category]));
+  if (!categoryOf.has(aId) || !categoryOf.has(bId)) {
     return NextResponse.json({ ok: false, error: "unknown-ai" }, { status: 404 });
+  }
+  // A pick only means something between two tools doing the same job, so a
+  // cross-category pair is refused here even if an old client sends one.
+  if (categoryOf.get(aId) !== categoryOf.get(bId)) {
+    return NextResponse.json({ ok: false, error: "cross-category" }, { status: 422 });
   }
 
   mutateDb((draft) => {

@@ -160,33 +160,27 @@ export function initialRound(pools: ArenaPool[], records: Record<string, ArenaRe
 }
 
 /**
- * Next round: draw a card from a category that still has contenders without
- * many matchups, so the table fills in evenly instead of replaying the same
- * top two tools.
+ * A round inside one chosen category: both cards come from `pools[poolIndex]`,
+ * so a category pick never mixes jobs. An out-of-range index falls back to the
+ * first pool instead of rendering an empty board.
  */
-export function nextRound(
+export function roundInPool(
   pools: ArenaPool[],
+  poolIndex: number,
   records: Record<string, ArenaRecord>,
   random: () => number = Math.random,
 ): ArenaRound {
-  const eligible = pools
-    .map((pool, index) => ({ pool, index }))
-    .filter(({ pool }) => pool.contenders.length >= 2);
-  if (!eligible.length) return { pool: 0, a: 0, b: 0 };
-
-  const fresh = eligible.filter(({ pool }) => pool.contenders.some((c) => matchups(records, c.id) < 2));
-  const from = fresh.length ? fresh : eligible;
-  // Math.random() is always below 1, the clamp only guards a custom random.
-  const choice = from[Math.min(from.length - 1, Math.floor(random() * from.length))];
-  const list = choice.pool.contenders;
-
+  if (!pools.length) return { pool: 0, a: 0, b: 0 };
+  const index = Math.min(Math.max(poolIndex, 0), pools.length - 1);
+  const list = pools[index].contenders ?? [];
+  if (list.length < 2) return { pool: index, a: 0, b: 0 };
   const aCandidates = byFewestMatchups(
     list,
     records,
     list.map((_, i) => i),
   );
   const a = aCandidates[Math.min(aCandidates.length - 1, Math.floor(random() * aCandidates.length))];
-  return { pool: choice.index, a, b: partnerIndex(list, records, a) };
+  return { pool: index, a, b: partnerIndex(list, records, a) };
 }
 
 /**
