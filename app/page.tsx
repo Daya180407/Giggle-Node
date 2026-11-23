@@ -1,10 +1,8 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import AdSlot from "@/components/AdSlot";
 import AiCard from "@/components/AiCard";
 import AnimatedStats, { type HomeStat } from "@/components/AnimatedStats";
 import AppShowcase, { type AppShowcaseItem } from "@/components/AppShowcase";
-import BrandLogo from "@/components/BrandLogo";
 import ChampionPodium, { type ChampionCategory } from "@/components/ChampionPodium";
 import FeatureRotator from "@/components/FeatureRotator";
 import HeroSearch from "@/components/HeroSearch";
@@ -13,6 +11,8 @@ import { formatMoney } from "@/lib/analytics";
 import PostCard from "@/components/PostCard";
 import RankTabs, { type RankRow, type RankTab } from "@/components/RankTabs";
 import { SectionHead } from "@/components/ui";
+import { movers } from "@/lib/insight";
+import { USE_CASES } from "@/lib/usecases";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName, getCategories } from "@/lib/categories";
 import { communityTotals } from "@/lib/community-chat";
@@ -31,24 +31,6 @@ import {
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
-
-const CATEGORY_TINTS = [
-  "#8b6cff",
-  "#3fd8e6",
-  "#f472b6",
-  "#f4c95d",
-  "#4ade80",
-  "#60a5fa",
-  "#fb923c",
-  "#a78bfa",
-  "#22d3ee",
-  "#facc15",
-  "#34d399",
-  "#f87171",
-  "#818cf8",
-  "#e879f9",
-  "#2dd4bf",
-];
 
 function toRows(stats: AiStat[]): RankRow[] {
   return stats.map((s, i) => ({
@@ -85,6 +67,8 @@ export default async function HomePage({
     .slice(0, 6);
   const trending = trendingAis(view, 4, settings.trendingAiIds);
   const rising = risingAis(view, 4);
+  const momentum = movers(view, 4);
+  const leaders = rankedAis(view).slice(0, 3);
 
   const bySlug = new Map([...view.aiStats.values()].map((s) => [s.ai.slug, s]));
 
@@ -237,15 +221,15 @@ export default async function HomePage({
 
       {/* Hero */}
       <section className="relative pt-3 sm:pt-5">
-        <div className="relative overflow-hidden bg-[#07070d]">
+        <div className="lab-hero">
+          <div className="lab-grid" aria-hidden />
           <div className="hero-blobs absolute inset-0" aria-hidden>
             <span className="hero-blob-1" />
             <span className="hero-blob-2" />
             <span className="hero-blob-3" />
           </div>
-          <div className="hero-grid absolute inset-0" aria-hidden />
 
-          <div className="relative mx-auto max-w-6xl px-4 pb-4 pt-8 sm:px-8 sm:pb-8 sm:pt-12 lg:px-10 lg:pt-14">
+          <div className="relative mx-auto max-w-7xl px-4 pb-4 pt-8 sm:px-8 sm:pb-8 sm:pt-12 lg:px-10 lg:pt-14">
             <div className="mx-auto max-w-4xl text-center">
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="anim-rise chip border border-white/10 bg-white/[0.06] text-slate-300 backdrop-blur">
@@ -256,17 +240,7 @@ export default async function HomePage({
                 </span>
               </div>
 
-              <div className="anim-rise delay-1 mt-7 flex justify-center">
-                <span className="relative block w-fit">
-                  <span
-                    className="pointer-events-none absolute -inset-3 rounded-3xl bg-gradient-to-br from-violet-500/35 via-fuchsia-500/20 to-cyan-400/30 blur-xl"
-                    aria-hidden
-                  />
-                  <BrandLogo size={58} className="anim-float relative shadow-2xl shadow-violet-950/60" />
-                </span>
-              </div>
-
-              <h1 className="anim-rise delay-1 mt-5">
+              <h1 className="anim-rise delay-1 mt-7">
                 <span className="sr-only">GigleNode — </span>
                 <span className="display block text-[clamp(2.45rem,6.4vw,4.65rem)] leading-[1.02] tracking-[-0.045em] text-white">
                   {settings.heroTitle} <span className="hero-gradient">{settings.heroHighlight}</span> {settings.heroSuffix}
@@ -286,32 +260,95 @@ export default async function HomePage({
                 <HeroSearch />
               </div>
 
-              <div className="anim-fade delay-4 mt-4 flex flex-wrap items-center justify-center gap-2">
-                {[
-                  { label: "🎬 Video", href: "/category/video" },
-                  { label: "🖼️ Image", href: "/category/image" },
-                  { label: "⌨️ Coding", href: "/category/coding" },
-                  { label: "✍️ Writing", href: "/category/writing" },
-                  { label: "🎙️ Voice", href: "/category/voice" },
-                ].map((b) => (
-                  <Link
-                    key={b.href}
-                    href={b.href}
-                    className="chip border border-white/10 bg-white/[0.05] px-3 py-1.5 text-slate-300 backdrop-blur transition hover:-translate-y-0.5 hover:border-violet-400/60 hover:bg-violet-400/10 hover:text-white"
-                  >
-                    {b.label}
-                  </Link>
-                ))}
-                <Link
-                  href="/finder"
-                  className="chip border border-transparent bg-[linear-gradient(100deg,#8b6cff,#3fd8e6)] px-3 py-1.5 font-semibold text-[#07070d] transition hover:-translate-y-0.5"
-                >
-                  ⚡ 30-second AI finder
-                </Link>
-              </div>
             </div>
 
             <AnimatedStats stats={stats} />
+
+            <div className="anim-fade delay-4 mx-auto mt-6">
+              <div className="flex flex-wrap items-center justify-center gap-2 pb-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Top rated now</span>
+                {leaders.map((s, i) => (
+                  <Link
+                    key={s.ai.id}
+                    href={`/ai/${s.ai.slug}`}
+                    className="chip border border-white/10 bg-white/[0.05] text-slate-300 transition hover:-translate-y-0.5 hover:border-violet-400/60 hover:text-white"
+                  >
+                    <span className="text-slate-500">#{i + 1}</span> {s.ai.name}
+                    <span className="font-bold text-amber-300">★ {s.score.toFixed(1)}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pick a board: arena, task rankings, value */}
+      <section className="board-deck mt-5 bg-white sm:mt-7">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-8 sm:py-7 lg:px-10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <p className="eyebrow">Three ways in</p>
+              <h2 className="display mt-1.5 text-[21px] leading-tight text-ink sm:text-[26px]">
+                Start with a vote, a task or a budget
+              </h2>
+              <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-muted">
+                The leaderboard is one view. These boards answer what it cannot: which tool wins with the names
+                hidden, which one suits your exact job, and what each rating point actually costs.
+              </p>
+            </div>
+            <Link href="/ranking" className="btn btn-ghost shrink-0 self-start !py-2 text-xs sm:self-auto">
+              All boards →
+            </Link>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              {
+                href: "/arena",
+                cls: "board-card-arena",
+                icon: "⚔️",
+                title: "Blind arena",
+                body: "Two tools, names hidden. Pick the one you would actually use, then see who won.",
+                meta: "Community picks",
+              },
+              {
+                href: "/ranking",
+                cls: "board-card-rank",
+                icon: "🎯",
+                title: "Ranked by task",
+                body: `${USE_CASES.length} boards for real jobs — blog posts, code review, thumbnails, research.`,
+                meta: "Task-first",
+              },
+              {
+                href: "/value",
+                cls: "board-card-value",
+                icon: "💸",
+                title: "Best value",
+                body: "Live score divided by the cheapest plan, with genuinely free tools kept separate.",
+                meta: "Score per rupee",
+              },
+            ].map((card, i) => (
+              <Link key={card.href} href={card.href} className={`board-card group bg-white ${card.cls}`}>
+                <span className="board-rail" aria-hidden />
+                <span className="flex items-start justify-between gap-2">
+                  <span className="board-icon" aria-hidden>
+                    {card.icon}
+                  </span>
+                  <span className="board-index" aria-hidden>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                </span>
+                <span className="mt-3 block text-[15px] font-bold text-ink">{card.title}</span>
+                <span className="mt-1 block flex-1 text-[12.5px] leading-relaxed text-slate-500">{card.body}</span>
+                <span className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-2.5">
+                  <span className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400">{card.meta}</span>
+                  <span className="text-xs font-semibold text-brand transition group-hover:translate-x-0.5" aria-hidden>
+                    →
+                  </span>
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -381,6 +418,42 @@ export default async function HomePage({
           </div>
         </section>
 
+        {/* New boards */}
+        <section className="grid gap-3 lg:grid-cols-2">
+          <Link
+            href="/arena"
+            className="lab-panel group relative overflow-hidden p-5 transition hover:-translate-y-0.5 hover:border-indigo-200"
+          >
+            <span
+              aria-hidden
+              className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-200/40 blur-2xl transition group-hover:bg-indigo-300/50"
+            />
+            <p className="eyebrow relative">Community signal</p>
+            <h2 className="display relative mt-2 text-xl text-ink">Vote blind. See what actually wins.</h2>
+            <p className="relative mt-1.5 max-w-md text-[13px] leading-relaxed text-slate-600">
+              Two tools, no logos and no scores until you pick. Arena wins stay separate from the weighted
+              leaderboard, so a popular favourite never quietly rewrites the ranking.
+            </p>
+            <span className="relative mt-3 inline-flex text-xs font-semibold text-brand">Enter the arena →</span>
+          </Link>
+          <Link
+            href="/value"
+            className="lab-panel group relative overflow-hidden p-5 transition hover:-translate-y-0.5 hover:border-emerald-200"
+          >
+            <span
+              aria-hidden
+              className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-200/40 blur-2xl transition group-hover:bg-emerald-300/50"
+            />
+            <p className="eyebrow relative">Money board</p>
+            <h2 className="display relative mt-2 text-xl text-ink">The most rating per rupee.</h2>
+            <p className="relative mt-1.5 max-w-md text-[13px] leading-relaxed text-slate-600">
+              A 4.9★ tool at $30 is not better value than a 4.8★ tool at $10. The value board divides the live score by
+              the cheapest monthly plan and lists free tools on their own shelf.
+            </p>
+            <span className="relative mt-3 inline-flex text-xs font-semibold text-brand">Open the value board →</span>
+          </Link>
+        </section>
+
         </div>
       </div>
 
@@ -412,6 +485,32 @@ export default async function HomePage({
             ))}
           </div>
         </section>
+
+        {/* Momentum */}
+        {momentum.length ? (
+          <section>
+            <SectionHead
+              eyebrow="This week"
+              title="Rank movers"
+              subtitle="Real ratings from the last seven days, not a paid push. When the week is quiet, recent drift takes the shelf instead."
+              action={
+                <Link href="/ranking" className="text-sm font-semibold text-brand transition hover:text-brand-dark">
+                  Why they moved →
+                </Link>
+              }
+            />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {momentum.map((row) => (
+                <AiCard
+                  key={row.stat.ai.id}
+                  stat={row.stat}
+                  saved={saved.has(row.stat.ai.id)}
+                  badge={row.votes7 > 0 ? `${row.votes7} new this week` : "recent drift"}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* Mobile & desktop */}
         <section id="apps">
@@ -510,37 +609,34 @@ export default async function HomePage({
             subtitle="Pick the job you need done — every category has a live top-three and a full leaderboard."
           />
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-            {categories.map((c, i) => {
-              const tint = CATEGORY_TINTS[i % CATEGORY_TINTS.length];
-              return (
-                <Link
-                  key={c.slug}
-                  href={`/category/${c.slug}`}
-                  className="card card-hover category-tile group relative flex min-h-[150px] flex-col items-center justify-center overflow-hidden rounded-2xl p-4 text-center sm:min-h-[162px]"
-                  style={{ "--tint": tint } as CSSProperties}
-                >
-                  <span className="category-glow" style={{ background: tint }} aria-hidden />
+            {categories.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/category/${c.slug}`}
+                className="card card-hover group flex min-h-[122px] flex-col justify-between rounded-2xl p-4 sm:min-h-[132px]"
+              >
+                <span className="flex items-start justify-between gap-2">
                   <span
                     aria-hidden
-                    className="absolute right-3 top-3 text-xs text-slate-400 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand"
-                  >
-                    ↗
-                  </span>
-                  <span
-                    className="relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl border text-xl shadow-sm"
-                    style={{ borderColor: `${tint}55`, background: `${tint}18` }}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-50 text-base"
                   >
                     {c.emoji}
                   </span>
-                  <span className="relative mt-3 block min-w-0">
-                    <span className="block truncate text-sm font-bold text-ink">{c.name}</span>
-                    <span className="mt-1 block text-[11px] font-medium text-muted">
-                      {categoryCounts.get(c.slug) ?? 0} tools
-                    </span>
+                  <span
+                    aria-hidden
+                    className="text-xs text-slate-300 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand"
+                  >
+                    ↗
                   </span>
-                </Link>
-              );
-            })}
+                </span>
+                <span className="mt-3 block min-w-0">
+                  <span className="block truncate text-sm font-bold text-ink">{c.name}</span>
+                  <span className="mt-0.5 block text-[11px] font-medium text-muted">
+                    {categoryCounts.get(c.slug) ?? 0} tools
+                  </span>
+                </span>
+              </Link>
+            ))}
           </div>
         </section>
       </div>

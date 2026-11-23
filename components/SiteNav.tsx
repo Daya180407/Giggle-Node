@@ -8,20 +8,23 @@ import { logoutAction } from "@/app/auth-actions";
 // Items are revealed as the header gains room: the full row plus search and
 // account buttons only fits above ~1700px, so nothing is clipped before that.
 const NAV = [
-  { href: "/category/all", label: "Rankings" },
+  { href: "/ranking", label: "Rankings" },
+  { href: "/arena", label: "Arena" },
+  { href: "/value", label: "Best value" },
   { href: "/compare", label: "Compare" },
-  { href: "/prompts", label: "Prompts" },
   { href: "/community", label: "Community" },
+  { href: "/prompts", label: "Prompts", narrow: true },
   { href: "/finder", label: "AI Finder", narrow: true },
-  { href: "/blog", label: "Blog", narrow: true },
+  { href: "/blog", label: "Blog", wide: true },
   { href: "/stack", label: "Stack planner", wide: true },
-  { href: "/contributors", label: "Contributors", wide: true },
 ];
 
 export type HeaderUser = { id: string; name: string; avatar: string; role: string } | null;
 
 function isActive(pathname: string, href: string) {
-  if (href === "/category/all") return pathname.startsWith("/category") || pathname.startsWith("/ai");
+  if (href === "/ranking") {
+    return pathname.startsWith("/ranking") || pathname.startsWith("/category") || pathname.startsWith("/ai");
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

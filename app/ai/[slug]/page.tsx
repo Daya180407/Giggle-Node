@@ -15,6 +15,7 @@ import Distribution from "@/components/Distribution";
 import PostCard from "@/components/PostCard";
 import PricingReport from "@/components/PricingReport";
 import PromptSubmitForm from "@/components/PromptSubmitForm";
+import ScoreBreakdown from "@/components/ScoreBreakdown";
 import ShareButton from "@/components/ShareButton";
 import { AiLogo, PriceBadge, SectionHead, SponsoredTag, Stars, Trend } from "@/components/ui";
 import { formatMoney } from "@/lib/analytics";
@@ -829,6 +830,8 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               Visit Official Site
             </a>
           </div>
+
+          <ScoreBreakdown stat={stat} view={view} />
 
           <Distribution dist={stat.dist} votes={stat.votes} />
 

@@ -159,7 +159,10 @@ export default function AppShowcase({
         </div>
       </div>
 
-      <div key={`${tab}-${group}-${query}`} className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        key={`${tab}-${group}-${query}`}
+        className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+      >
         {visible.map((item, i) => {
           const body = (
             <>

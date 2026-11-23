@@ -124,6 +124,15 @@ export type PricingReport = {
   resolvedAt?: string | null;
 };
 
+/** One blind A/B pick from the public arena. */
+export type ArenaVote = {
+  id: string;
+  aId: string;
+  bId: string;
+  winnerId: string;
+  at: string;
+};
+
 export type RatingStatus = "pending" | "approved" | "rejected";
 
 export type Rating = {
@@ -772,4 +781,6 @@ export type DB = {
   communityMessages?: CommunityMessage[];
   /** room memberships; a signed-in user must join before posting */
   communityMembers?: CommunityMember[];
+  /** blind arena picks, the basis of the community win-rate table */
+  arenaVotes?: ArenaVote[];
 };

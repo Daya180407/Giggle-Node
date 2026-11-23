@@ -3,6 +3,7 @@ import { readDb } from "@/lib/store";
 import { getCategories } from "@/lib/categories";
 import { publishedPosts } from "@/lib/rank";
 import { UNIVERSAL_ROOM_SLUG } from "@/lib/community-chat";
+import { USE_CASES } from "@/lib/usecases";
 
 // Rooms, posts and AI listings are edited at runtime, so the sitemap must not be
 // frozen into the build output.
@@ -16,6 +17,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [
     "",
     "/category/all",
+    "/ranking",
+    "/arena",
+    "/value",
     "/blog",
     "/compare",
     "/prompts",
@@ -34,6 +38,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: now,
     changeFrequency: path === "" ? "daily" : "weekly",
     priority: path === "" ? 1 : 0.6,
+  }));
+
+  const useCases: MetadataRoute.Sitemap = USE_CASES.map((useCase) => ({
+    url: `${base}/ranking/${useCase.slug}`,
+    lastModified: now,
+    changeFrequency: "daily",
+    priority: 0.8,
   }));
 
   const categories: MetadataRoute.Sitemap = getCategories(db).map((c) => ({
@@ -86,5 +97,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     }));
 
-  return [...staticRoutes, ...categories, ...ais, ...community, ...models, ...posts];
+  return [...staticRoutes, ...useCases, ...categories, ...ais, ...community, ...models, ...posts];
 }

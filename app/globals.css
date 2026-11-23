@@ -42,7 +42,10 @@
     /* 18px base keeps body copy, tables and labels comfortably readable. */
     font-size: 112.5%;
     scroll-behavior: smooth;
-    scroll-padding-top: 8rem;
+    scroll-padding-top: 6rem;
+    /* Nothing may widen the page on phones; a stray card used to add a blank
+       strip on the right and make the layout look zoomed in. */
+    overflow-x: clip;
   }
   body {
     color: var(--color-ink);
@@ -205,10 +208,10 @@
     min-width: 0;
     background: #fff;
     border: 1px solid var(--color-line);
-    border-radius: 1.1rem;
+    border-radius: 1.25rem;
     box-shadow:
       0 1px 2px rgb(11 18 32 / 0.04),
-      0 12px 32px -26px rgb(11 18 32 / 0.28);
+      0 16px 40px -30px rgb(11 18 32 / 0.32);
   }
   .card-hover {
     transition:
@@ -295,8 +298,8 @@
   }
   .btn-primary {
     color: #fff;
-    background-image: linear-gradient(135deg, #4f46e5 0%, #6d28d9 58%, #0891b2 120%);
-    box-shadow: 0 10px 24px -12px rgb(79 70 229 / 0.65);
+    background-image: linear-gradient(135deg, #4338ca 0%, #7c3aed 52%, #0e7490 118%);
+    box-shadow: 0 12px 28px -14px rgb(79 70 229 / 0.7);
   }
   .btn-primary:hover {
     box-shadow: 0 14px 30px -12px rgb(79 70 229 / 0.72);
@@ -815,36 +818,73 @@
     -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 28%, #000 20%, transparent 76%);
     opacity: 0.65;
   }
-  .category-tile {
-    --tint: #8b6cff;
-    background:
-      radial-gradient(130% 100% at 50% -10%, color-mix(in srgb, var(--tint) 17%, transparent) 0%, transparent 64%),
-      linear-gradient(165deg, #ffffff 0%, color-mix(in srgb, var(--tint) 7%, #ffffff) 100%);
-    border-color: color-mix(in srgb, var(--tint) 24%, #e5e8f0);
-    box-shadow: 0 18px 40px -34px color-mix(in srgb, var(--tint) 60%, #0b1220);
+  /* ------------------------ pick-a-board deck ------------------------ */
+  /* Full-bleed band: no side margins, content aligned to the page grid. */
+  .board-deck {
+    border-top: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
+    background-image:
+      radial-gradient(680px 240px at 6% -40%, #eef2ff, transparent 72%),
+      radial-gradient(560px 220px at 98% -30%, #ecfeff, transparent 72%);
   }
-  .category-tile:hover {
-    border-color: color-mix(in srgb, var(--tint) 52%, #c7d2fe);
-    box-shadow: 0 26px 50px -30px color-mix(in srgb, var(--tint) 50%, #0b1220);
-  }
-  .category-glow {
-    position: absolute;
-    left: 50%;
-    top: -3rem;
-    width: 8rem;
-    height: 8rem;
-    border-radius: 999px;
-    filter: blur(30px);
-    opacity: 0.42;
-    transform: translateX(-50%);
+  .board-card {
+    --board-accent: var(--color-brand);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    border-radius: 1rem;
+    padding: 0.95rem 1rem 0.85rem;
     transition:
-      opacity 0.35s ease,
-      transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      transform 0.22s ease,
+      border-color 0.22s ease,
+      box-shadow 0.22s ease;
   }
-  .category-tile:hover .category-glow {
-    opacity: 0.8;
-    transform: translateX(-50%) scale(1.35);
+  .board-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--board-accent) 38%, #c7d2fe);
+    box-shadow: 0 22px 44px -34px rgb(11 18 32 / 0.55);
   }
+  .board-rail {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: linear-gradient(90deg, var(--board-accent), color-mix(in srgb, var(--board-accent) 28%, #fff));
+  }
+  .board-icon {
+    display: grid;
+    place-items: center;
+    height: 2.4rem;
+    width: 2.4rem;
+    border-radius: 0.75rem;
+    font-size: 1.1rem;
+    background: color-mix(in srgb, var(--board-accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--board-accent) 24%, transparent);
+  }
+  .board-index {
+    font-family: var(--font-display);
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    color: color-mix(in srgb, var(--board-accent) 22%, #e8edf6);
+  }
+  .board-card-arena {
+    --board-accent: #4f46e5;
+  }
+  .board-card-rank {
+    --board-accent: #7c3aed;
+  }
+  .board-card-value {
+    --board-accent: #0d9488;
+  }
+}
+
+html[data-theme="dark"] .board-deck {
+  background-image:
+    radial-gradient(680px 240px at 6% -40%, rgb(79 70 229 / 0.24), transparent 72%),
+    radial-gradient(560px 220px at 98% -30%, rgb(8 145 178 / 0.18), transparent 72%);
 }
 
 @media (max-width: 640px) {
@@ -859,6 +899,13 @@
   }
   .stat-card p {
     display: none;
+  }
+  /* iOS Safari zooms the whole page when a focused field renders under 16px,
+     which left the page magnified with empty space to the right. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
   }
 }
 
@@ -1023,9 +1070,93 @@ html[data-theme="dark"] ::selection {
   background: #4338ca;
   color: #fff;
 }
-html[data-theme="dark"] .category-tile {
-  background:
-    radial-gradient(130% 100% at 50% -10%, color-mix(in srgb, var(--tint) 30%, transparent) 0%, transparent 66%),
-    linear-gradient(165deg, #121828 0%, #0b1020 100%);
-  border-color: color-mix(in srgb, var(--tint) 38%, #1e2537);
+/* --------------------- 2026 research desk interface --------------------- */
+/* A second, calmer surface used by the new ranking, arena and value boards. */
+
+@layer utilities {
+  .lab-hero {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(760px 400px at 10% -22%, rgb(91 61 245 / 0.55), transparent 66%),
+      radial-gradient(640px 350px at 90% -12%, rgb(15 181 201 / 0.34), transparent 62%),
+      radial-gradient(520px 320px at 52% 116%, rgb(178 60 240 / 0.22), transparent 72%),
+      #070a18;
+    color: #e5eaf5;
+  }
+  .lab-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+    background-size: 62px 62px;
+    mask-image: radial-gradient(ellipse 80% 68% at 50% 4%, #000 18%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 68% at 50% 4%, #000 18%, transparent 78%);
+    opacity: 0.75;
+  }
+  .lab-panel {
+    min-width: 0;
+    background: linear-gradient(168deg, #ffffff 0%, #f8faff 100%);
+    border: 1px solid var(--color-line);
+    border-radius: 1.25rem;
+    box-shadow:
+      0 1px 2px rgb(11 18 32 / 0.04),
+      0 18px 44px -34px rgb(11 18 32 / 0.38);
+  }
+  .lab-panel-dark {
+    min-width: 0;
+    background: rgb(255 255 255 / 0.05);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 1.15rem;
+    color: #e2e8f0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .matrix-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .matrix-table th,
+  .matrix-table td {
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.6rem 0.55rem;
+    vertical-align: top;
+    text-align: left;
+  }
+  .matrix-table thead th {
+    background: #f8faff;
+    font-size: 0.78rem;
+    border-bottom: 1px solid #e0e7ff;
+  }
+  .matrix-table tbody th {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #64748b;
+    background: #fbfcff;
+  }
+  .matrix-table tbody tr:last-child th,
+  .matrix-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+html[data-theme="dark"] .lab-panel {
+  background: linear-gradient(168deg, #101625 0%, #0b1020 100%);
+  border-color: #1e2537;
+}
+html[data-theme="dark"] .matrix-table th,
+html[data-theme="dark"] .matrix-table td {
+  border-color: #1e2537;
+}
+html[data-theme="dark"] .matrix-table thead th,
+html[data-theme="dark"] .matrix-table tbody th {
+  background: #121828;
+  border-color: #1e2537;
+  color: #8b97ab;
 }

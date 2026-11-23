@@ -101,6 +101,7 @@ export function SectionHead({
       <div className="min-w-0">
         {eyebrow ? <p className="eyebrow mb-2">{eyebrow}</p> : null}
         <h2 className="display text-[clamp(1.65rem,3vw,2.3rem)] leading-tight text-ink">{title}</h2>
+        <span className="mt-3 block h-px w-16 rounded-full bg-[linear-gradient(90deg,#8b6cff,#3fd8e6)]" aria-hidden />
         {subtitle ? (
           <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-muted sm:text-sm">{subtitle}</p>
         ) : null}

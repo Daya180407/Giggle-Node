@@ -5,7 +5,14 @@ import type { AiStat } from "@/lib/rank";
 
 const MEDALS = ["medal-1", "medal-2", "medal-3"];
 
-export default function RankingTable({ stats }: { stats: AiStat[] }) {
+export default function RankingTable({
+  stats,
+  reasons,
+}: {
+  stats: AiStat[];
+  /** optional "why this tool is on this board" keywords, shown as chips */
+  reasons?: Record<string, string[]>;
+}) {
   if (!stats.length) {
     return <p className="py-10 text-center text-sm text-muted">No AI tools in this category yet.</p>;
   }
@@ -28,6 +35,15 @@ export default function RankingTable({ stats }: { stats: AiStat[] }) {
               {s.trend === "up" ? <Trend trend="up" /> : null}
             </div>
             <p className="truncate text-xs text-muted">{s.ai.bestFor.join(" · ")}</p>
+            {reasons?.[s.ai.id]?.length ? (
+              <p className="mt-1 flex flex-wrap gap-1">
+                {reasons[s.ai.id].slice(0, 3).map((reason) => (
+                  <span key={reason} className="chip border border-indigo-100 bg-indigo-50/70 text-[9.5px] text-indigo-700">
+                    {reason}
+                  </span>
+                ))}
+              </p>
+            ) : null}
             <div className="mt-1 flex items-center gap-1.5 sm:hidden">
               <Stars value={s.score} size={15} />
               <span className="rounded-full bg-amber-50 px-1.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">

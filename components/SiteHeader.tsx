@@ -49,24 +49,6 @@ export default async function SiteHeader() {
           extraNav={extraNav}
         />
       </div>
-
-      <div data-site-search className="border-t border-line/70 px-4 py-2">
-        <form action="/search" className="relative mx-auto max-w-[96rem]" role="search">
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
-              <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M13 13l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </span>
-          <input
-            name="q"
-            type="search"
-            placeholder="Search AI tools, models or tasks…"
-            className="w-full rounded-full border border-line bg-white/90 py-2 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
-            aria-label="Search"
-          />
-        </form>
-      </div>
     </header>
   );
 }
