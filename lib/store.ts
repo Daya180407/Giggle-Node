@@ -40,6 +40,7 @@ const g = globalThis as typeof globalThis & {
   __giglenodeEtag?: string | null;
   __giglenodePending?: Mutator[];
   __giglenodeFlushing?: boolean;
+  __giglenodeFlush?: Promise<void> | null;
   __giglenodeBootError?: string | null;
   __giglenodeSyncedAt?: number;
   __giglenodeMtime?: number;
@@ -196,62 +197,92 @@ function pendingMutators(): Mutator[] {
   return g.__giglenodePending;
 }
 
-async function flushCloud(): Promise<void> {
-  if (g.__giglenodeFlushing) return;
+async function writePendingToCloud(): Promise<void> {
   const bucket = r2Bucket();
   if (!bucket) return;
 
   const pending = pendingMutators();
-  g.__giglenodeFlushing = true;
-  try {
-    while (pending.length > 0) {
-      const batch = pending.slice();
-      let written = false;
+  while (pending.length > 0) {
+    const batch = pending.slice();
+    let written = false;
 
-      for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS && !written; attempt++) {
-        const result = await putDoc(bucket, readDb(), g.__giglenodeEtag ?? null);
+    for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS && !written; attempt++) {
+      const result = await putDoc(bucket, readDb(), g.__giglenodeEtag ?? null);
 
-        if (result !== "conflict" && result !== "error") {
-          g.__giglenodeEtag = result.object.etag ?? null;
-          pending.splice(0, batch.length);
-          written = true;
-          break;
-        }
-        if (result === "error") return; // keep mutations pending for the next write
-
-        // Another isolate wrote first: replay our mutations on top of the latest document.
-        const remote = await bucket.get(R2_KEY);
-        let fresh: DB | null = null;
-        if (remote) {
-          try {
-            fresh = JSON.parse(await remote.text()) as DB;
-          } catch {
-            fresh = null;
-          }
-        }
-        if (!fresh) return;
-
-        for (const mutate of batch) {
-          try {
-            mutate(fresh);
-          } catch {
-            // A mutation referring to data removed by the other writer is dropped.
-          }
-        }
-        Object.assign(readDb(), fresh);
-        g.__giglenodeEtag = remote?.etag ?? null;
-        await new Promise((resolve) => setTimeout(resolve, 25 + attempt * 40));
+      if (result !== "conflict" && result !== "error") {
+        g.__giglenodeEtag = result.object.etag ?? null;
+        pending.splice(0, batch.length);
+        written = true;
+        break;
       }
+      if (result === "error") return; // keep mutations pending for the next write
 
-      if (!written) return; // give up for now; retried on the next mutation
+      // Another isolate wrote first: replay our mutations on top of the latest document.
+      const remote = await bucket.get(R2_KEY);
+      let fresh: DB | null = null;
+      if (remote) {
+        try {
+          fresh = JSON.parse(await remote.text()) as DB;
+        } catch {
+          fresh = null;
+        }
+      }
+      if (!fresh) return;
+
+      for (const mutate of batch) {
+        try {
+          mutate(fresh);
+        } catch {
+          // A mutation referring to data removed by the other writer is dropped.
+        }
+      }
+      Object.assign(readDb(), fresh);
+      g.__giglenodeEtag = remote?.etag ?? null;
+      await new Promise((resolve) => setTimeout(resolve, 25 + attempt * 40));
     }
-  } finally {
-    g.__giglenodeFlushing = false;
+
+    if (!written) return; // give up for now; retried on the next mutation
+  }
+}
+
+/**
+ * Flushes queued mutations to R2. When a flush is already running this waits for it to
+ * finish instead of returning early, so a caller that awaits a durable write (auth, claims,
+ * admin saves) never redirects to a page whose next request reads the pre-write document.
+ */
+async function flushCloud(): Promise<void> {
+  for (let round = 0; round < 3; round++) {
+    if (!g.__giglenodeFlushing) {
+      if (!r2Bucket()) return;
+      g.__giglenodeFlushing = true;
+      const run = writePendingToCloud();
+      g.__giglenodeFlush = run;
+      try {
+        await run;
+      } catch {
+        // Keep the mutations queued; the next mutation or request retries them.
+      } finally {
+        g.__giglenodeFlushing = false;
+        g.__giglenodeFlush = null;
+      }
+      return;
+    }
+
+    const running = g.__giglenodeFlush;
+    if (running) {
+      try {
+        await running;
+      } catch {
+        // The running flush records its own failures; the caller keeps going.
+      }
+    }
+    if (pendingMutators().length === 0) return;
+    // The running flush gave up with our mutations still queued: try writing them now.
   }
 }
 
 function scheduleFlush() {
-  const run = flushCloud();
+  const run = flushCloud().catch(() => {});
   try {
     getCloudflareContext().ctx.waitUntil(run);
   } catch {
@@ -301,6 +332,12 @@ export async function refreshDb(maxAgeMs?: number): Promise<DB> {
   }
   // Never refresh away writes that have not reached R2 yet.
   if (pendingMutators().length > 0) await flushCloud();
+  if (pendingMutators().length > 0) {
+    // The write still has not landed: keep our snapshot rather than swapping in a
+    // document that is missing these mutations.
+    g.__giglenodeSyncedAt = Date.now();
+    return g.__giglenodeDb;
+  }
 
   const bucket = r2Bucket();
   if (bucket) {
