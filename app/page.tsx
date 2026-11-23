@@ -19,6 +19,8 @@ import { communityTotals } from "@/lib/community-chat";
 import { getSiteSettings } from "@/lib/settings";
 import { appPricingFor, formatPlanPrice } from "@/lib/plans";
 import { allApps, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
+import { demoSnapshot } from "@/lib/demo";
+import { formatVotes } from "@/lib/format";
 import {
   buildView,
   championFor,
@@ -58,6 +60,7 @@ export default async function HomePage({
   const { pricingReport } = await searchParams;
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
   const settings = getSiteSettings(db);
+  const demo = demoSnapshot(db);
   const view = buildView(db);
   const saved = new Set(user ? db.bookmarks.filter((b) => b.userId === user.id).map((b) => b.aiId) : []);
   const categories = getCategories(db);
@@ -158,13 +161,15 @@ export default async function HomePage({
       gradient: "#4f46e5",
       hint: "Every major category",
     },
-    { label: "Models compared", value: db.models.length, icon: "models", gradient: "#7c3aed", hint: "Rated one by one" },
+    demo
+      ? { label: "Members", value: demo.users, icon: "models", gradient: "#7c3aed", hint: "Demo accounts" }
+      : { label: "Models compared", value: db.models.length, icon: "models", gradient: "#7c3aed", hint: "Rated one by one" },
     {
-      label: "Real ratings",
-      value: db.ratings.filter((r) => r.status !== "pending" && r.status !== "rejected").length,
+      label: demo ? "Ratings" : "Real ratings",
+      value: db.ratings.filter((r) => r.status !== "pending" && r.status !== "rejected").length + (demo?.ratings ?? 0),
       icon: "ratings",
       gradient: "#0891b2",
-      hint: "From signed-in users",
+      hint: demo ? `From ${formatVotes(demo.users)} demo members` : "From signed-in users",
     },
     { label: "Expert guides", value: publishedPosts(db).length, icon: "guides", gradient: "#059669", hint: "No hype, just tests" },
   ];

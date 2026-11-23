@@ -63,6 +63,9 @@ export default async function AdminUsersPage({
         <Link href="/admin/roles" className="btn btn-ghost text-xs">
           🔐 Roles &amp; permissions
         </Link>
+        <Link href="/admin/demo" className="btn btn-ghost text-xs">
+          🧪 Demo dataset &amp; sample members
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">

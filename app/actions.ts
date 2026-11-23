@@ -23,6 +23,7 @@ import { CATEGORIES, getCategories, slugifyCategory } from "@/lib/categories";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
 import { parseCsv } from "@/lib/csv";
 import { criteriaOverall, readCriteria } from "@/lib/criteria";
+import { clampUsers } from "@/lib/demo";
 import { findBadWord, isBlockedIp, normalizeIpList, normalizeWordList } from "@/lib/guard";
 import { deliverEmails, mailerConfigured } from "@/lib/mailer";
 import { pushNotification, queueEmail, renderTemplate } from "@/lib/notify";
@@ -1219,6 +1220,54 @@ export async function toggleBanAction(formData: FormData) {
   });
   revalidatePath("/admin/users");
   redirect("/admin/users");
+}
+
+/* --------------------------- demo dataset --------------------------- */
+
+export async function saveDemoDataAction(formData: FormData) {
+  const admin = await assertAdmin("users");
+  const enabled = formData.get("enabled") === "on";
+  const users = clampUsers(formData.get("users"));
+  mutateDb((db) => {
+    const settings = getSiteSettings(db);
+    db.settings = {
+      ...settings,
+      demo: {
+        ...settings.demo,
+        enabled,
+        users,
+        startedAt: enabled ? settings.demo.startedAt ?? new Date().toISOString() : settings.demo.startedAt,
+      },
+      updatedAt: new Date().toISOString(),
+      updatedBy: admin.name,
+    };
+    logAdminAction(
+      db,
+      admin,
+      enabled ? "demo dataset enabled" : "demo dataset paused",
+      "Demo dataset",
+      `${users.toLocaleString("en-IN")} sample members, no stored rows`,
+    );
+  });
+  revalidatePath("/", "layout");
+  redirect(`/admin/demo?saved=${enabled ? "on" : "off"}`);
+}
+
+/** One tap: every sample member, vote and review disappears on the next request. */
+export async function removeDemoDataAction() {
+  const admin = await assertAdmin("users");
+  mutateDb((db) => {
+    const settings = getSiteSettings(db);
+    db.settings = {
+      ...settings,
+      demo: { ...settings.demo, enabled: false },
+      updatedAt: new Date().toISOString(),
+      updatedBy: admin.name,
+    };
+    logAdminAction(db, admin, "demo dataset removed", "Demo dataset", "All sample members and ratings hidden in one tap");
+  });
+  revalidatePath("/", "layout");
+  redirect("/admin/demo?removed=1");
 }
 
 export async function deleteUserAction(formData: FormData) {

@@ -1,3 +1,4 @@
+import { demoSnapshot } from "./demo";
 import type { Ai, CategorySlug, DB, Model, Post, Prompt, User } from "./types";
 
 export const PRIOR_VOTES = 50;
@@ -171,6 +172,37 @@ export function buildView(db: DB): View {
     a.dist[Math.min(5, Math.max(1, r.stars)) - 1] += 1;
     if (ageDays <= 7) a.last7 += 1;
     aiAcc.set(r.aiId, a);
+  }
+
+  // Virtual demo votes: added as full-weight aggregates, never as stored rows.
+  // They keep real votes on top so a new visitor rating still moves the number.
+  const demo = demoSnapshot(db);
+  if (demo) {
+    for (const [modelId, d] of demo.byModel) {
+      const a = acc.get(modelId);
+      if (!a || d.votes <= 0) continue;
+      a.votes += d.votes;
+      a.wSum += d.votes;
+      a.wStars += d.votes * d.avg;
+      for (let i = 0; i < 5; i++) a.dist[i] += d.dist[i];
+      a.last7 += d.last7;
+      const recent = Math.round(d.votes * 0.012);
+      a.recentVotes += recent;
+      a.recentStars += recent * d.avg;
+    }
+    for (const [aiId, d] of demo.byAi) {
+      if (d.overallVotes <= 0) continue;
+      const a = aiAcc.get(aiId) ?? { votes: 0, wSum: 0, wStars: 0, dist: [0, 0, 0, 0, 0], last7: 0 };
+      a.votes += d.overallVotes;
+      a.wSum += d.overallVotes;
+      a.wStars += d.overallVotes * d.avg;
+      const dist = [0, 0, 0, 0, 0];
+      const total = d.dist.reduce((s, n) => s + n, 0) || 1;
+      for (let i = 0; i < 5; i++) dist[i] = Math.round((d.dist[i] / total) * d.overallVotes);
+      for (let i = 0; i < 5; i++) a.dist[i] += dist[i];
+      a.last7 += Math.max(1, Math.round(d.last7 * 0.22));
+      aiAcc.set(aiId, a);
+    }
   }
 
   const aiStats = new Map<string, AiStat>();

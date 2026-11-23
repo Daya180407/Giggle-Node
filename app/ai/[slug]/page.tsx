@@ -33,6 +33,7 @@ import { communityMessagesForRoom, UNIVERSAL_ROOM_SLUG } from "@/lib/community-c
 import { reportRatingAction } from "@/app/actions";
 import { aiReviews, buildView, isVerifiedPrompt, publishedPosts, promptsFor, timeAgo } from "@/lib/rank";
 import { criterionAverages } from "@/lib/criteria";
+import { demoCriteriaAverages, withDemoReviews } from "@/lib/demo";
 import ReviewDetail from "@/components/ReviewDetail";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
@@ -81,12 +82,14 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
     : [];
   const prompts = promptsFor(db, ai.id);
   const communityPosts = settings.community.enabled ? communityMessagesForRoom(db, ai.id, null).length : 0;
-  const reviews = aiReviews(db, ai.id, 8);
-  const criteriaRows = criterionAverages(
+  const reviews = withDemoReviews(db, ai, aiReviews(db, ai.id, 8), 8);
+  const realCriteriaRows = criterionAverages(
     db.ratings.filter(
       (r) => r.status !== "pending" && r.status !== "rejected" && (r.aiId === ai.id || modelIds.has(r.modelId ?? "")),
     ),
   );
+  const demoCriteriaRows = realCriteriaRows.length ? [] : demoCriteriaAverages(db, ai.id);
+  const criteriaRows = realCriteriaRows.length ? realCriteriaRows : demoCriteriaRows;
   const posts = publishedPosts(db).filter((p) => p.relatedAiIds.includes(ai.id)).slice(0, 3);
   const bookmarked = Boolean(user && db.bookmarks.some((b) => b.userId === user.id && b.aiId === ai.id));
   const followed = Boolean(user && db.follows.some((f) => f.userId === user.id && f.aiId === ai.id));
@@ -825,6 +828,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                     <ReviewDetail rating={rating} />
                     <p className="mt-1 text-xs text-muted">
                       {model ? `Rated on ${model.name}` : `Rated ${ai.name} overall`}
+                      {rating.demo ? <span className="chip ml-1.5 bg-slate-100 text-[9px] text-slate-500">Demo</span> : null}
                     </p>
                     {rating.verified ? (
                       <p className="mt-1 text-[10.5px] font-semibold text-emerald-600">✓ Verified — opened from GigleNode</p>
@@ -838,14 +842,16 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                         <p className="mt-0.5 text-[10px] text-muted">{timeAgo(reply.createdAt)}</p>
                       </div>
                     ))}
-                    {canReply ? <ReviewReplyForm ratingId={rating.id} /> : null}
-                    <form action={reportRatingAction} className="mt-1.5">
-                      <input type="hidden" name="id" value={rating.id} />
-                      <input type="hidden" name="back" value={`/ai/${ai.slug}`} />
-                      <button className="text-[11px] font-medium text-muted transition hover:text-rose-600">
-                        ⚑ Report this review
-                      </button>
-                    </form>
+                    {canReply && !rating.demo ? <ReviewReplyForm ratingId={rating.id} /> : null}
+                    {rating.demo ? null : (
+                      <form action={reportRatingAction} className="mt-1.5">
+                        <input type="hidden" name="id" value={rating.id} />
+                        <input type="hidden" name="back" value={`/ai/${ai.slug}`} />
+                        <button className="text-[11px] font-medium text-muted transition hover:text-rose-600">
+                          ⚑ Report this review
+                        </button>
+                      </form>
+                    )}
                   </div>
                 );
               })}
@@ -936,7 +942,9 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           {criteriaRows.length ? (
             <div className="card p-4">
               <h3 className="display text-base text-ink">What users rate</h3>
-              <p className="mt-0.5 text-[10.5px] text-muted">Average area scores from real reviews.</p>
+              <p className="mt-0.5 text-[10.5px] text-muted">
+                {demoCriteriaRows.length ? "Average area scores from the demo dataset." : "Average area scores from real reviews."}
+              </p>
               <div className="mt-3 space-y-2">
                 {criteriaRows.map((row) => (
                   <div key={row.key}>

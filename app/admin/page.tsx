@@ -7,6 +7,8 @@ import { categoryName } from "@/lib/categories";
 import { canAccess, resolveRoles, type AdminArea } from "@/lib/roles";
 import { buildView, contributorBoard, mostVisited, publishedPosts, rankedAis, timeAgo } from "@/lib/rank";
 import { getSiteSettings } from "@/lib/settings";
+import { DEMO_RATINGS_PER_USER } from "@/lib/demo";
+import { formatVotes } from "@/lib/format";
 import { bootstrapDiagnostics, readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +32,7 @@ const CONTROL_GROUPS: {
       { href: "/admin/ratings", label: "Ratings & Reviews", hint: "Moderate and flag", icon: "★", area: "ratings" },
       { href: "/admin/submissions", label: "Submissions & Claims", hint: "Tool suggestions, vendors", icon: "📨", area: "catalogue" },
       { href: "/admin/users", label: "Users & Roles", hint: "Accounts and access", icon: "👥", area: "users" },
+      { href: "/admin/demo", label: "Demo Dataset", hint: "1M sample members, 1-tap remove", icon: "🧪", area: "users" },
       { href: "/admin/roles", label: "Roles & Permissions", hint: "Create roles, grant sections", icon: "🔐", area: "users" },
       { href: "/admin/gamification", label: "Gamification", hint: "Points, badges, leaderboard", icon: "🏅", area: "gamification" },
       { href: "/admin/feedback", label: "Feedback Inbox", hint: "Bugs and feature requests", icon: "📬", area: "feedback" },
@@ -191,6 +194,27 @@ export default async function AdminOverviewPage({
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
           Ranking recalculated from the latest ratings.
         </div>
+      ) : null}
+
+      {settings.demo.enabled ? (
+        <Link
+          href="/admin/demo"
+          className="card flex flex-wrap items-center justify-between gap-3 border-amber-200 bg-amber-50/70 p-3.5 transition hover:border-amber-300"
+        >
+          <span className="flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-100 text-base" aria-hidden>
+              🧪
+            </span>
+            <span>
+              <span className="block text-sm font-bold text-ink">Demo dataset is on</span>
+              <span className="block text-[11px] text-slate-600">
+                {settings.demo.users.toLocaleString("en-US")} sample members ·{" "}
+                {formatVotes(Math.round(settings.demo.users * DEMO_RATINGS_PER_USER))} sample ratings · 0 rows stored
+              </span>
+            </span>
+          </span>
+          <span className="btn btn-ghost !py-1.5 text-xs">Inspect or remove in one tap →</span>
+        </Link>
       ) : null}
 
       <div className="flex flex-wrap items-end justify-between gap-3">
