@@ -284,8 +284,8 @@ export default async function HomePage({
       </section>
 
       {/* Pick a board: arena, task rankings, value */}
-      <section className="board-deck mt-5 bg-white sm:mt-7">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-8 sm:py-7 lg:px-10">
+      <section className="board-deck surface-band mt-5 bg-white sm:mt-7">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
               <p className="eyebrow">Three ways in</p>
@@ -383,7 +383,6 @@ export default async function HomePage({
       ) : null}
 
       <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 sm:pt-14">
-        <div className="space-y-14 lg:space-y-16">
         {/* Category champions */}
         <section id="champions">
           <SectionHead
@@ -400,9 +399,11 @@ export default async function HomePage({
             <ChampionPodium categories={champions} />
           </div>
         </section>
+      </div>
 
-        {/* Overall ranking */}
-        <section id="ranking">
+      {/* Overall ranking — a full-bleed band, so the section has no side margins */}
+      <section id="ranking" className="surface-band mt-12 bg-white sm:mt-14">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
           <SectionHead
             eyebrow="Leaderboard"
             title="Top AI ranking"
@@ -413,11 +414,11 @@ export default async function HomePage({
               </Link>
             }
           />
-          <div className="card p-4 sm:p-5">
-            <RankTabs tabs={tabs} />
-          </div>
-        </section>
+          <RankTabs tabs={tabs} />
+        </div>
+      </section>
 
+      <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 sm:pt-14">
         {/* New boards */}
         <section className="grid gap-3 lg:grid-cols-2">
           <Link
@@ -453,8 +454,6 @@ export default async function HomePage({
             <span className="relative mt-3 inline-flex text-xs font-semibold text-brand">Open the value board →</span>
           </Link>
         </section>
-
-        </div>
       </div>
 
       {/* Paid promotions */}

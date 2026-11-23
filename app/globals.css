@@ -818,11 +818,16 @@
     -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 28%, #000 20%, transparent 76%);
     opacity: 0.65;
   }
-  /* ------------------------ pick-a-board deck ------------------------ */
-  /* Full-bleed band: no side margins, content aligned to the page grid. */
-  .board-deck {
+  /* ------------------------ full-bleed section bands ------------------------ */
+  /* A band's surface reaches both screen edges; its inner grid keeps the page
+     padding, so a section never floats with left/right margins. */
+  .surface-band {
     border-top: 1px solid var(--color-line);
     border-bottom: 1px solid var(--color-line);
+  }
+
+  /* ------------------------ pick-a-board deck ------------------------ */
+  .board-deck {
     background-image:
       radial-gradient(680px 240px at 6% -40%, #eef2ff, transparent 72%),
       radial-gradient(560px 220px at 98% -30%, #ecfeff, transparent 72%);

@@ -59,11 +59,13 @@ export default async function ArenaPage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6">
-        <div className="card p-4 sm:p-5">
+      <section className="surface-band bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6">
           <ArenaBoard contenders={contenders} initialA={a} initialB={b} records={records} totalVotes={total} />
         </div>
+      </section>
 
+      <div className="mx-auto max-w-7xl px-4 pb-7 sm:px-6">
         <section className="mt-10">
           <SectionHead
             eyebrow="Why blind"

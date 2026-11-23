@@ -140,59 +140,63 @@ export default async function ValuePage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <SectionHead
-          eyebrow="Paid plans"
-          title="Cost per rating point"
-          subtitle="Lower is better. We divide the cheapest monthly plan by the live score, so a 4.8★ tool at $10 beats a 4.9★ tool at $30 — and both are shown with the plan they assume."
-        />
-        <div className="card overflow-hidden">
-          <div className="hidden grid-cols-[2.5rem_minmax(0,1fr)_5rem_7rem_7rem] gap-3 border-b border-line bg-slate-50/70 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.13em] text-muted sm:grid">
-            <span>Rank</span>
-            <span>Tool</span>
-            <span>Score</span>
-            <span>Cheapest plan</span>
-            <span className="text-right">Per rating point</span>
-          </div>
-          <ol className="divide-y divide-line/80">
-            {paid.map((row, i) => (
-              <li
-                key={row.stat.ai.id}
-                className={`flex items-center gap-3 px-3 py-3 sm:grid sm:grid-cols-[2.5rem_minmax(0,1fr)_5rem_7rem_7rem] sm:px-4 ${
-                  i === 0 ? "bg-amber-50/40" : ""
-                }`}
-              >
-                <span className="medal-plain medal h-7 w-7 shrink-0 text-[11px]">{i + 1}</span>
-                <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <AiLogo slug={row.stat.ai.slug} logo={row.stat.ai.logo} color={row.stat.ai.color} size={34} />
-                  <div className="min-w-0">
-                    <Link href={`/ai/${row.stat.ai.slug}`} className="truncate text-[13px] font-bold text-ink hover:text-brand">
-                      {row.stat.ai.name}
-                    </Link>
-                    <p className="truncate text-[11px] text-muted">
-                      {row.planName} · {categoryName(row.stat.ai.category)}
-                    </p>
+      <section className="surface-band bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+          <SectionHead
+            eyebrow="Paid plans"
+            title="Cost per rating point"
+            subtitle="Lower is better. We divide the cheapest monthly plan by the live score, so a 4.8★ tool at $10 beats a 4.9★ tool at $30 — and both are shown with the plan they assume."
+          />
+          <div className="overflow-hidden">
+            <div className="hidden grid-cols-[2.5rem_minmax(0,1fr)_5rem_7rem_7rem] gap-3 border-b border-line bg-slate-50/70 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.13em] text-muted sm:grid">
+              <span>Rank</span>
+              <span>Tool</span>
+              <span>Score</span>
+              <span>Cheapest plan</span>
+              <span className="text-right">Per rating point</span>
+            </div>
+            <ol className="divide-y divide-line/80">
+              {paid.map((row, i) => (
+                <li
+                  key={row.stat.ai.id}
+                  className={`flex items-center gap-3 px-3 py-3 sm:grid sm:grid-cols-[2.5rem_minmax(0,1fr)_5rem_7rem_7rem] sm:px-4 ${
+                    i === 0 ? "bg-amber-50/40" : ""
+                  }`}
+                >
+                  <span className="medal-plain medal h-7 w-7 shrink-0 text-[11px]">{i + 1}</span>
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <AiLogo slug={row.stat.ai.slug} logo={row.stat.ai.logo} color={row.stat.ai.color} size={34} />
+                    <div className="min-w-0">
+                      <Link href={`/ai/${row.stat.ai.slug}`} className="truncate text-[13px] font-bold text-ink hover:text-brand">
+                        {row.stat.ai.name}
+                      </Link>
+                      <p className="truncate text-[11px] text-muted">
+                        {row.planName} · {categoryName(row.stat.ai.category)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <span className="hidden text-sm font-bold text-ink sm:block">{row.stat.score.toFixed(1)}</span>
-                <span className="hidden text-xs font-semibold text-slate-600 sm:block">
-                  {money(row.monthly ?? 0, appearance)}
-                </span>
-                <span className="ml-auto text-right sm:ml-0">
-                  <span className="block text-sm font-extrabold text-brand">
-                    ${(row.costPerPoint ?? 0).toFixed(1)}
+                  <span className="hidden text-sm font-bold text-ink sm:block">{row.stat.score.toFixed(1)}</span>
+                  <span className="hidden text-xs font-semibold text-slate-600 sm:block">
+                    {money(row.monthly ?? 0, appearance)}
                   </span>
-                  <span className="block text-[10px] text-muted">per 1.0★</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-          <p className="border-t border-line bg-slate-50/40 px-4 py-2.5 text-[11px] leading-relaxed text-muted">
-            Plans are monthly list prices converted at the site rate. Annual discounts, usage limits and taxes are not
-            modelled — this is a shortlist, not a quote.
-          </p>
+                  <span className="ml-auto text-right sm:ml-0">
+                    <span className="block text-sm font-extrabold text-brand">
+                      ${(row.costPerPoint ?? 0).toFixed(1)}
+                    </span>
+                    <span className="block text-[10px] text-muted">per 1.0★</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="border-t border-line bg-slate-50/40 px-4 py-2.5 text-[11px] leading-relaxed text-muted">
+              Plans are monthly list prices converted at the site rate. Annual discounts, usage limits and taxes are not
+              modelled — this is a shortlist, not a quote.
+            </p>
+          </div>
         </div>
+      </section>
 
+      <div className="mx-auto max-w-7xl px-4 pb-8 sm:px-6">
         <section className="mt-10">
           <SectionHead
             eyebrow="Zero cost"
@@ -219,18 +223,18 @@ export default async function ValuePage() {
             ))}
           </div>
         </section>
+      </div>
 
-        <section className="mt-10">
+      <section className="surface-band bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
           <SectionHead
             eyebrow="Plan matrix"
             title="Put the plans side by side"
             subtitle="Choose up to four tools. Free tier, entry plans and API starting rates in one table."
           />
-          <div className="card p-4 sm:p-5">
-            <PlanMatrix rows={matrix} />
-          </div>
-        </section>
-      </div>
+          <PlanMatrix rows={matrix} />
+        </div>
+      </section>
     </div>
   );
 }
