@@ -1,0 +1,54 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: Node.js CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+        # Next.js 16 requires Node.js >= 20.9.0 and wrangler 4 requires >= 22.0.0
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: npm ci
+    - run: npm run typecheck
+    - run: npm run build
+    - name: Smoke test the built app
+      run: |
+        npm run start -- --port 3000 > /tmp/next-start.log 2>&1 &
+        for i in $(seq 1 30); do
+          curl -sf -o /dev/null http://127.0.0.1:3000/ && break
+          sleep 2
+        done
+
+        failed=0
+        for path in / /ai/chatgpt /blog /login /signup /owner/claim /owner/login /sitemap.xml "/search?q=chatgpt"; do
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3000$path")
+          echo "$path -> $code"
+          if [ "$code" != "200" ]; then
+            failed=1
+          fi
+        done
+
+        if [ "$failed" != "0" ]; then
+          echo '--- server log ---'
+          cat /tmp/next-start.log
+          exit 1
+        fi
