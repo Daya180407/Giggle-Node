@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AiLogo, PriceBadge } from "@/components/ui";
+import { nextRound, type ArenaContender, type ArenaPool, type ArenaRecord, type ArenaRound } from "@/lib/arena";
 import { categoryName } from "@/lib/categories";
-import type { ArenaContender, ArenaRecord } from "@/lib/arena";
 import type { PriceType } from "@/lib/types";
 
 type Props = {
-  contenders: ArenaContender[];
-  initialA: number;
-  initialB: number;
+  pools: ArenaPool[];
   records: Record<string, ArenaRecord>;
   totalVotes: number;
+  initialRound: ArenaRound;
 };
 
 function recordFor(records: Record<string, ArenaRecord>, id: string): ArenaRecord {
@@ -93,25 +92,21 @@ function BlindCard({
   );
 }
 
-export default function ArenaBoard({ contenders, initialA, initialB, records, totalVotes }: Props) {
-  const [pair, setPair] = useState<[number, number]>([initialA, initialB]);
+export default function ArenaBoard({ pools, records, totalVotes, initialRound: opening }: Props) {
+  const [round, setRound] = useState<ArenaRound>(opening);
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [session, setSession] = useState({ votes: 0, aWins: 0, bWins: 0 });
   const [localRecords, setLocalRecords] = useState<Record<string, ArenaRecord>>(records);
   const [tally, setTally] = useState(totalVotes);
 
-  const [left, right] = useMemo(
-    () => [contenders[pair[0]] ?? contenders[0], contenders[pair[1]] ?? contenders[1]],
-    [contenders, pair],
-  );
+  const pool = pools[round.pool] ?? pools[0];
+  const left = pool?.contenders[round.a] ?? pool?.contenders[0];
+  const right = pool?.contenders[round.b] ?? pool?.contenders[1];
 
   function nextPair() {
-    if (contenders.length < 3) return;
-    const a = Math.floor(Math.random() * contenders.length);
-    let b = Math.floor(Math.random() * contenders.length);
-    while (b === a) b = Math.floor(Math.random() * contenders.length);
-    setPair([a, b]);
+    if (pools.length === 0) return;
+    setRound(nextRound(pools, localRecords));
     setPicked(null);
   }
 
@@ -150,11 +145,20 @@ export default function ArenaBoard({ contenders, initialA, initialB, records, to
     }
   }
 
-  if (!left || !right) {
-    return <p className="text-sm text-muted">Not enough rated tools for an arena yet.</p>;
+  if (!pool || !left || !right) {
+    return (
+      <p className="text-sm text-muted">
+        Not enough rated tools in one category for an arena yet. A blind pair needs two tools doing the same job.
+      </p>
+    );
   }
 
   const revealed = Boolean(picked);
+  const table = pool.contenders
+    .map((c) => ({ c, record: recordFor(localRecords, c.id) }))
+    .filter((row) => row.record.total > 0)
+    .sort((a, b) => b.record.rate - a.record.rate || b.record.total - a.record.total)
+    .slice(0, 8);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -167,6 +171,15 @@ export default function ArenaBoard({ contenders, initialA, initialB, records, to
           <span className="chip border border-line bg-white text-slate-500">
             Session · {session.votes} {session.votes === 1 ? "vote" : "votes"}
           </span>
+        </div>
+
+        <div className="mb-3 rounded-2xl border border-line bg-slate-50/80 px-3.5 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Same job · same category</p>
+          <p className="mt-1 text-sm font-bold text-ink">Which {pool.label} tool would you open first?</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+            Both cards come from {pool.label}, so the pick compares like with like. Names, logos and scores stay hidden
+            until you choose.
+          </p>
         </div>
 
         <div className="relative grid gap-3 sm:grid-cols-2">
@@ -197,7 +210,7 @@ export default function ArenaBoard({ contenders, initialA, initialB, records, to
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white/70 p-3.5">
           <p className="text-xs leading-relaxed text-muted">
             {revealed
-              ? "Both tools revealed. Your pick was added to the community win rate — no account needed."
+              ? `Both tools revealed. Your pick was added to the ${pool.label} win rate — no account needed.`
               : "Names and scores stay hidden until you choose, so the badge cannot do the arguing."}
           </p>
           <button type="button" onClick={nextPair} className="btn btn-primary !py-2 text-xs">
@@ -208,37 +221,34 @@ export default function ArenaBoard({ contenders, initialA, initialB, records, to
 
       <aside className="lab-panel p-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-ink">Arena win rates</h2>
-          <span className="chip bg-brand-soft text-brand">live</span>
+          <h2 className="text-sm font-bold text-ink">Win rates</h2>
+          <span className="chip bg-brand-soft text-brand">{pool.label}</span>
         </div>
         <p className="mt-1 text-[11px] leading-relaxed text-muted">
-          Community picks only — this never changes the 1–5 weighted leaderboard.
+          Same-category picks only — a design tool is never scored against a coding assistant, and this never changes the
+          1–5 weighted leaderboard.
         </p>
         <ol className="mt-3 space-y-2">
-          {contenders
-            .map((c) => ({ c, record: recordFor(localRecords, c.id) }))
-            .filter((row) => row.record.total > 0)
-            .sort((a, b) => b.record.rate - a.record.rate || b.record.total - a.record.total)
-            .slice(0, 8)
-            .map(({ c, record }, i) => (
-              <li key={c.id} className="flex items-center gap-2">
-                <span className="w-4 text-right text-[11px] font-bold text-slate-400">{i + 1}</span>
-                <AiLogo slug={c.slug} logo={c.logo} color={c.color} size={26} rounded="rounded-lg" />
-                <Link href={`/ai/${c.slug}`} className="min-w-0 flex-1 truncate text-xs font-semibold text-ink hover:text-brand">
-                  {c.name}
-                </Link>
-                <span className="text-[11px] font-bold tabular-nums text-ink">{Math.round(record.rate * 100)}%</span>
-                <span className="w-8 text-right text-[10px] text-muted">{record.total}</span>
-              </li>
-            ))}
-          {!Object.values(localRecords).some((record) => record.total > 0) ? (
+          {table.map(({ c, record }, i) => (
+            <li key={c.id} className="flex items-center gap-2">
+              <span className="w-4 text-right text-[11px] font-bold text-slate-400">{i + 1}</span>
+              <AiLogo slug={c.slug} logo={c.logo} color={c.color} size={26} rounded="rounded-lg" />
+              <Link href={`/ai/${c.slug}`} className="min-w-0 flex-1 truncate text-xs font-semibold text-ink hover:text-brand">
+                {c.name}
+              </Link>
+              <span className="text-[11px] font-bold tabular-nums text-ink">{Math.round(record.rate * 100)}%</span>
+              <span className="w-8 text-right text-[10px] text-muted">{record.total}</span>
+            </li>
+          ))}
+          {table.length === 0 ? (
             <li className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[11px] leading-relaxed text-muted">
-              No arena picks yet. Cast the first vote and this table starts moving.
+              No {pool.label} picks yet. Cast the first vote and this table starts moving.
             </li>
           ) : null}
         </ol>
         <p className="mt-3 border-t border-line/70 pt-2.5 text-[10px] leading-relaxed text-muted">
-          Win rate = picks won ÷ matchups entered. Small samples swing fast, so read it next to the vote count.
+          Win rate = picks won ÷ matchups entered in this category. Small samples swing fast, so read it next to the
+          vote count.
         </p>
       </aside>
     </div>

@@ -1,5 +1,6 @@
 import type { AiStat, View } from "./rank";
-import type { DB } from "./types";
+import type { ArenaVote, DB } from "./types";
+import { categoryName } from "./categories";
 import { rankedAis } from "./rank";
 
 export type ArenaRecord = { wins: number; losses: number; total: number; rate: number };
@@ -18,7 +19,17 @@ export type ArenaContender = {
   priceType: string;
 };
 
-export function arenaContenders(view: View, limit = 24): ArenaContender[] {
+/**
+ * One category's contenders. Both cards of a round come from the same pool, so
+ * a pick answers "which of these two for this job" instead of pitting a design
+ * tool against a coding assistant, where neither answer means anything.
+ */
+export type ArenaPool = { category: string; label: string; contenders: ArenaContender[] };
+
+/** Which pool and which two contenders are on the screen. */
+export type ArenaRound = { pool: number; a: number; b: number };
+
+export function arenaContenders(view: View, limit = 240): ArenaContender[] {
   return rankedAis(view)
     .filter((stat) => !stat.ai.sponsored || stat.ai.boost === 0)
     .slice(0, limit)
@@ -36,10 +47,49 @@ export function arenaContenders(view: View, limit = 24): ArenaContender[] {
     }));
 }
 
-/** Wins and losses per AI from the stored arena picks. */
+/**
+ * The built-in catch-all category mixes health, finance, legal and browser
+ * tools, so it is the loosest comparison on the site; it goes last instead of
+ * opening the arena.
+ */
+const CATCH_ALL = "specialized";
+
+/** Categories with at least two public contenders; busiest specific category first. */
+export function arenaPools(contenders: ArenaContender[]): ArenaPool[] {
+  const byCategory = new Map<string, ArenaContender[]>();
+  for (const contender of contenders) {
+    const list = byCategory.get(contender.category) ?? [];
+    list.push(contender);
+    byCategory.set(contender.category, list);
+  }
+  return [...byCategory.entries()]
+    .filter(([, list]) => list.length >= 2)
+    .map(([category, list]) => ({ category, label: categoryName(category), contenders: list }))
+    .sort(
+      (a, b) =>
+        Number(a.category === CATCH_ALL) - Number(b.category === CATCH_ALL) ||
+        b.contenders.length - a.contenders.length ||
+        a.label.localeCompare(b.label),
+    );
+}
+
+/**
+ * A pick only says something about quality when both tools do the same job.
+ * Pairs from two different categories (stored before the pools existed) are
+ * left out of the win rate instead of being compared across categories.
+ */
+function fairVotes(db: DB): ArenaVote[] {
+  const categoryOf = new Map(db.ai.map((ai) => [ai.id, ai.category]));
+  return (db.arenaVotes ?? []).filter((vote) => {
+    const category = categoryOf.get(vote.aId);
+    return Boolean(category) && categoryOf.get(vote.bId) === category;
+  });
+}
+
+/** Wins and losses per AI from the stored same-category arena picks. */
 export function arenaRecords(db: DB): Map<string, ArenaRecord> {
   const map = new Map<string, ArenaRecord>();
-  for (const vote of db.arenaVotes ?? []) {
+  for (const vote of fairVotes(db)) {
     const win = map.get(vote.winnerId) ?? { wins: 0, losses: 0, total: 0, rate: 0 };
     win.wins += 1;
     win.total += 1;
@@ -57,32 +107,112 @@ export function arenaRecords(db: DB): Map<string, ArenaRecord> {
   return map;
 }
 
+/** Community picks that counted: same-category pairs only. */
 export function arenaTotal(db: DB): number {
-  return (db.arenaVotes ?? []).length;
+  return fairVotes(db).length;
+}
+
+function matchups(records: Record<string, ArenaRecord>, id: string): number {
+  return records[id]?.total ?? 0;
+}
+
+function byFewestMatchups(list: ArenaContender[], records: Record<string, ArenaRecord>, indices: number[]): number[] {
+  const min = Math.min(...indices.map((i) => matchups(records, list[i].id)));
+  return indices.filter((i) => matchups(records, list[i].id) === min);
 }
 
 /**
- * Deterministic opening pair so the server render and the client hydration
- * agree. Later pairs are drawn client-side from the same list.
+ * The second card prefers the first card's price tier, so a free tool is not
+ * losing to a $20 one by default, then a shared best-for tag, so two tools in a
+ * broad category are still asked about the same kind of work. Matchups decide
+ * the rest.
  */
-export function initialPair(contenders: ArenaContender[]): [number, number] {
-  if (contenders.length < 2) return [0, 0];
-  const a = 0;
-  const b = Math.min(contenders.length - 1, Math.max(1, Math.ceil(contenders.length / 2)));
-  return [a, b];
+function partnerIndex(list: ArenaContender[], records: Record<string, ArenaRecord>, a: number): number {
+  const rest = list.map((_, i) => i).filter((i) => i !== a);
+  const scored = rest.map((i) => ({
+    i,
+    tier: list[i].priceType === list[a].priceType ? 0 : 1,
+    tag: list[i].bestFor.some((tag) => list[a].bestFor.includes(tag)) ? 0 : 1,
+  }));
+  const bestTier = Math.min(...scored.map((s) => s.tier));
+  const tierPool = scored.filter((s) => s.tier === bestTier);
+  const bestTag = Math.min(...tierPool.map((s) => s.tag));
+  const tagPool = tierPool.filter((s) => s.tag === bestTag).map((s) => s.i);
+  const fewest = byFewestMatchups(list, records, tagPool);
+  return [...fewest].sort((i, j) => list[j].score - list[i].score || list[i].id.localeCompare(list[j].id))[0];
 }
 
+/**
+ * Deterministic opening round so the server render and the client hydration
+ * agree: the busiest category, then whoever has the fewest matchups.
+ */
+export function initialRound(pools: ArenaPool[], records: Record<string, ArenaRecord>): ArenaRound {
+  if (!pools.length) return { pool: 0, a: 0, b: 0 };
+  const list = pools[0].contenders;
+  if (list.length < 2) return { pool: 0, a: 0, b: 0 };
+  const fewest = byFewestMatchups(
+    list,
+    records,
+    list.map((_, i) => i),
+  );
+  const a = [...fewest].sort((i, j) => list[j].score - list[i].score || list[i].id.localeCompare(list[j].id))[0];
+  return { pool: 0, a, b: partnerIndex(list, records, a) };
+}
+
+/**
+ * Next round: draw a card from a category that still has contenders without
+ * many matchups, so the table fills in evenly instead of replaying the same
+ * top two tools.
+ */
+export function nextRound(
+  pools: ArenaPool[],
+  records: Record<string, ArenaRecord>,
+  random: () => number = Math.random,
+): ArenaRound {
+  const eligible = pools
+    .map((pool, index) => ({ pool, index }))
+    .filter(({ pool }) => pool.contenders.length >= 2);
+  if (!eligible.length) return { pool: 0, a: 0, b: 0 };
+
+  const fresh = eligible.filter(({ pool }) => pool.contenders.some((c) => matchups(records, c.id) < 2));
+  const from = fresh.length ? fresh : eligible;
+  // Math.random() is always below 1, the clamp only guards a custom random.
+  const choice = from[Math.min(from.length - 1, Math.floor(random() * from.length))];
+  const list = choice.pool.contenders;
+
+  const aCandidates = byFewestMatchups(
+    list,
+    records,
+    list.map((_, i) => i),
+  );
+  const a = aCandidates[Math.min(aCandidates.length - 1, Math.floor(random() * aCandidates.length))];
+  return { pool: choice.index, a, b: partnerIndex(list, records, a) };
+}
+
+/**
+ * One leader per category instead of one table across every category: a 100%
+ * image-tool record is not comparable to a 100% coding record, but it is a fair
+ * leader inside its own pool.
+ */
 export function topArenaPicks(db: DB, view: View, limit = 8) {
   const records = arenaRecords(db);
-  return [...view.aiStats.values()]
-    .filter((stat) => !stat.ai.hidden && (records.get(stat.ai.id)?.total ?? 0) >= 1)
-    .sort((a, b) => {
-      const ra = records.get(a.ai.id)!;
-      const rb = records.get(b.ai.id)!;
-      return rb.rate - ra.rate || rb.total - ra.total;
-    })
-    .slice(0, limit)
-    .map((stat) => ({ stat, record: records.get(stat.ai.id)! }));
+  const best = new Map<string, { stat: AiStat; record: ArenaRecord }>();
+  for (const stat of view.aiStats.values()) {
+    if (stat.ai.hidden) continue;
+    const record = records.get(stat.ai.id);
+    if (!record || record.total < 2) continue;
+    const current = best.get(stat.ai.category);
+    if (
+      !current ||
+      record.rate > current.record.rate ||
+      (record.rate === current.record.rate && record.total > current.record.total)
+    ) {
+      best.set(stat.ai.category, { stat, record });
+    }
+  }
+  return [...best.values()]
+    .sort((a, b) => b.record.total - a.record.total || b.record.rate - a.record.rate)
+    .slice(0, limit);
 }
 
 export type { AiStat };

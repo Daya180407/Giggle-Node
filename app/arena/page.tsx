@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import ArenaBoard from "@/components/ArenaBoard";
 import { AiLogo, SectionHead } from "@/components/ui";
-import { arenaContenders, arenaRecords, arenaTotal, initialPair, topArenaPicks } from "@/lib/arena";
+import { arenaContenders, arenaPools, arenaRecords, arenaTotal, initialRound, topArenaPicks } from "@/lib/arena";
 import { categoryName } from "@/lib/categories";
 import { buildView } from "@/lib/rank";
 import { readDb } from "@/lib/store";
@@ -12,17 +12,18 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Blind AI Arena — Vote Without Seeing the Brand",
   description:
-    "Two AI tools, no names, no scores. Pick the one you would actually use, then see who won. Free community arena with a live win-rate table.",
+    "Two AI tools from the same category, no names, no scores. Pick the one you would actually use for that job, then see who won. Free community arena with a live win-rate table.",
   alternates: { canonical: "/arena" },
 };
 
 export default async function ArenaPage() {
   const db = readDb();
   const view = buildView(db);
-  const contenders = arenaContenders(view, 24);
-  const [a, b] = initialPair(contenders);
+  const contenders = arenaContenders(view);
+  const pools = arenaPools(contenders);
   const records = Object.fromEntries(arenaRecords(db));
   const total = arenaTotal(db);
+  const opening = initialRound(pools, records);
   const picks = topArenaPicks(db, view, 8);
 
   return (
@@ -41,8 +42,9 @@ export default async function ArenaPage() {
                 <span className="hero-gradient">You decide.</span>
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-400">
-                Logos and scores are hidden until you pick. That strips out brand bias and turns the ranking into a
-                question you can actually answer: which one would you open for this job?
+                Both cards come from the same category, and logos and scores stay hidden until you pick. That strips out
+                brand bias and turns the ranking into a question you can actually answer: for this job, which one would
+                you open?
               </p>
             </div>
             <div className="flex gap-3">
@@ -61,7 +63,7 @@ export default async function ArenaPage() {
 
       <section className="surface-band bg-white">
         <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6">
-          <ArenaBoard contenders={contenders} initialA={a} initialB={b} records={records} totalVotes={total} />
+          <ArenaBoard pools={pools} records={records} totalVotes={total} initialRound={opening} />
         </div>
       </section>
 
@@ -70,14 +72,19 @@ export default async function ArenaPage() {
           <SectionHead
             eyebrow="Why blind"
             title="A vote that cannot be bought by a logo"
-            subtitle="The arena is deliberately separate from the 1–5 leaderboard: it is a preference signal, not a score rewrite."
+            subtitle="Pairs are drawn inside one category, and the arena stays separate from the 1–5 leaderboard: it is a preference signal, not a score rewrite."
           />
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 icon: "🕶️",
-                title: "Hidden until chosen",
-                body: "You see the job, the description and the best-for tags. The brand stays behind the curtain until after the pick.",
+                title: "Same job, hidden brand",
+                body: "Both tools do the same job, so the pick is a real preference instead of a guess between two categories. The brand stays behind the curtain.",
+              },
+              {
+                icon: "⚖️",
+                title: "Matched fairly",
+                body: "A round prefers two tools on the same price tier, so a free pick is not beaten by a $20 one just because of the price badge.",
               },
               {
                 icon: "🔢",
@@ -106,7 +113,7 @@ export default async function ArenaPage() {
             <SectionHead
               eyebrow="Community favourites"
               title="What the arena has picked"
-              subtitle="Ordered by win rate; the vote count sits next to it so small samples stay visible."
+              subtitle="One leader per category, ordered by how many same-category matchups that category has. The vote count sits next to each rate so small samples stay visible."
             />
             <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
               {picks.map(({ stat, record }, i) => (
