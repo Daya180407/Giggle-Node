@@ -14,7 +14,15 @@ import type {
   User,
 } from "./types";
 
-type SeedModel = { name: string; bestFor: string; price?: PriceType; offset?: number; date?: string };
+type SeedModel = {
+  name: string;
+  bestFor: string;
+  price?: PriceType;
+  offset?: number;
+  date?: string;
+  /** jobs this model handles; a model without tags follows its tool's category */
+  categories?: CategorySlug[];
+};
 
 type SeedAi = {
   name: string;
@@ -55,9 +63,16 @@ const AI_SEED: SeedAi[] = [
     bestFor: ["Writing", "Coding help", "Research", "Brainstorming"],
     freeAlt: "gemini",
     models: [
-      { name: "GPT-4o", bestFor: "Daily all-round tasks", price: "freemium", offset: 0.25, date: "2024-05-13" },
-      { name: "o1", bestFor: "Hard reasoning & maths", price: "paid", offset: 0.12, date: "2024-12-05" },
-      { name: "GPT-4o Mini", bestFor: "Fast, cheap everyday chat", price: "free", offset: -0.3, date: "2024-07-18" },
+      {
+        name: "GPT-4o",
+        bestFor: "Daily all-round tasks",
+        price: "freemium",
+        offset: 0.25,
+        date: "2024-05-13",
+        categories: ["writing", "coding", "research"],
+      },
+      { name: "o1", bestFor: "Hard reasoning & maths", price: "paid", offset: 0.12, date: "2024-12-05", categories: ["research", "coding"] },
+      { name: "GPT-4o Mini", bestFor: "Fast, cheap everyday chat", price: "free", offset: -0.3, date: "2024-07-18", categories: ["writing", "productivity"] },
     ],
   },
   {
@@ -78,9 +93,9 @@ const AI_SEED: SeedAi[] = [
     bestFor: ["Long-form writing", "Document analysis", "Editing"],
     freeAlt: "chatgpt",
     models: [
-      { name: "Claude Sonnet 4.5", bestFor: "Coding + writing balance", price: "freemium", offset: 0.3, date: "2025-09-29" },
-      { name: "Claude Opus 4.1", bestFor: "Deep research & strategy", price: "paid", offset: 0.18, date: "2025-08-05" },
-      { name: "Claude Haiku 3.5", bestFor: "Fast drafts and summaries", price: "free", offset: -0.25, date: "2024-10-22" },
+      { name: "Claude Sonnet 4.5", bestFor: "Coding + writing balance", price: "freemium", offset: 0.3, date: "2025-09-29", categories: ["coding", "writing"] },
+      { name: "Claude Opus 4.1", bestFor: "Deep research & strategy", price: "paid", offset: 0.18, date: "2025-08-05", categories: ["research", "writing"] },
+      { name: "Claude Haiku 3.5", bestFor: "Fast drafts and summaries", price: "free", offset: -0.25, date: "2024-10-22", categories: ["writing"] },
     ],
   },
   {
@@ -100,8 +115,8 @@ const AI_SEED: SeedAi[] = [
       "Google ka Gemini search, Gmail, Docs aur YouTube ke saath deeply connected hai. Bade context window aur free tier ki generosity ki wajah se students aur creators ise roz use karte hain.",
     bestFor: ["Google Workspace", "Research", "Free usage"],
     models: [
-      { name: "Gemini 2.5 Pro", bestFor: "Long context reasoning", price: "freemium", offset: 0.26, date: "2025-03-25" },
-      { name: "Gemini 2.5 Flash", bestFor: "Fast answers on mobile", price: "free", offset: -0.18, date: "2025-04-17" },
+      { name: "Gemini 2.5 Pro", bestFor: "Long context reasoning", price: "freemium", offset: 0.26, date: "2025-03-25", categories: ["research", "productivity"] },
+      { name: "Gemini 2.5 Flash", bestFor: "Fast answers on mobile", price: "free", offset: -0.18, date: "2025-04-17", categories: ["writing", "productivity"] },
     ],
   },
   {
@@ -1472,6 +1487,7 @@ export function buildSeed(): DB {
         description: `${m.name} — ${m.bestFor}. ${seed.name} ke family ka ye model ${m.price === "free" ? "free tier me available hai" : "paid plan me milta hai"} aur ${seed.category} ke kaam ke liye tuned hai.`,
         launchDate: m.date ?? "2024-01-01",
         bestFor: m.bestFor,
+        categories: m.categories,
         priceType: m.price ?? seed.price,
       });
 

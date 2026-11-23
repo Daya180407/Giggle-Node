@@ -10,7 +10,7 @@ import { AiLogo, PriceBadge, Stars, Trend } from "@/components/ui";
 import { getApiPricing } from "@/lib/api-pricing";
 import { formatVotes } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
-import { categoryName } from "@/lib/categories";
+import { categoryName, modelCategories } from "@/lib/categories";
 import { helpfulScore, myHelpfulVote } from "@/lib/helpful";
 import { canAccess, resolveRoles } from "@/lib/roles";
 import { formatPlanPrice } from "@/lib/plans";
@@ -121,6 +121,17 @@ export default async function ModelPage({ params, searchParams }: Props) {
           <div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">{model.name}</h1>
             <p className="mt-1 text-sm text-muted">Best for: {model.bestFor}</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {modelCategories(model, ai).map((slug) => (
+                <Link
+                  key={slug}
+                  href={`/category/${slug}`}
+                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-200 hover:text-brand"
+                >
+                  {categoryName(slug)}
+                </Link>
+              ))}
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Stars value={stat.score} size={22} />
               <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>

@@ -23,7 +23,7 @@ import { formatMoney } from "@/lib/analytics";
 import { formatVotes } from "@/lib/format";
 import { getApiPricing } from "@/lib/api-pricing";
 import { getCurrentUser } from "@/lib/auth";
-import { categoryName } from "@/lib/categories";
+import { aiCategoryTags, categoryName, modelCategories } from "@/lib/categories";
 import { helpfulScore, myHelpfulVote } from "@/lib/helpful";
 import { canAccess, resolveRoles } from "@/lib/roles";
 import { formatPlanPrice } from "@/lib/plans";
@@ -69,6 +69,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
   const settings = getSiteSettings(db);
   const stat = view.aiStats.get(ai.id)!;
   const models = [...stat.models].sort((a, b) => b.score - a.score || b.votes - a.votes);
+  const capabilityTags = aiCategoryTags(ai, models.map((m) => m.model));
   const modelIds = new Set(models.map((m) => m.model.id));
   const myRatings = user
     ? db.ratings.filter((r) => r.userId === user.id && (modelIds.has(r.modelId ?? "") || r.aiId === ai.id))
@@ -190,6 +191,19 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               <span>·</span>
               <span>{followers} followers</span>
             </div>
+            {capabilityTags.length > 1 ? (
+              <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted">
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Best for </span>
+                {capabilityTags.map((slug, i) => (
+                  <span key={slug}>
+                    <Link href={`/category/${slug}`} className="font-semibold text-slate-700 hover:text-brand">
+                      {categoryName(slug)}
+                    </Link>
+                    {i === capabilityTags.length - 2 ? " and " : i < capabilityTags.length - 1 ? ", " : ""}
+                  </span>
+                ))}
+              </p>
+            ) : null}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Stars value={stat.score} size={22} />
               <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
@@ -336,6 +350,19 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                       <PriceBadge price={m.model.priceType} />
                     </div>
                     <p className="mt-1 text-[13px] leading-relaxed text-slate-600">{m.model.bestFor}</p>
+                    {m.model.categories?.length ? (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {modelCategories(m.model, ai).map((slug) => (
+                          <Link
+                            key={slug}
+                            href={`/category/${slug}`}
+                            className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-200 hover:text-brand"
+                          >
+                            {categoryName(slug)}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <Stars value={m.score} size={15} />
                       <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
@@ -399,6 +426,19 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                         </td>
                         <td className="px-2 py-2.5 text-[12px] leading-relaxed text-slate-600 sm:px-4 sm:text-xs">
                           {m.model.bestFor}
+                          {m.model.categories?.length ? (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {modelCategories(m.model, ai).map((slug) => (
+                                <Link
+                                  key={slug}
+                                  href={`/category/${slug}`}
+                                  className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-200 hover:text-brand"
+                                >
+                                  {categoryName(slug)}
+                                </Link>
+                              ))}
+                            </div>
+                          ) : null}
                         </td>
                         <td className="px-2 py-2.5 sm:px-4">
                           <div className="flex flex-wrap items-center gap-1.5">
@@ -437,32 +477,6 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               derived from plan pricing. Token models are priced per 1M tokens; image, video and voice models use their
               own units. Always confirm current rates with the provider before you build.
             </p>
-            {models.length ? (
-              <div className="border-t border-line bg-slate-50/50 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
-                  Which model is best for what?
-                </p>
-                <ul className="mt-1.5 divide-y divide-line/70">
-                  {models.map((m) => (
-                    <li key={m.model.id}>
-                      <Link
-                        href={`/ai/${ai.slug}/${m.model.slug}`}
-                        className="group flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-1.5 text-[11.5px] leading-relaxed transition hover:text-brand"
-                      >
-                        <span className="min-w-0 break-words font-semibold text-slate-700 group-hover:text-brand">
-                          {m.model.bestFor || "General use"}
-                        </span>
-                        <span className="flex shrink-0 items-center gap-1 text-slate-500">
-                          <span aria-hidden className="text-muted">→</span>
-                          <span className="font-medium group-hover:text-brand">{m.model.name}</span>
-                          <span className="font-semibold text-amber-600">{m.score.toFixed(1)}★</span>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
           </section>
 
           {/* Subscription plans */}

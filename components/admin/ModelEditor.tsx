@@ -1,9 +1,45 @@
 import { deleteModelAction, saveModelAction } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { getApiPricing } from "@/lib/api-pricing";
+import { categoryName, getCategories, modelCategories } from "@/lib/categories";
+import { readDb } from "@/lib/store";
 import type { Ai, Model } from "@/lib/types";
 
 const UNITS = ["1M tokens", "image", "second", "1M characters", "track", "request"];
+
+function CategoryPicker({
+  categories,
+  selected,
+  hint,
+}: {
+  categories: { slug: string; name: string; emoji: string }[];
+  selected: string[];
+  hint: string;
+}) {
+  return (
+    <div className="sm:col-span-2">
+      <input type="hidden" name="categoriesSubmitted" value="on" />
+      <label className="label">Categories (what this model is good at)</label>
+      <div className="flex flex-wrap gap-x-3 gap-y-1.5 rounded-xl border border-line bg-white p-2 text-xs">
+        {categories.map((c) => (
+          <label key={c.slug} className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              name="categories"
+              value={c.slug}
+              defaultChecked={selected.includes(c.slug)}
+              className="h-3.5 w-3.5 accent-indigo-600"
+            />
+            <span>
+              {c.emoji} {c.name}
+            </span>
+          </label>
+        ))}
+      </div>
+      <p className="mt-1 text-[11px] text-muted">{hint}</p>
+    </div>
+  );
+}
 
 export default function ModelEditor({
   ai,
@@ -16,6 +52,7 @@ export default function ModelEditor({
   models: Model[];
   stats: Record<string, { score: number; votes: number }>;
 }) {
+  const categories = getCategories(readDb());
   return (
     <div className="space-y-3">
       {models.map((m) => {
@@ -79,6 +116,11 @@ export default function ModelEditor({
                   <input type="checkbox" name="pin" defaultChecked={m.pin} className="h-4 w-4 accent-indigo-600" />
                   Pin this model to the top
                 </label>
+                <CategoryPicker
+                  categories={categories}
+                  selected={modelCategories(m, ai)}
+                  hint={`Tick every job this model handles. Blank = follow the tool's category (${categoryName(ai.category)}).`}
+                />
               </div>
               <div>
                 <label className="label">Description</label>
@@ -209,6 +251,11 @@ export default function ModelEditor({
               <input type="checkbox" name="pin" className="h-4 w-4 accent-indigo-600" />
               Top par dikhao
             </label>
+            <CategoryPicker
+              categories={categories}
+              selected={[ai.category]}
+              hint={`Tick every job this model handles. Blank = follow the tool's category (${categoryName(ai.category)}).`}
+            />
           </div>
           <textarea name="description" rows={2} placeholder="Short description" className="field" />
           <button className="btn btn-ghost !py-1.5 text-xs">Add model</button>

@@ -1,4 +1,4 @@
-import type { Category, CategorySlug, DB } from "./types";
+import type { Ai, Category, CategorySlug, DB, Model } from "./types";
 
 export const CATEGORIES: Category[] = [
   {
@@ -142,6 +142,28 @@ export function slugifyCategory(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
+}
+
+/**
+ * Categories a single model is good at. A model with no tags follows its tool,
+ * so existing listings need no data migration.
+ */
+export function modelCategories(model: Pick<Model, "categories">, ai: Pick<Ai, "category">): CategorySlug[] {
+  const tagged = (model.categories ?? []).map((slug) => slug.trim()).filter(Boolean);
+  return [...new Set(tagged.length > 0 ? tagged : [ai.category])];
+}
+
+/**
+ * Tool-level summary shown on the AI page: the tool's own category plus every
+ * category its models are tagged with, in a stable order, capped for display.
+ */
+export function aiCategoryTags(
+  ai: Pick<Ai, "category">,
+  models: Pick<Model, "categories">[],
+  limit = 4,
+): CategorySlug[] {
+  const tags = [ai.category, ...models.flatMap((model) => modelCategories(model, ai))];
+  return [...new Set(tags.filter(Boolean))].slice(0, limit);
 }
 
 export const PRICE_LABEL: Record<string, string> = {

@@ -69,6 +69,12 @@ export type Model = {
   description: string;
   launchDate: string;
   bestFor: string;
+  /**
+   * What this model is good at. Models inside one tool can sit in different
+   * categories (a chat model for coding, an image model for image work).
+   * Empty means "same as the tool's category".
+   */
+  categories?: CategorySlug[];
   priceType: PriceType;
   /** pinned models stay on top of the model list regardless of score */
   pin?: boolean;

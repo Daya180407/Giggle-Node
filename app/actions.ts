@@ -480,6 +480,15 @@ export async function saveModelAction(formData: FormData) {
   mutateDb((db) => {
     const taken = db.models.filter((m) => m.aiId === aiId && m.id !== id).map((m) => m.slug);
     const useCustomPricing = formData.get("pricingCustom") === "on";
+    // Categories are optional: forms that do not send the picker leave the model
+    // on its tool's category instead of wiping existing tags.
+    const knownCategories = new Set(getCategories(db).map((row) => row.slug));
+    const categoriesSubmitted = formData.get("categoriesSubmitted") === "on";
+    const pickedCategories = categoriesSubmitted
+      ? [...new Set(formData.getAll("categories").map((value) => String(value)))]
+          .filter((slug) => knownCategories.has(slug))
+          .slice(0, 4)
+      : [];
     const payload = {
       aiId,
       name,
@@ -487,6 +496,7 @@ export async function saveModelAction(formData: FormData) {
       description: String(formData.get("description") ?? "").trim(),
       launchDate: String(formData.get("launchDate") ?? "") || new Date().toISOString().slice(0, 10),
       bestFor: String(formData.get("bestFor") ?? "").trim(),
+      ...(categoriesSubmitted ? { categories: pickedCategories.length ? pickedCategories : undefined } : {}),
       priceType: String(formData.get("priceType") ?? "freemium") as PriceType,
       pin: formData.get("pin") === "on",
       editorRating: Number(formData.get("editorRating") ?? 0) || null,
