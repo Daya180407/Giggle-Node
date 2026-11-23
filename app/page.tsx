@@ -190,12 +190,17 @@ export default async function HomePage({
           applicationCategory: `${s.ai.category}Application`,
           url: `https://giglenode.com/ai/${s.ai.slug}`,
           image: `https://giglenode.com/logos/${s.ai.slug}.png`,
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: Number(s.score.toFixed(1)),
-            ratingCount: s.votes,
-            bestRating: 5,
-          },
+          // Only tools with real votes carry a rating in structured data.
+          ...(s.votes > 0
+            ? {
+                aggregateRating: {
+                  "@type": "AggregateRating",
+                  ratingValue: Number(s.score.toFixed(1)),
+                  ratingCount: s.votes,
+                  bestRating: 5,
+                },
+              }
+            : {}),
         },
       })),
   };
@@ -274,7 +279,7 @@ export default async function HomePage({
                     className="chip border border-white/10 bg-white/[0.05] text-slate-300 transition hover:-translate-y-0.5 hover:border-violet-400/60 hover:text-white"
                   >
                     <span className="text-slate-500">#{i + 1}</span> {s.ai.name}
-                    <span className="font-bold text-amber-300">★ {s.score.toFixed(1)}</span>
+                    <span className="font-bold text-amber-300">{s.votes > 0 ? `★ ${s.score.toFixed(1)}` : "New"}</span>
                   </Link>
                 ))}
               </div>

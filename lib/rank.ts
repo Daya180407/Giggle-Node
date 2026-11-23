@@ -269,6 +269,10 @@ export function buildView(db: DB): View {
 
 export function sortByRank(list: AiStat[]): AiStat[] {
   return [...list].sort((a, b) => {
+    // A tool nobody has rated is listed after every tool that has real votes.
+    const aRated = a.votes > 0 ? 1 : 0;
+    const bRated = b.votes > 0 ? 1 : 0;
+    if (aRated !== bRated) return bRated - aRated;
     const aScore = a.score + a.ai.boost;
     const bScore = b.score + b.ai.boost;
     if (Math.abs(bScore - aScore) > 0.0001) return bScore - aScore;

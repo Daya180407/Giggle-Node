@@ -13,6 +13,8 @@ export type ArenaContender = {
   logo: string;
   color: string;
   score: number;
+  /** real votes behind `score`; 0 means the tool is still unrated */
+  votes: number;
   category: string;
   description: string;
   bestFor: string[];
@@ -40,6 +42,7 @@ export function arenaContenders(view: View, limit = 240): ArenaContender[] {
       logo: stat.ai.logo,
       color: stat.ai.color,
       score: stat.score,
+      votes: stat.votes,
       category: stat.ai.category,
       description: stat.ai.description,
       bestFor: stat.ai.bestFor.slice(0, 3),

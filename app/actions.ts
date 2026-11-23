@@ -1890,7 +1890,10 @@ export async function queueNewsletterAction() {
   const top = rankedAis(buildView(db)).slice(0, 5);
   if (top.length === 0) redirect("/admin/notifications?error=no-ai");
   const lines = top
-    .map((s, i) => `${i + 1}. ${s.ai.name} — ${s.score.toFixed(1)}★ from ${s.votes} votes (${s.ai.priceType})`)
+    .map(
+      (s, i) =>
+        `${i + 1}. ${s.ai.name} — ${s.votes > 0 ? `${s.score.toFixed(1)}★ from ${s.votes} votes` : "not rated yet"} (${s.ai.priceType})`,
+    )
     .join("\n");
   // The outbox keeps 250 rows, so a single manual send is capped below that.
   const recipients = [

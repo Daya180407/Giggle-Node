@@ -66,8 +66,14 @@ function ChampionCard({ row }: { row: ChampionRow }) {
       <p className="mt-0.5 line-clamp-1 text-xs text-muted">{row.bestFor}</p>
 
       <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
-        <Stars value={row.score} size={16} />
-        <span className="text-sm font-extrabold text-ink">{row.score.toFixed(1)}</span>
+        {row.votes > 0 ? (
+          <>
+            <Stars value={row.score} size={16} />
+            <span className="text-sm font-extrabold text-ink">{row.score.toFixed(1)}</span>
+          </>
+        ) : (
+          <span className="text-[11px] font-semibold text-slate-500">New · no ratings yet</span>
+        )}
       </div>
 
       <div className="mt-3 w-full">

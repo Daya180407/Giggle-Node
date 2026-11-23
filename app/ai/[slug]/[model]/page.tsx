@@ -36,7 +36,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const stat = view.modelStats.get(model.id);
   return {
     title: `${model.name} Rating & Review — ${ai.name}`,
-    description: `${model.name} (${ai.name}) — ${stat?.score.toFixed(1)}/5 rating, ${stat?.votes} user votes. Best for ${model.bestFor}.`,
+    description:
+      stat && stat.votes > 0
+        ? `${model.name} (${ai.name}) — ${stat.score.toFixed(1)}/5 rating, ${stat.votes} user votes. Best for ${model.bestFor}.`
+        : `${model.name} (${ai.name}) — not rated yet. Best for ${model.bestFor}.`,
     alternates: { canonical: `/ai/${ai.slug}/${model.slug}` },
   };
 }
@@ -67,12 +70,16 @@ export default async function ModelPage({ params, searchParams }: Props) {
     "@type": "Product",
     name: `${model.name} (${ai.name})`,
     description: model.description,
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: Number(stat.score.toFixed(1)),
-      ratingCount: stat.votes,
-      bestRating: 5,
-    },
+    ...(stat.votes > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(stat.score.toFixed(1)),
+            ratingCount: stat.votes,
+            bestRating: 5,
+          },
+        }
+      : {}),
   };
 
   return (
@@ -133,10 +140,18 @@ export default async function ModelPage({ params, searchParams }: Props) {
               ))}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Stars value={stat.score} size={22} />
-              <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
-              <span className="text-sm text-muted">({formatVotes(stat.votes)} people rated)</span>
-              <Trend trend={stat.trend} />
+              {stat.votes > 0 ? (
+                <>
+                  <Stars value={stat.score} size={22} />
+                  <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
+                  <span className="text-sm text-muted">({formatVotes(stat.votes)} people rated)</span>
+                  <Trend trend={stat.trend} />
+                </>
+              ) : (
+                <span className="chip border border-dashed border-line bg-white text-slate-500">
+                  Not rated yet · be the first
+                </span>
+              )}
               <PriceBadge price={model.priceType} />
             </div>
           </div>
@@ -305,7 +320,7 @@ export default async function ModelPage({ params, searchParams }: Props) {
                   >
                     <span className="flex items-center justify-between gap-2">
                       <span className="truncate">{s.model.name}</span>
-                      <span className="shrink-0 text-xs text-muted">{s.score.toFixed(1)} ★</span>
+                      <span className="shrink-0 text-xs text-muted">{s.votes > 0 ? `${s.score.toFixed(1)} ★` : "New"}</span>
                     </span>
                     <span className="mt-0.5 block truncate text-[10.5px] text-muted">
                       Best for: {s.model.bestFor || "general use"}

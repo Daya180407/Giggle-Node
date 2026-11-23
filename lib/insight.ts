@@ -133,8 +133,9 @@ export type ValueRow = {
  * Free tools are listed separately instead of pretending to divide by zero.
  */
 export function valueRows(view: View, limit = 12): { paid: ValueRow[]; free: ValueRow[] } {
+  // Value only means something for a tool that has actually been rated.
   const rows: ValueRow[] = [...view.aiStats.values()]
-    .filter((stat) => !stat.ai.hidden && stat.score > 0)
+    .filter((stat) => !stat.ai.hidden && stat.score > 0 && stat.votes > 0)
     .map((stat) => {
       const paidPlans = (stat.ai.plans ?? []).filter((plan) => plan.priceMonthly > 0);
       const monthly = paidPlans.length

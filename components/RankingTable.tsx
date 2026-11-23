@@ -22,9 +22,11 @@ export default function RankingTable({
       {stats.map((s, i) => (
         <div
           key={s.ai.id}
-          className={`rank-row rank-row-v2 flex items-center gap-2.5 rounded-2xl px-1 py-3 sm:gap-3 sm:px-2 ${i < 3 ? "rank-top" : ""}`}
+          className={`rank-row rank-row-v2 flex items-center gap-2.5 rounded-2xl px-1 py-3 sm:gap-3 sm:px-2 ${i < 3 && s.votes > 0 ? "rank-top" : ""}`}
         >
-          <span className={`medal h-8 w-8 shrink-0 ${MEDALS[i] ?? "medal-plain"}`}>{i === 0 ? "★" : i + 1}</span>
+          <span className={`medal h-8 w-8 shrink-0 ${s.votes > 0 ? (MEDALS[i] ?? "medal-plain") : "medal-plain"}`}>
+            {i === 0 && s.votes > 0 ? "★" : i + 1}
+          </span>
           <AiLogo slug={s.ai.slug} logo={s.ai.logo} color={s.ai.color} size={44} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -45,22 +47,34 @@ export default function RankingTable({
               </p>
             ) : null}
             <div className="mt-1 flex items-center gap-1.5 sm:hidden">
-              <Stars value={s.score} size={15} />
-              <span className="rounded-full bg-amber-50 px-1.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">
-                ★ {s.score.toFixed(1)}
-              </span>
-              <span className="text-xs text-muted">({formatVotes(s.votes)})</span>
+              {s.votes > 0 ? (
+                <>
+                  <Stars value={s.score} size={15} />
+                  <span className="rounded-full bg-amber-50 px-1.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">
+                    ★ {s.score.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-muted">({formatVotes(s.votes)})</span>
+                </>
+              ) : (
+                <span className="text-xs font-semibold text-slate-500">New · no ratings yet</span>
+              )}
             </div>
           </div>
 
           <div className="hidden w-28 shrink-0 sm:block">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-ink">{s.score.toFixed(1)}</span>
-              <span className="text-muted">{formatVotes(s.votes)}</span>
-            </div>
-            <div className="score-bar mt-1.5">
-              <span style={{ width: `${Math.max(6, Math.min(100, (s.score / 5) * 100))}%` }} />
-            </div>
+            {s.votes > 0 ? (
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-ink">{s.score.toFixed(1)}</span>
+                  <span className="text-muted">{formatVotes(s.votes)}</span>
+                </div>
+                <div className="score-bar mt-1.5">
+                  <span style={{ width: `${Math.max(6, Math.min(100, (s.score / 5) * 100))}%` }} />
+                </div>
+              </>
+            ) : (
+              <span className="text-[11px] font-semibold text-slate-500">New</span>
+            )}
           </div>
 
           <div className="hidden md:block">

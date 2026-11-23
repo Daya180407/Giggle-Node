@@ -10,6 +10,22 @@ const CONFIDENCE = {
 };
 
 export default function ScoreBreakdown({ stat, view }: { stat: AiStat; view: View }) {
+  // Nothing to explain before the first real vote: no demo totals sit behind it.
+  if (stat.votes === 0) {
+    return (
+      <section className="lab-panel p-5" aria-labelledby="score-breakdown">
+        <p className="eyebrow">Transparency</p>
+        <h2 id="score-breakdown" className="display mt-1.5 text-lg text-ink">
+          No score yet
+        </h2>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
+          Nobody has rated this tool yet, so there is no score to explain. The first real rating starts it. No demo
+          votes, imported averages or purchased scores sit behind any number on GigleNode.
+        </p>
+      </section>
+    );
+  }
+
   const breakdown = scoreBreakdown(stat, view);
   const totalWeight = breakdown.layers.reduce((sum, layer) => sum + layer.weight, 0) || 1;
   const confidence = CONFIDENCE[breakdown.confidence];

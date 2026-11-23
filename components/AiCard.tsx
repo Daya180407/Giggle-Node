@@ -63,10 +63,16 @@ export default function AiCard({
       <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-slate-600">{ai.description}</p>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <Stars value={stat.score} size={16} />
-        <span className="text-sm font-bold text-ink">{stat.score.toFixed(1)}</span>
-        <span className="text-xs text-muted">({formatVotes(stat.votes)})</span>
-        <Trend trend={stat.trend} />
+        {stat.votes > 0 ? (
+          <>
+            <Stars value={stat.score} size={16} />
+            <span className="text-sm font-bold text-ink">{stat.score.toFixed(1)}</span>
+            <span className="text-xs text-muted">({formatVotes(stat.votes)})</span>
+            <Trend trend={stat.trend} />
+          </>
+        ) : (
+          <span className="chip border border-dashed border-line bg-white text-slate-500">New · no ratings yet</span>
+        )}
       </div>
 
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-line/70 pt-3">

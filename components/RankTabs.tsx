@@ -108,25 +108,37 @@ export default function RankTabs({ tabs }: { tabs: RankTab[] }) {
                       {row.sponsored ? <SponsoredTag /> : null}
                       <Trend trend={row.trend} />
                       <span className="ml-0.5 inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-1.5 py-px text-[10px] font-bold text-amber-700 ring-1 ring-amber-200/80 sm:hidden">
-                        ★ {row.score.toFixed(1)}
+                        {row.votes > 0 ? `★ ${row.score.toFixed(1)}` : "New"}
                       </span>
                     </div>
                     <p className="mt-0.5 truncate text-[11px] text-muted sm:text-xs">{row.bestFor}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
-                      <Stars value={row.score} size={14} />
-                      <span className="text-[10.5px] text-muted">{formatVotes(row.votes)} votes</span>
+                      {row.votes > 0 ? (
+                        <>
+                          <Stars value={row.score} size={14} />
+                          <span className="text-[10.5px] text-muted">{formatVotes(row.votes)} votes</span>
+                        </>
+                      ) : (
+                        <span className="text-[10.5px] font-semibold text-slate-500">No ratings yet</span>
+                      )}
                       <PriceBadge price={row.priceType} />
                     </div>
                   </div>
 
                   <div className="hidden w-32 shrink-0 sm:block">
-                    <div className="flex items-baseline justify-between gap-1 text-xs">
-                      <span className="text-sm font-extrabold text-ink">{row.score.toFixed(1)}</span>
-                      <span className="text-[10px] text-muted">{formatVotes(row.votes)}</span>
-                    </div>
-                    <div className="score-bar mt-1.5">
-                      <span style={{ width: `${Math.max(6, Math.min(100, (row.score / 5) * 100))}%` }} />
-                    </div>
+                    {row.votes > 0 ? (
+                      <>
+                        <div className="flex items-baseline justify-between gap-1 text-xs">
+                          <span className="text-sm font-extrabold text-ink">{row.score.toFixed(1)}</span>
+                          <span className="text-[10px] text-muted">{formatVotes(row.votes)}</span>
+                        </div>
+                        <div className="score-bar mt-1.5">
+                          <span style={{ width: `${Math.max(6, Math.min(100, (row.score / 5) * 100))}%` }} />
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-slate-500">New</span>
+                    )}
                   </div>
 
                   <div className="hidden shrink-0 sm:block">

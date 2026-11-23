@@ -1,4 +1,4 @@
-import type { Ai, CategorySlug, DB, Model, PriceType, Rating } from "../types";
+import type { Ai, CategorySlug, DB, Model, PriceType } from "../types";
 import { CATALOGUE } from "./index";
 
 /**
@@ -174,10 +174,9 @@ export function applyCatalogue(db: DB): boolean {
 
   let changed = false;
   const existing = new Map(db.ai.map((ai) => [ai.slug, ai]));
-  const seedUsers = db.users.filter((u) => u.isSeed);
-  const pool = seedUsers.length ? seedUsers : db.users;
 
-  CATALOGUE.forEach((entry, index) => {
+  // Catalogue entries are real listings, not opinions: no votes are invented here.
+  CATALOGUE.forEach((entry) => {
     const current = existing.get(entry.slug);
     if (current) {
       if (current.category !== entry.category) {
@@ -196,10 +195,8 @@ export function applyCatalogue(db: DB): boolean {
     }
 
     const seed = hash(entry.slug);
-    const rng = makeRng(seed);
     const meta = CATEGORY_META[entry.category];
     const color = meta.colors[seed % meta.colors.length];
-    const quality = 0.73 + (seed % 170) / 1000;
     const popularity = 0.25 + (seed % 700) / 1000;
 
     const aiId = `ai_${entry.slug}`;
@@ -245,27 +242,6 @@ export function applyCatalogue(db: DB): boolean {
       priceType: entry.price,
     };
     db.models.push(model);
-
-    const voteCount = 10 + (seed % 20);
-    const mean = 3.55 + quality * 1.35;
-    const start = (index * 13 + seed) % pool.length;
-    for (let i = 0; i < voteCount && i < pool.length; i++) {
-      const user = pool[(start + i * 7) % pool.length];
-      if (!user) continue;
-      const stars = Math.min(5, Math.max(1, Math.round(mean + (rng() * 2 - 1) * 0.95)));
-      const created = daysAgo(rng() < 0.45 ? rng() * 29 : 30 + rng() * 150);
-      const rating: Rating = {
-        id: `rt_${entry.slug}_standard_${i}`,
-        userId: user.id,
-        modelId,
-        stars,
-        review: null,
-        createdAt: created,
-        updatedAt: created,
-        lastEditedAt: null,
-      };
-      db.ratings.push(rating);
-    }
 
     changed = true;
   });

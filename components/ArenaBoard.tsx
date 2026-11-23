@@ -58,7 +58,8 @@ function BlindCard({
           <div className="min-w-0">
             <p className="truncate font-bold text-ink">{contender.name}</p>
             <p className="text-xs text-muted">
-              ★ {contender.score.toFixed(1)} · {categoryName(contender.category)}
+              {contender.votes > 0 ? `★ ${contender.score.toFixed(1)}` : "Not rated"} ·{" "}
+              {categoryName(contender.category)}
             </p>
           </div>
         </div>

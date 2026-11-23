@@ -50,16 +50,19 @@ function buildRows(appearance: SiteSettings["appearance"]): { label: string; ren
   return [
   {
     label: "Weighted rating",
-    render: (s) => (
-      <span className="flex flex-wrap items-center gap-1.5">
-        {/* Phones cannot fit five stars in a tool column; the score still shows. */}
-        <span className="hidden sm:inline-flex">
-          <Stars value={s.score} size={16} />
+    render: (s) =>
+      s.votes > 0 ? (
+        <span className="flex flex-wrap items-center gap-1.5">
+          {/* Phones cannot fit five stars in a tool column; the score still shows. */}
+          <span className="hidden sm:inline-flex">
+            <Stars value={s.score} size={16} />
+          </span>
+          <strong>{s.score.toFixed(1)}</strong>
+          <Trend trend={s.trend} />
         </span>
-        <strong>{s.score.toFixed(1)}</strong>
-        <Trend trend={s.trend} />
-      </span>
-    ),
+      ) : (
+        <span className="text-muted">Not rated yet</span>
+      ),
   },
   { label: "Total votes", render: (s) => `${formatVotes(s.votes)} ratings` },
   { label: "Price", render: (s) => <PriceBadge price={s.ai.priceType} /> },
@@ -82,7 +85,8 @@ function buildRows(appearance: SiteSettings["appearance"]): { label: string; ren
     label: "Top model",
     render: (s) => {
       const top = [...s.models].sort((a, b) => b.score - a.score)[0];
-      return top ? `${top.model.name} (${top.score.toFixed(1)} ★)` : "—";
+      if (!top) return "—";
+      return top.votes > 0 ? `${top.model.name} (${top.score.toFixed(1)} ★)` : top.model.name;
     },
   },
   {
@@ -265,8 +269,14 @@ export default async function ComparePage({ params }: Props) {
             <div className="card mt-4 border-indigo-100 bg-brand-soft/40 p-4">
               <h2 className="text-sm font-bold">Verdict</h2>
               <p className="mt-1 text-sm text-slate-700">
-                On weighted rating, <strong>{best.ai.name}</strong> leads ({best.score.toFixed(1)} ★,{" "}
-                {formatVotes(best.votes)} votes).
+                {best.votes > 0 ? (
+                  <>
+                    On weighted rating, <strong>{best.ai.name}</strong> leads ({best.score.toFixed(1)} ★,{" "}
+                    {formatVotes(best.votes)} votes).
+                  </>
+                ) : (
+                  <>None of these tools has a real rating yet, so nothing here is declared a winner.</>
+                )}{" "}
                 If you need a free option, start with{" "}
                 {stats.find((s) => s.ai.priceType !== "paid")?.ai.name ?? best.ai.name}. Compare each tool's best use
                 case first — rating is one factor, not the whole answer.

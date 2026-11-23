@@ -51,7 +51,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const stat = view.aiStats.get(ai.id)!;
   return {
     title: `${ai.name} Review, Rating & Models (2026)`,
-    description: `${ai.name} — rated ${stat.score.toFixed(1)}/5 by ${stat.votes} users. Explore models, pricing, free alternatives, prompts and reviews.`,
+    description:
+      stat.votes > 0
+        ? `${ai.name} — rated ${stat.score.toFixed(1)}/5 by ${stat.votes} users. Explore models, pricing, free alternatives, prompts and reviews.`
+        : `${ai.name} — models, pricing, free alternatives, prompts and reviews. No user ratings yet.`,
     alternates: { canonical: `/ai/${ai.slug}` },
     openGraph: { title: `${ai.name} — GigleNode Rating`, description: ai.description.slice(0, 160) },
   };
@@ -120,12 +123,17 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
     sameAs: ai.website,
     mainEntityOfPage: `https://giglenode.com/ai/${ai.slug}`,
     offers: { "@type": "Offer", price: ai.priceType === "free" ? 0 : ai.planPrice, priceCurrency: "USD" },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: Number(stat.score.toFixed(1)),
-      ratingCount: stat.votes,
-      bestRating: 5,
-    },
+    // Never claim a rating that no real visitor gave.
+    ...(stat.votes > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(stat.score.toFixed(1)),
+            ratingCount: stat.votes,
+            bestRating: 5,
+          },
+        }
+      : {}),
   };
 
   const breadcrumbLd = {
@@ -205,20 +213,31 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               </p>
             ) : null}
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Stars value={stat.score} size={22} />
-              <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
-              <span className="text-sm text-muted">({formatVotes(stat.votes)} people rated)</span>
-              <Trend trend={stat.trend} />
-              <span
-                className={`chip ${verified.percent >= 50 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
-                title="Ratings from users who opened this tool from GigleNode"
-              >
-                ✓ {verified.percent}% verified
-              </span>
+              {stat.votes > 0 ? (
+                <>
+                  <Stars value={stat.score} size={22} />
+                  <span className="text-lg font-bold">{stat.score.toFixed(1)}</span>
+                  <span className="text-sm text-muted">({formatVotes(stat.votes)} people rated)</span>
+                  <Trend trend={stat.trend} />
+                </>
+              ) : (
+                <span className="chip border border-dashed border-line bg-white text-slate-500">
+                  Not rated yet · be the first
+                </span>
+              )}
+              {verified.total > 0 ? (
+                <span
+                  className={`chip ${verified.percent >= 50 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
+                  title="Ratings from users who opened this tool from GigleNode"
+                >
+                  ✓ {verified.percent}% verified
+                </span>
+              ) : null}
             </div>
             <p className="mt-1 text-[11px] text-muted">
-              Overall rating · {formatVotes(stat.aiVotes)} overall {stat.aiVotes === 1 ? "vote" : "votes"} +{" "}
-              {formatVotes(stat.modelVotes)} model {stat.modelVotes === 1 ? "vote" : "votes"}
+              {stat.votes > 0
+                ? `Overall rating · ${formatVotes(stat.aiVotes)} overall ${stat.aiVotes === 1 ? "vote" : "votes"} + ${formatVotes(stat.modelVotes)} model ${stat.modelVotes === 1 ? "vote" : "votes"}`
+                : "No ratings on this listing yet — every score on the site comes from a real user."}
             </p>
           </div>
         </div>
@@ -364,9 +383,15 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                       </div>
                     ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <Stars value={m.score} size={15} />
-                      <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
-                      <span className="text-[11px] text-muted">{m.votes} votes</span>
+                      {m.votes > 0 ? (
+                        <>
+                          <Stars value={m.score} size={15} />
+                          <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
+                          <span className="text-[11px] text-muted">{m.votes} votes</span>
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-muted">Not rated yet</span>
+                      )}
                     </div>
                     <div className="mt-2">
                       <ApiPricingInline pricing={getApiPricing(ai, m.model)} />
@@ -442,10 +467,16 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                         </td>
                         <td className="px-2 py-2.5 sm:px-4">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <Stars value={m.score} size={15} />
-                            <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
+                            {m.votes > 0 ? (
+                              <>
+                                <Stars value={m.score} size={15} />
+                                <span className="text-sm font-semibold">{m.score.toFixed(1)}</span>
+                              </>
+                            ) : (
+                              <span className="text-[11px] text-muted">Not rated yet</span>
+                            )}
                           </div>
-                          <p className="mt-0.5 text-[10px] text-muted">{m.votes} votes</p>
+                          {m.votes > 0 ? <p className="mt-0.5 text-[10px] text-muted">{m.votes} votes</p> : null}
                         </td>
                         <td className="px-2 py-2.5 sm:px-4">
                           <ApiPricingInline pricing={pricing} />
@@ -663,8 +694,14 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                     {freeAlternative.ai.name}
                   </Link>
                   <div className="mt-0.5 flex items-center gap-1.5">
-                    <Stars value={freeAlternative.score} size={15} />
-                    <span className="text-xs font-semibold">{freeAlternative.score.toFixed(1)}</span>
+                    {freeAlternative.votes > 0 ? (
+                      <>
+                        <Stars value={freeAlternative.score} size={15} />
+                        <span className="text-xs font-semibold">{freeAlternative.score.toFixed(1)}</span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted">Not rated yet</span>
+                    )}
                     <PriceBadge price={freeAlternative.ai.priceType} />
                   </div>
                   <p className="mt-0.5 line-clamp-1 text-xs text-muted">{freeAlternative.ai.bestFor.join(" · ")}</p>
@@ -843,12 +880,14 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-xs text-muted">Overall rating</p>
-                <p className="text-3xl font-extrabold">{stat.score.toFixed(1)}</p>
+                <p className="text-3xl font-extrabold">{stat.votes > 0 ? stat.score.toFixed(1) : "—"}</p>
               </div>
-              <Stars value={stat.score} size={19} />
+              {stat.votes > 0 ? <Stars value={stat.score} size={19} /> : null}
             </div>
             <p className="mt-1 text-xs text-muted">
-              {stat.votes.toLocaleString("en-IN")} votes · {stat.trend === "up" ? "trend up" : stat.trend === "down" ? "trend down" : "stable"}
+              {stat.votes > 0
+                ? `${stat.votes.toLocaleString("en-IN")} votes · ${stat.trend === "up" ? "trend up" : stat.trend === "down" ? "trend down" : "stable"}`
+                : "Waiting for the first rating"}
             </p>
             <div className="mt-3 space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-600">
@@ -925,7 +964,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                       className="flex items-center justify-between rounded-lg px-1 py-1 hover:bg-brand-soft hover:text-brand"
                     >
                       <span className="truncate">{m.model.name}</span>
-                      <span className="text-xs text-muted">{m.score.toFixed(1)} ★</span>
+                      <span className="text-xs text-muted">{m.votes > 0 ? `${m.score.toFixed(1)} ★` : "New"}</span>
                     </Link>
                   </li>
                 ))}

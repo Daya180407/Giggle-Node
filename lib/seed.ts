@@ -1381,43 +1381,8 @@ export function buildSeed(): DB {
 
   const now = new Date();
 
-  // ---- users first: seeded ratings reference this pool ----
-  const FIRST = [
-    "Aarav", "Priya", "Rohit", "Sneha", "Kabir", "Ananya", "Vikram", "Meera", "Rahul", "Ishita",
-    "Arjun", "Tanya", "Dev", "Nisha", "Aditya", "Pooja", "Sahil", "Riya", "Karan", "Divya",
-    "Manav", "Sara", "Nikhil", "Aditi", "Yash", "Zoya", "Aman", "Kavya", "Varun", "Neha",
-  ];
-  const LAST = [
-    "Sharma", "Nair", "Verma", "Iyer", "Khan", "Das", "Patel", "Joshi", "Gupta", "Bose",
-    "Reddy", "Singh", "Malhotra", "Rao", "Kulkarni", "Menon", "Chopra", "Bhatt", "Mehta", "Pillai",
-  ];
-  USER_NAMES.forEach((name, i) => {
-    users.push({
-      id: `u_seed_${String(i + 1).padStart(3, "0")}`,
-      name,
-      email: `${name.toLowerCase().replace(/[^a-z0-9]+/g, ".")}@giglenode.com`,
-      avatar: name.slice(0, 1),
-      role: "user",
-      createdAt: isoDaysAgo(220 - i),
-      isSeed: true,
-    });
-  });
-  let poolIndex = USER_NAMES.length;
-  while (users.length < 240) {
-    const first = FIRST[poolIndex % FIRST.length];
-    const last = LAST[Math.floor(poolIndex / FIRST.length) % LAST.length];
-    const n = poolIndex + 1;
-    users.push({
-      id: `u_seed_${String(n).padStart(3, "0")}`,
-      name: `${first} ${last}`,
-      email: `${first.toLowerCase()}.${last.toLowerCase()}${n}@giglenode.com`,
-      avatar: first.slice(0, 1),
-      role: "user",
-      createdAt: isoDaysAgo(210 - (n % 180)),
-      isSeed: true,
-    });
-    poolIndex++;
-  }
+  // Only real accounts exist. The catalogue is editorial, but every rating,
+  // review and vote has to come from a visitor, so no reviewers are pre-seeded.
   users.push(
     {
       id: "u_demo",
@@ -1491,36 +1456,6 @@ export function buildSeed(): DB {
         priceType: m.price ?? seed.price,
       });
 
-      const rng = makeRng(hashCode(`${seed.slug}-${slug}`));
-      const popularity = Math.max(0.12, seed.pop * (1 - mIndex * 0.22));
-      const wanted = Math.round(18 + popularity * (60 + rng() * 210));
-      const voteCount = Math.min(wanted, ratingPool.length - 1);
-      const quality = Math.min(
-        0.97,
-        Math.max(0.34, seed.quality + (m.offset ?? 0) + (rng() - 0.5) * 0.05),
-      );
-      const mean = 3.55 + quality * 1.35;
-      const startUser = Math.floor(rng() * ratingPool.length);
-      for (let i = 0; i < voteCount; i++) {
-        // stride 7 is coprime with the 240-user pool, so ids stay unique per model
-        const user = ratingPool[(startUser + i * 7 + aiIndex) % ratingPool.length];
-        if (!user) break;
-        const stars = Math.min(5, Math.max(1, Math.round(mean + gaussian(rng) * 0.72)));
-        const daysAgo = rng() < 0.42 ? rng() * 29 : 30 + rng() * 160;
-        const createdAt = isoDaysAgo(daysAgo, rng() * 20);
-        const hasReview = rng() < 0.17;
-        ratings.push({
-          id: `rt_${seed.slug}_${slug}_${i}`,
-          userId: user.id,
-          modelId: `mdl_${seed.slug}_${slug}`,
-          stars,
-          review: hasReview ? pick(rng, REVIEWS) : null,
-          createdAt,
-          updatedAt: createdAt,
-          lastEditedAt: null,
-        });
-      }
-
       PROMPT_TEMPLATES.forEach((template, ti) => {
         const p = template(seed.name, seed.category);
         prompts.push({
@@ -1584,26 +1519,6 @@ export function buildSeed(): DB {
     aiId,
     createdAt: isoDaysAgo(3 - i),
   }));
-
-  // the demo user's own ratings (so edit + lock states are visible immediately)
-  const demoRatings: { aiSlug: string; modelIdx: number; stars: number; review: string | null; days: number }[] = [
-    { aiSlug: "chatgpt", modelIdx: 0, stars: 5, review: "Mera daily driver. Hindi prompts bhi achhe samajhta hai.", days: 3 },
-    { aiSlug: "midjourney", modelIdx: 0, stars: 4, review: "Quality is excellent, but the price is a little high.", days: 9 },
-  ];
-  demoRatings.forEach((r, i) => {
-    const model = models.filter((m) => m.aiId === `ai_${r.aiSlug}`)[r.modelIdx];
-    if (!model) return;
-    ratings.push({
-      id: `rt_demo_${i}`,
-      userId: "u_demo",
-      modelId: model.id,
-      stars: r.stars,
-      review: r.review,
-      createdAt: isoDaysAgo(r.days),
-      updatedAt: isoDaysAgo(r.days),
-      lastEditedAt: null,
-    });
-  });
 
   return {
     version: 1,

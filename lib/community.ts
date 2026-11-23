@@ -174,22 +174,16 @@ export function subscriberStats(db: DB) {
 
 /* ------------------------------ backfill ------------------------------ */
 
-/** Stable 0–99 bucket for a row id, so backfilled flags are identical on every boot. */
-function bucket(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 1000;
-  return hash % 100;
-}
-
 /**
- * Legacy data predates both flags, so seeded ratings get a stable verification
- * flag and every tool gets a baseline price snapshot. Runs once per document.
+ * Legacy rows predate the verified flag. A rating is never called verified
+ * without proof that the reviewer opened the tool, so older rows start unverified
+ * and every tool gets a baseline price snapshot. Runs once per document.
  */
 export function backfillCommunity(db: DB): boolean {
   let changed = false;
   for (const rating of db.ratings) {
     if (typeof rating.verified !== "boolean") {
-      rating.verified = bucket(rating.id) < 78;
+      rating.verified = false;
       changed = true;
     }
   }
