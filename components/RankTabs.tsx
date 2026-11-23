@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AiLogo, PriceBadge, SponsoredTag, Stars, Trend } from "@/components/ui";
 import { formatVotes } from "@/lib/format";
+import { RATED_MIN_VOTES } from "@/lib/rank";
 import type { PriceType } from "@/lib/types";
 
 export type RankRow = {
@@ -64,7 +65,7 @@ export default function RankTabs({ tabs }: { tabs: RankTab[] }) {
       <div className="space-y-1">
         {current?.rows.length ? (
           current.rows.map((row) => {
-            const top = row.rank <= 3;
+            const top = row.rank <= 3 && row.votes >= RATED_MIN_VOTES;
             return (
               <div
                 key={row.id}
@@ -73,8 +74,8 @@ export default function RankTabs({ tabs }: { tabs: RankTab[] }) {
                 }`}
               >
                 <div className="relative shrink-0 sm:justify-self-center">
-                  <span className={`medal h-8 w-8 ${MEDALS[row.rank - 1] ?? "medal-plain"}`}>
-                    {row.rank === 1 ? "★" : row.rank}
+                  <span className={`medal h-8 w-8 ${row.votes >= RATED_MIN_VOTES ? (MEDALS[row.rank - 1] ?? "medal-plain") : "medal-plain"}`}>
+                    {row.rank === 1 && row.votes >= RATED_MIN_VOTES ? "★" : row.rank}
                   </span>
                   {top ? (
                     <span

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AiLogo, PriceBadge, SponsoredTag, Stars, Trend } from "@/components/ui";
 import { formatVotes } from "@/lib/format";
-import type { AiStat } from "@/lib/rank";
+import { RATED_MIN_VOTES, type AiStat } from "@/lib/rank";
 
 const MEDALS = ["medal-1", "medal-2", "medal-3"];
 
@@ -22,10 +22,10 @@ export default function RankingTable({
       {stats.map((s, i) => (
         <div
           key={s.ai.id}
-          className={`rank-row rank-row-v2 flex items-center gap-2.5 rounded-2xl px-1 py-3 sm:gap-3 sm:px-2 ${i < 3 && s.votes > 0 ? "rank-top" : ""}`}
+          className={`rank-row rank-row-v2 flex items-center gap-2.5 rounded-2xl px-1 py-3 sm:gap-3 sm:px-2 ${i < 3 && s.votes >= RATED_MIN_VOTES ? "rank-top" : ""}`}
         >
-          <span className={`medal h-8 w-8 shrink-0 ${s.votes > 0 ? (MEDALS[i] ?? "medal-plain") : "medal-plain"}`}>
-            {i === 0 && s.votes > 0 ? "★" : i + 1}
+          <span className={`medal h-8 w-8 shrink-0 ${s.votes >= RATED_MIN_VOTES ? (MEDALS[i] ?? "medal-plain") : "medal-plain"}`}>
+            {i === 0 && s.votes >= RATED_MIN_VOTES ? "★" : i + 1}
           </span>
           <AiLogo slug={s.ai.slug} logo={s.ai.logo} color={s.ai.color} size={44} />
           <div className="min-w-0 flex-1">
@@ -35,6 +35,11 @@ export default function RankingTable({
               </Link>
               {s.ai.sponsored ? <SponsoredTag /> : null}
               {s.trend === "up" ? <Trend trend="up" /> : null}
+              {s.votes > 0 && s.votes < RATED_MIN_VOTES ? (
+                <span className="chip bg-slate-100 text-[9.5px] text-slate-500" title="Fewer than 10 votes so far">
+                  Early signal
+                </span>
+              ) : null}
             </div>
             <p className="truncate text-xs text-muted">{s.ai.bestFor.join(" · ")}</p>
             {reasons?.[s.ai.id]?.length ? (

@@ -158,6 +158,12 @@ export type HelpfulVote = {
 
 export type RatingStatus = "pending" | "approved" | "rejected";
 
+/** The five areas every rating is scored on. */
+export type RatingCriterion = "ease" | "quality" | "speed" | "reliability" | "value";
+
+/** Per-area 1–5 scores; a rating's overall `stars` is their average. */
+export type RatingCriteria = Record<RatingCriterion, number>;
+
 export type Rating = {
   id: string;
   userId: string;
@@ -166,6 +172,12 @@ export type Rating = {
   /** set for an AI-level rating so overall votes stay attached to the tool */
   aiId?: string | null;
   stars: number;
+  /** per-area scores behind `stars`; missing on ratings made before this existed */
+  criteria?: RatingCriteria | null;
+  /** short "what worked" line shown under the review */
+  pros?: string | null;
+  /** short "what did not work" line shown under the review */
+  cons?: string | null;
   review: string | null;
   createdAt: string;
   updatedAt: string;

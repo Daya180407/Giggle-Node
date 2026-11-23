@@ -22,6 +22,7 @@ import { getCurrentUser, requestIp } from "@/lib/auth";
 import { CATEGORIES, getCategories, slugifyCategory } from "@/lib/categories";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
 import { parseCsv } from "@/lib/csv";
+import { criteriaOverall, readCriteria } from "@/lib/criteria";
 import { findBadWord, isBlockedIp, normalizeIpList, normalizeWordList } from "@/lib/guard";
 import { deliverEmails, mailerConfigured } from "@/lib/mailer";
 import { pushNotification, queueEmail, renderTemplate } from "@/lib/notify";
@@ -125,13 +126,24 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
   // The AI page submits aiId (whole product); a model page submits modelId.
   const aiTargetId = String(formData.get("aiId") ?? "").trim();
   const modelId = String(formData.get("modelId") ?? "").trim();
-  const stars = Number(formData.get("stars"));
   const review = String(formData.get("review") ?? "").trim().slice(0, 600);
+  const pros = String(formData.get("pros") ?? "").trim().slice(0, 160);
+  const cons = String(formData.get("cons") ?? "").trim().slice(0, 160);
+  // Every new rating scores five areas; the overall stars are their average.
+  const criteria = readCriteria({
+    ease: formData.get("criterion_ease"),
+    quality: formData.get("criterion_quality"),
+    speed: formData.get("criterion_speed"),
+    reliability: formData.get("criterion_reliability"),
+    value: formData.get("criterion_value"),
+  });
 
   if (!aiTargetId && !modelId) return { ok: false, error: "Model not found." };
-  if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
-    return { ok: false, error: "Please choose a rating between 1 and 5 stars." };
+  if (!criteria) {
+    return { ok: false, error: "Please rate all five areas from 1 to 5 stars." };
   }
+  const stars = criteriaOverall(criteria);
+  const reviewText = [review, pros, cons].filter(Boolean).join(" ");
 
   const db = readDb();
   const settings = getSiteSettings(db);
@@ -149,9 +161,9 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
     return { ok: false, error: `This network has reached the limit of ${MAX_RATINGS_PER_DAY} ratings per 24 hours.` };
   }
 
-  const badWord = findBadWord(review, settings.security.badWords);
+  const badWord = findBadWord(reviewText, settings.security.badWords);
   const needsApproval =
-    review.length > 0 &&
+    reviewText.length > 0 &&
     (settings.requireReviewApproval || (Boolean(badWord) && settings.security.badWordAction === "pending"));
   const ratingStatus: RatingStatus =
     badWord && settings.security.badWordAction === "hide" ? "rejected" : needsApproval ? "pending" : "approved";
@@ -180,6 +192,9 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
     mutateDb((d) => {
       const row = d.ratings.find((r) => r.id === existing.id)!;
       row.stars = stars;
+      row.criteria = criteria;
+      row.pros = pros || null;
+      row.cons = cons || null;
       row.review = review || null;
       row.status = ratingStatus;
       row.verified = parent ? hasVerifiedUse(d, user.id, parent.id) : Boolean(row.verified);
@@ -199,6 +214,9 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
       modelId: targetAi ? null : model!.id,
       aiId: targetAi ? targetAi.id : null,
       stars,
+      criteria,
+      pros: pros || null,
+      cons: cons || null,
       review: review || null,
       status: ratingStatus,
       verified: parent ? hasVerifiedUse(d, user.id, parent.id) : false,
@@ -213,8 +231,9 @@ export async function rateModelAction(_prev: ActionState, formData: FormData): P
         id: uid("pt"),
         userId: user.id,
         points:
-          settings.gamification.pointsPerRating + (review.length > 0 ? settings.gamification.pointsPerReview : 0),
-        reason: review.length > 0 ? "rating + review" : "rating",
+          settings.gamification.pointsPerRating +
+          (reviewText.length > 0 ? settings.gamification.pointsPerReview : 0),
+        reason: reviewText.length > 0 ? "rating + review" : "rating",
         at: new Date().toISOString(),
       });
       d.pointEvents = d.pointEvents.slice(-1500);

@@ -32,6 +32,8 @@ import { CONTRIBUTION_LABEL, myContributions } from "@/lib/contributions";
 import { communityMessagesForRoom, UNIVERSAL_ROOM_SLUG } from "@/lib/community-chat";
 import { reportRatingAction } from "@/app/actions";
 import { aiReviews, buildView, isVerifiedPrompt, publishedPosts, promptsFor, timeAgo } from "@/lib/rank";
+import { criterionAverages } from "@/lib/criteria";
+import ReviewDetail from "@/components/ReviewDetail";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
@@ -80,6 +82,11 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
   const prompts = promptsFor(db, ai.id);
   const communityPosts = settings.community.enabled ? communityMessagesForRoom(db, ai.id, null).length : 0;
   const reviews = aiReviews(db, ai.id, 8);
+  const criteriaRows = criterionAverages(
+    db.ratings.filter(
+      (r) => r.status !== "pending" && r.status !== "rejected" && (r.aiId === ai.id || modelIds.has(r.modelId ?? "")),
+    ),
+  );
   const posts = publishedPosts(db).filter((p) => p.relatedAiIds.includes(ai.id)).slice(0, 3);
   const bookmarked = Boolean(user && db.bookmarks.some((b) => b.userId === user.id && b.aiId === ai.id));
   const followed = Boolean(user && db.follows.some((f) => f.userId === user.id && f.aiId === ai.id));
@@ -809,12 +816,13 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                       </span>
                       <span className="text-sm font-semibold">{reviewer?.name ?? "GigleNode user"}</span>
                       {reviewer?.verified ? (
-                        <span className="chip bg-emerald-50 text-emerald-700">✓ verified</span>
+                        <span className="chip bg-emerald-50 text-emerald-700">✓ Verified account</span>
                       ) : null}
                       <Stars value={rating.stars} size={15} />
                       <span className="ml-auto text-xs text-muted">{timeAgo(rating.updatedAt)}</span>
                     </div>
                     <p className="mt-1.5 text-sm text-slate-600">{rating.review}</p>
+                    <ReviewDetail rating={rating} />
                     <p className="mt-1 text-xs text-muted">
                       {model ? `Rated on ${model.name}` : `Rated ${ai.name} overall`}
                     </p>
@@ -924,6 +932,29 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           <ScoreBreakdown stat={stat} view={view} />
 
           <Distribution dist={stat.dist} votes={stat.votes} />
+
+          {criteriaRows.length ? (
+            <div className="card p-4">
+              <h3 className="display text-base text-ink">What users rate</h3>
+              <p className="mt-0.5 text-[10.5px] text-muted">Average area scores from real reviews.</p>
+              <div className="mt-3 space-y-2">
+                {criteriaRows.map((row) => (
+                  <div key={row.key}>
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="text-slate-700">{row.label}</span>
+                      <span className="font-bold text-ink">{row.avg.toFixed(1)}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-[linear-gradient(90deg,#8b6cff,#3fd8e6)]"
+                        style={{ width: `${(row.avg / 5) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {trendPoints.length ? (
             <div className="card p-4">

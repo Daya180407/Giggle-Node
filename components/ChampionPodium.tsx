@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AiLogo, PriceBadge, Stars } from "@/components/ui";
 import { formatVotes } from "@/lib/format";
+import { RATED_MIN_VOTES } from "@/lib/rank";
 import type { PriceType } from "@/lib/types";
 
 export type ChampionRow = {
@@ -45,8 +46,12 @@ function ChampionCard({ row }: { row: ChampionRow }) {
               : "bg-slate-50 text-slate-500 ring-1 ring-line"
           }`}
         >
-          {first ? "👑 " : "#"}
-          {first ? TITLES[0] : `#${row.rank} ${TITLES[row.rank - 1]}`}
+          {row.votes > 0 && row.votes < RATED_MIN_VOTES ? "" : first ? "👑 " : "#"}
+          {row.votes > 0 && row.votes < RATED_MIN_VOTES
+            ? "Early signal"
+            : first
+              ? TITLES[0]
+              : `#${row.rank} ${TITLES[row.rank - 1]}`}
         </span>
         <span className="text-xs font-bold text-slate-400">{formatVotes(row.votes)} votes</span>
       </div>

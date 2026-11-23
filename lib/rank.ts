@@ -1,6 +1,8 @@
 import type { Ai, CategorySlug, DB, Model, Post, Prompt, User } from "./types";
 
 export const PRIOR_VOTES = 50;
+/** A board medal needs at least this many real votes; below it we show "Early signal". */
+export const RATED_MIN_VOTES = 10;
 export const RECENT_DAYS = 30;
 export const RECENT_MULTIPLIER = 1.5;
 /** An overall vote covers every model, so it weighs more than a single model vote. */

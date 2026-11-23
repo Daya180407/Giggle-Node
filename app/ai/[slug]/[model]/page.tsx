@@ -6,6 +6,7 @@ import Distribution from "@/components/Distribution";
 import HelpfulWidget from "@/components/HelpfulWidget";
 import PricingReport from "@/components/PricingReport";
 import RatingWidget from "@/components/RatingWidget";
+import ReviewDetail from "@/components/ReviewDetail";
 import { AiLogo, PriceBadge, Stars, Trend } from "@/components/ui";
 import { getApiPricing } from "@/lib/api-pricing";
 import { formatVotes } from "@/lib/format";
@@ -271,6 +272,7 @@ export default async function ModelPage({ params, searchParams }: Props) {
                     <span className="ml-auto text-xs text-muted">{timeAgo(rating.updatedAt)}</span>
                   </div>
                   <p className="mt-1.5 text-sm text-slate-600">{rating.review}</p>
+                  <ReviewDetail rating={rating} />
                   <form action={reportRatingAction} className="mt-1.5">
                     <input type="hidden" name="id" value={rating.id} />
                     <input type="hidden" name="back" value={`/ai/${ai.slug}/${model.slug}`} />
