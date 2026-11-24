@@ -19,6 +19,15 @@ export type SponsorSlot = {
 
 export const SPONSOR_SLOTS: SponsorSlot[] = [
   {
+    key: "trending",
+    label: "Trending this week — after #1",
+    short: "Trending card",
+    position: 1,
+    blurb:
+      "The paid card inside the homepage Trending AI tools grid, right after the first tool. The tool keeps its real rank.",
+    defaultPrice: 12000,
+  },
+  {
     key: "top3",
     label: "Category top 3 — after #1",
     short: "Top 3 podium",
@@ -64,6 +73,16 @@ export const SPONSOR_SLOT_KEYS: SponsorSlotKey[] = SPONSOR_SLOTS.map((slot) => s
 
 export function slotMeta(key: string): SponsorSlot | null {
   return SPONSOR_SLOTS.find((slot) => slot.key === key) ?? null;
+}
+
+/**
+ * Slots that make sense for one list. The trending card only exists in the
+ * homepage trending grid, and app lists have neither a podium nor trending.
+ */
+export function sponsorSlotsFor(targetType: "ai" | "app", listKey: string): SponsorSlot[] {
+  if (targetType === "app") return SPONSOR_SLOTS.filter((slot) => slot.key !== "top3" && slot.key !== "trending");
+  if (listKey === "trending") return SPONSOR_SLOTS.filter((slot) => slot.key === "trending");
+  return SPONSOR_SLOTS.filter((slot) => slot.key !== "trending");
 }
 
 export function defaultSponsorPrices(): Record<SponsorSlotKey, number> {
@@ -149,6 +168,7 @@ export function appListLabel(listKey: string): string {
 }
 
 export function aiListLabel(listKey: string, categoryName?: (slug: string) => string): string {
+  if (listKey === "trending") return "Trending AI tools this week";
   if (listKey === "all") return "All AI leaderboard";
   return `${categoryName ? categoryName(listKey) : listKey} AI ranking`;
 }

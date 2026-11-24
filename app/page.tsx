@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AdSlot from "@/components/AdSlot";
+import AdTrackerView from "@/components/AdTrackerView";
 import AiCard from "@/components/AiCard";
 import AnimatedStats, { type HomeStat } from "@/components/AnimatedStats";
 import AppShowcase, { type AppShowcaseItem } from "@/components/AppShowcase";
@@ -18,7 +19,7 @@ import { categoryName, getCategories } from "@/lib/categories";
 import { communityTotals } from "@/lib/community-chat";
 import { getSiteSettings } from "@/lib/settings";
 import { appPricingFor, formatPlanPrice } from "@/lib/plans";
-import { activeSponsorPlacements, isAiSponsored, slotMeta } from "@/lib/sponsors";
+import { activeSponsorPlacements, isAiSponsored, placementsFor, slotMeta } from "@/lib/sponsors";
 import { allApps, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
 import {
   buildView,
@@ -67,6 +68,23 @@ export default async function HomePage({
     .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
     .slice(0, 6);
   const trending = trendingAis(view, 4, settings.trendingAiIds);
+  // The trending grid also carries one paid card, placed right after #1.
+  const trendingPlacement = placementsFor(db, "ai", "trending")[0];
+  const trendingSponsorStat = trendingPlacement ? view.aiStats.get(trendingPlacement.targetId) : undefined;
+  const trendingRows = trending.map((s, i) => ({
+    stat: s,
+    badge: `#${i + 1} Trending`,
+    sponsored: false,
+    sponsorId: undefined as string | undefined,
+  }));
+  if (trendingSponsorStat && trendingPlacement) {
+    trendingRows.splice(1, 0, {
+      stat: trendingSponsorStat,
+      badge: "Sponsored placement",
+      sponsored: true,
+      sponsorId: trendingPlacement.id,
+    });
+  }
   const rising = risingAis(view, 4);
   const momentum = movers(view, 4);
   const leaders = rankedAis(view).slice(0, 3);
@@ -517,8 +535,16 @@ export default async function HomePage({
             }
           />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {trending.map((s, i) => (
-              <AiCard key={s.ai.id} stat={s} saved={saved.has(s.ai.id)} badge={`#${i + 1} Trending`} />
+            {trendingRows.map((row) => (
+              <div key={row.sponsorId ?? row.stat.ai.id} className="relative">
+                {row.sponsorId ? <AdTrackerView kind="placement" id={row.sponsorId} /> : null}
+                <AiCard
+                  stat={row.stat}
+                  saved={saved.has(row.stat.ai.id)}
+                  badge={row.badge}
+                  sponsored={row.sponsored}
+                />
+              </div>
             ))}
           </div>
         </section>

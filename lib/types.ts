@@ -107,7 +107,7 @@ export type SponsorTargetType = "ai" | "app";
  * card inside a category's champions podium (after #1); the list slots are the
  * position of the row after which the sponsored card appears.
  */
-export type SponsorSlotKey = "top3" | "list5" | "list10" | "list15" | "list50";
+export type SponsorSlotKey = "trending" | "top3" | "list5" | "list10" | "list15" | "list50";
 
 /** A paid placement: the listing is inserted at `slot` but keeps its real rank. */
 export type SponsorPlacement = {
@@ -134,6 +134,8 @@ export type SponsorPlacement = {
   clicks?: number;
   /** public token for the advertiser's own performance report */
   reportToken?: string;
+  /** seeded demo row, removable with one click from /admin/ads */
+  demo?: boolean;
 };
 
 /**
@@ -169,6 +171,8 @@ export type ChatAd = {
   reportToken: string;
   createdAt: string;
   createdBy: string;
+  /** seeded demo row, removable with one click from /admin/ads */
+  demo?: boolean;
 };
 
 /** A member's report on a community message, reviewed by an admin. */
@@ -651,6 +655,8 @@ export type CommunityMessage = {
   kind: CommunityMessageKind;
   attachment: CommunityAttachment | null;
   createdAt: string;
+  /** seeded demo conversation, removable with the demo ads button */
+  demo?: boolean;
 };
 
 /** Admin controls for the per-AI community rooms. */
@@ -1083,6 +1089,8 @@ export type DB = {
   chatAds?: ChatAd[];
   /** default CPM (price per 1000 chat impressions) used by the admin form */
   chatAdCpm?: number;
+  /** set once the demo ads were installed, so they are never re-added after cleanup */
+  demoAdsSeededAt?: string | null;
   /** blind arena picks, the basis of the community win-rate table */
   arenaVotes?: ArenaVote[];
   /** anonymous yes/no "was this helpful?" signals, not part of the ranking */

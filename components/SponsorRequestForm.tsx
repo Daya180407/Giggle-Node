@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { submitSponsorRequestAction } from "@/app/actions";
-import { money, SPONSOR_SLOTS } from "@/lib/sponsors";
+import { money, SPONSOR_SLOTS, sponsorSlotsFor } from "@/lib/sponsors";
 import type { SponsorSlotKey } from "@/lib/types";
 
 /**
@@ -34,14 +34,16 @@ export default function SponsorRequestForm({
     targetType === "ai"
       ? ais.map((ai) => ({ value: `ai:${ai.id}`, label: `${ai.name} · ${ai.categoryName}` }))
       : apps.filter((app) => app.kind === appKind).map((app) => ({ value: `app:${app.slug}`, label: app.name }));
-  // The top-3 podium only exists for AI categories, so app requests start at list5.
-  const slotChoices = targetType === "ai" ? SPONSOR_SLOTS : SPONSOR_SLOTS.filter((row) => row.key !== "top3");
-  const selectedSlot = SPONSOR_SLOTS.find((row) => row.key === slot) ?? SPONSOR_SLOTS[0];
+  // The trending card only exists in the trending grid; app requests start at list5.
+  const slotChoices = sponsorSlotsFor(targetType, listKey);
+  const selectedSlot = slotChoices.find((row) => row.key === slot) ?? slotChoices[0];
   const listLabel =
     targetType === "ai"
-      ? listKey === "all"
-        ? "All AI leaderboard"
-        : `${categories.find((row) => row.slug === listKey)?.name ?? listKey} AI ranking`
+      ? listKey === "trending"
+        ? "Trending AI tools this week"
+        : listKey === "all"
+          ? "All AI leaderboard"
+          : `${categories.find((row) => row.slug === listKey)?.name ?? listKey} AI ranking`
       : listKey === "desktop"
         ? "PC software list"
         : "Mobile apps list";
@@ -53,7 +55,7 @@ export default function SponsorRequestForm({
       setTarget(ais[0] ? `ai:${ais[0].id}` : "");
     } else {
       setListKey("mobile");
-      if (slot === "top3") setSlot("list5");
+      if (slot === "top3" || slot === "trending") setSlot("list5");
       const first = apps.find((app) => app.kind === "mobile");
       setTarget(first ? `app:${first.slug}` : "");
     }
@@ -61,6 +63,8 @@ export default function SponsorRequestForm({
 
   function switchList(next: string) {
     setListKey(next);
+    if (next === "trending") setSlot("trending");
+    else if (slot === "trending") setSlot("list5");
     if (targetType === "app") {
       const first = apps.find((app) => app.kind === (next === "desktop" ? "desktop" : "mobile"));
       setTarget(first ? `app:${first.slug}` : "");
@@ -152,6 +156,7 @@ export default function SponsorRequestForm({
             {targetType === "ai" ? (
               <>
                 <option value="all">All AI leaderboard</option>
+                <option value="trending">Trending this week (homepage)</option>
                 {categories.map((category) => (
                   <option key={category.slug} value={category.slug}>
                     {category.name} AI ranking

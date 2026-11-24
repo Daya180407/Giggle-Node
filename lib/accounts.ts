@@ -1,6 +1,7 @@
 import { applyCatalogue } from "./catalogue/apply";
 import { CATEGORIES } from "./categories";
 import { backfillCommunity } from "./community";
+import { seedDemoAds } from "./demo-ads";
 import { SEED_ACCOUNTS } from "./seed-accounts";
 import { localizeContentToEnglish } from "./localize-en";
 import { stripFabricatedRatings } from "./real-data";
@@ -127,6 +128,8 @@ export async function migrateDb(db: DB): Promise<boolean> {
   if (backfillCommunity(db)) changed = true;
   // Last, so catalogue/ledger migrations cannot reintroduce generated reviews.
   if (stripFabricatedRatings(db)) changed = true;
+  // One-time demo of every ad product; removable from /admin/ads.
+  if (seedDemoAds(db)) changed = true;
 
   return changed;
 }

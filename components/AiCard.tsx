@@ -11,11 +11,14 @@ export default function AiCard({
   saved = false,
   back = "/",
   badge,
+  sponsored = false,
 }: {
   stat: AiStat;
   saved?: boolean;
   back?: string;
   badge?: string;
+  /** paid card from a sponsored placement, even when the listing itself is not labelled */
+  sponsored?: boolean;
 }) {
   const { ai } = stat;
   return (
@@ -35,7 +38,7 @@ export default function AiCard({
             <Link href={`/ai/${ai.slug}`} className="truncate font-bold text-ink transition hover:text-brand">
               {ai.name}
             </Link>
-            {isAiSponsored(ai) ? <SponsoredTag /> : null}
+            {sponsored || isAiSponsored(ai) ? <SponsoredTag /> : null}
           </div>
           <p className="mt-0.5 truncate text-xs text-muted">
             {categoryName(ai.category)} · {stat.models.length} {stat.models.length === 1 ? "model" : "models"}

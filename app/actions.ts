@@ -1346,6 +1346,35 @@ export async function saveChatAdAction(formData: FormData) {
   redirect(`/admin/ads?saved=${savedId}`);
 }
 
+/** Removes every seeded demo ad at once, keeping the one-time seed flag set. */
+export async function removeDemoAdsAction() {
+  const admin = await assertAdmin("sponsors");
+  let removed = 0;
+  mutateDb((db) => {
+    db.sponsorPlacements = (db.sponsorPlacements ?? []).filter((row) => {
+      if (!row.demo) return true;
+      removed += 1;
+      return false;
+    });
+    db.chatAds = (db.chatAds ?? []).filter((row) => {
+      if (!row.demo) return true;
+      removed += 1;
+      return false;
+    });
+    const messagesBefore = (db.communityMessages ?? []).length;
+    db.communityMessages = (db.communityMessages ?? []).filter((row) => !row.demo);
+    db.communityMembers = (db.communityMembers ?? []).filter((row) => row.id !== "cmm_demo");
+    removed += messagesBefore - (db.communityMessages?.length ?? 0);
+    logAdminAction(db, admin, "removed demo ads", "Demo ads", `${removed} demo rows removed`);
+  });
+  revalidatePath("/");
+  revalidatePath("/admin/ads");
+  revalidatePath("/admin/sponsors");
+  revalidatePath("/category/all");
+  revalidatePath("/community");
+  redirect("/admin/ads?saved=demo-removed");
+}
+
 export async function toggleChatAdAction(formData: FormData) {
   const admin = await assertAdmin("sponsors");
   const id = String(formData.get("id") ?? "");
@@ -2092,8 +2121,15 @@ function sponsoredTarget(db: DB, raw: string) {
 /** A placement can only point at a list that matches its target type. */
 function sponsoredListKey(db: DB, targetType: "ai" | "app", raw: string): string {
   if (targetType === "app") return raw === "mobile" || raw === "desktop" ? raw : "";
-  if (raw === "all") return "all";
+  if (raw === "all" || raw === "trending") return raw;
   return getCategories(db).some((category) => category.slug === raw) ? raw : "";
+}
+
+/** The trending card and the list slots cannot be mixed. */
+function invalidSponsorSlot(targetType: "ai" | "app", listKey: string, slot: string): boolean {
+  if (targetType === "app" && (slot === "top3" || slot === "trending")) return true;
+  if (listKey === "trending") return slot !== "trending";
+  return slot === "trending";
 }
 
 function sponsorAmount(formData: FormData): number {
@@ -2153,11 +2189,11 @@ export async function addSponsorPlacementAction(formData: FormData) {
       problem = "list";
       return;
     }
-    if (target.targetType === "app" && slot === "top3") {
+    if (invalidSponsorSlot(target.targetType, listKey, slot)) {
       problem = "slot";
       return;
     }
-    if (target.targetType === "ai" && listKey !== "all") {
+    if (target.targetType === "ai" && listKey !== "all" && listKey !== "trending") {
       const ai = db.ai.find((row) => row.id === target.targetId);
       if (ai && ai.category !== listKey) {
         problem = "target";
@@ -2260,10 +2296,10 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
   if (!target) return { ok: false, error: "Please choose the AI, app or software you want to promote." };
   const listKey = sponsoredListKey(db, target.targetType, String(formData.get("listKey") ?? ""));
   if (!listKey) return { ok: false, error: "Please choose where the sponsored row should appear." };
-  if (target.targetType === "app" && slot === "top3") {
-    return { ok: false, error: "The top-three card is only available inside an AI category. Pick a list position instead." };
+  if (invalidSponsorSlot(target.targetType, listKey, slot)) {
+    return { ok: false, error: "That position does not belong to this list. Pick the trending card for trending, or a list position elsewhere." };
   }
-  if (target.targetType === "ai" && listKey !== "all") {
+  if (target.targetType === "ai" && listKey !== "all" && listKey !== "trending") {
     const ai = db.ai.find((row) => row.id === target.targetId);
     if (ai && ai.category !== listKey) {
       return {
