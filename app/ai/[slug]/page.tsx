@@ -26,6 +26,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { aiCategoryTags, categoryName, modelCategories } from "@/lib/categories";
 import { helpfulScore, myHelpfulVote } from "@/lib/helpful";
 import { canAccess, resolveRoles } from "@/lib/roles";
+import { isAiSponsored } from "@/lib/sponsors";
 import { formatPlanPrice } from "@/lib/plans";
 import { myPriceAlert, priceChange, priceHistoryFor, repliesFor, verifiedShare, weeklyRatingTrend } from "@/lib/community";
 import { CONTRIBUTION_LABEL, myContributions } from "@/lib/contributions";
@@ -188,7 +189,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-extrabold sm:text-3xl">{ai.name}</h1>
-              {ai.sponsored ? <SponsoredTag /> : null}
+              {isAiSponsored(ai) ? <SponsoredTag /> : null}
               {ai.featured ? <span className="chip bg-indigo-50 text-indigo-700">★ Featured</span> : null}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -295,7 +296,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           ) : null}
         </div>
 
-        {ai.sponsored ? (
+        {isAiSponsored(ai) ? (
           <p className="mt-3 border-l-2 border-line pl-3 text-xs leading-relaxed text-slate-500">
             Sponsored placement. This never changes the ranking formula
             {ai.boost > 0 ? ` (manual editor boost: +${ai.boost.toFixed(2)}).` : "."}

@@ -4,6 +4,7 @@ import { AiLogo, PriceBadge, SponsoredTag, Stars, Trend } from "@/components/ui"
 import { formatVotes } from "@/lib/format";
 import type { AiStat } from "@/lib/rank";
 import { categoryName } from "@/lib/categories";
+import { isAiSponsored } from "@/lib/sponsors";
 
 export default function AiCard({
   stat,
@@ -34,7 +35,7 @@ export default function AiCard({
             <Link href={`/ai/${ai.slug}`} className="truncate font-bold text-ink transition hover:text-brand">
               {ai.name}
             </Link>
-            {ai.sponsored ? <SponsoredTag /> : null}
+            {isAiSponsored(ai) ? <SponsoredTag /> : null}
           </div>
           <p className="mt-0.5 truncate text-xs text-muted">
             {categoryName(ai.category)} · {stat.models.length} {stat.models.length === 1 ? "model" : "models"}

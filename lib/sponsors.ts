@@ -1,4 +1,4 @@
-import type { DB, SponsorPlacement, SponsorSlotKey } from "./types";
+import type { Ai, DB, SponsorPlacement, SponsorSlotKey } from "./types";
 
 /**
  * Sponsored slots.
@@ -84,12 +84,26 @@ export function sponsorPrices(db: DB): Record<SponsorSlotKey, number> {
   return prices;
 }
 
+/** True when a booking's last day (YYYY-MM-DD, inclusive) is in the past. */
+export function sponsorEnded(until?: string | null, now = Date.now()): boolean {
+  if (!until) return false;
+  const end = new Date(`${until}T23:59:59`).getTime();
+  return Number.isFinite(end) ? end < now : false;
+}
+
 /** A placement is live while it is active and its booking has not expired. */
 export function isPlacementLive(placement: SponsorPlacement, now = Date.now()): boolean {
   if (!placement.active) return false;
-  if (!placement.until) return true;
-  const end = new Date(`${placement.until}T23:59:59`).getTime();
-  return Number.isFinite(end) ? end >= now : true;
+  return !sponsorEnded(placement.until, now);
+}
+
+/**
+ * The per-listing "Sponsored" label. Admin books it for a number of days; once
+ * that last day passes the label switches itself off without anyone editing the
+ * listing again. Re-booking is just entering a new number of days.
+ */
+export function isAiSponsored(ai: Pick<Ai, "sponsored" | "sponsorUntil">, now = Date.now()): boolean {
+  return Boolean(ai.sponsored) && !sponsorEnded(ai.sponsorUntil, now);
 }
 
 export function activeSponsorPlacements(db: DB, now = Date.now()): SponsorPlacement[] {

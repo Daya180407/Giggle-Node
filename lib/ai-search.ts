@@ -2,6 +2,7 @@ import "server-only";
 import type { Ai, AiSearchSettings, DB, SearchCacheEntry, SearchRequest, SiteSettings } from "./types";
 import { getCategories } from "./categories";
 import { buildView, rankedAis, searchAll, type AiStat, type View } from "./rank";
+import { isAiSponsored } from "./sponsors";
 
 /**
  * AI search pipeline.
@@ -263,7 +264,7 @@ export function cardFor(stat: AiStat, db: DB): SearchCard {
     bestFor: stat.ai.bestFor.slice(0, 3),
     score: Math.round(stat.score * 100) / 100,
     votes: stat.votes,
-    sponsored: Boolean(stat.ai.sponsored),
+    sponsored: isAiSponsored(stat.ai),
   };
 }
 

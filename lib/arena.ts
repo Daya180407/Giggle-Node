@@ -2,6 +2,7 @@ import type { AiStat, View } from "./rank";
 import type { ArenaVote, DB } from "./types";
 import { categoryName } from "./categories";
 import { rankedAis } from "./rank";
+import { isAiSponsored } from "./sponsors";
 
 export type ArenaRecord = { wins: number; losses: number; total: number; rate: number };
 
@@ -33,7 +34,7 @@ export type ArenaRound = { pool: number; a: number; b: number };
 
 export function arenaContenders(view: View, limit = 240): ArenaContender[] {
   return rankedAis(view)
-    .filter((stat) => !stat.ai.sponsored || stat.ai.boost === 0)
+    .filter((stat) => !isAiSponsored(stat.ai) || stat.ai.boost === 0)
     .slice(0, limit)
     .map((stat) => ({
       id: stat.ai.id,

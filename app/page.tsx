@@ -18,7 +18,7 @@ import { categoryName, getCategories } from "@/lib/categories";
 import { communityTotals } from "@/lib/community-chat";
 import { getSiteSettings } from "@/lib/settings";
 import { appPricingFor, formatPlanPrice } from "@/lib/plans";
-import { activeSponsorPlacements, slotMeta } from "@/lib/sponsors";
+import { activeSponsorPlacements, isAiSponsored, slotMeta } from "@/lib/sponsors";
 import { allApps, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
 import {
   buildView,
@@ -45,7 +45,7 @@ function toRows(stats: AiStat[]): RankRow[] {
     votes: s.votes,
     priceType: s.ai.priceType,
     trend: s.trend,
-    sponsored: s.ai.sponsored,
+    sponsored: isAiSponsored(s.ai),
     website: s.ai.website,
     bestFor: s.ai.bestFor.slice(0, 2).join(" · "),
   }));

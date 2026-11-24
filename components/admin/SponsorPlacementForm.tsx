@@ -190,7 +190,9 @@ export default function SponsorPlacementForm({
             defaultValue={30}
             className="field"
           />
-          <p className="mt-1 text-[11px] text-muted">0 = no end date.</p>
+          <p className="mt-1 text-[11px] text-muted">
+            The placement hides itself automatically after these days. 0 = no end date.
+          </p>
         </div>
         <div className="sm:col-span-2">
           <label className="label" htmlFor="sponsorNote">

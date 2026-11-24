@@ -24,6 +24,7 @@ import {
   SPONSOR_SLOTS,
   sponsorPrices,
   sponsorRevenue,
+  sponsorEnded,
 } from "@/lib/sponsors";
 import { readDb } from "@/lib/store";
 
@@ -509,6 +510,11 @@ function SponsorRow({
         <Link href={`/admin/ai/${ai.slug}`} className="truncate text-sm font-medium hover:text-brand">
           {ai.name}
         </Link>
+        {ai.sponsored && sponsorEnded(ai.sponsorUntil) ? (
+          <span className="chip bg-amber-50 text-[9.5px] text-amber-700" title={`Booked till ${ai.sponsorUntil}`}>
+            Expired
+          </span>
+        ) : null}
         <div className="flex items-center gap-1.5">
           <Stars value={stat.score} size={11} />
           <span className="text-xs text-muted">

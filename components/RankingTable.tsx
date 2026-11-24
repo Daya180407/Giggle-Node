@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AiLogo, PriceBadge, SponsoredTag, Stars, Trend } from "@/components/ui";
 import { formatVotes } from "@/lib/format";
 import { RATED_MIN_VOTES, type AiStat } from "@/lib/rank";
-import { insertSponsors, slotMeta } from "@/lib/sponsors";
+import { insertSponsors, isAiSponsored, slotMeta } from "@/lib/sponsors";
 import type { SponsorPlacement } from "@/lib/types";
 
 const MEDALS = ["medal-1", "medal-2", "medal-3"];
@@ -59,7 +59,7 @@ export default function RankingTable({
                 <Link href={`/ai/${s.ai.slug}`} className="truncate font-semibold text-ink transition hover:text-brand">
                   {s.ai.name}
                 </Link>
-                {sponsor || s.ai.sponsored ? <SponsoredTag /> : null}
+                {sponsor || isAiSponsored(s.ai) ? <SponsoredTag /> : null}
                 {!sponsor && s.trend === "up" ? <Trend trend="up" /> : null}
                 {s.votes > 0 && s.votes < RATED_MIN_VOTES ? (
                   <span className="chip bg-slate-100 text-[9.5px] text-slate-500" title="Fewer than 10 votes so far">
