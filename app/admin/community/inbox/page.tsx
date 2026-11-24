@@ -14,7 +14,7 @@ import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-const PER_PAGE = 50;
+const PER_PAGE = 100;
 
 export default async function AdminCommunityInboxPage({
   searchParams,

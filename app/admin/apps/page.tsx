@@ -8,7 +8,7 @@ import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-const PER_PAGE = 60;
+const PER_PAGE = 100;
 
 export default async function AdminAppsPage({
   searchParams,
@@ -155,7 +155,9 @@ export default async function AdminAppsPage({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] text-muted">
-          Hidden apps disappear from the homepage showcase only; AI-backed entries keep their public AI rating page.
+          Showing {entries.length ? (pageNo - 1) * PER_PAGE + 1 : 0}–{Math.min(pageNo * PER_PAGE, entries.length)} of{" "}
+          {entries.length} · 100 per page. Hidden apps disappear from the homepage showcase only; AI-backed entries keep
+          their public AI rating page.
         </p>
         {pages > 1 ? (
           <div className="flex items-center gap-1.5">

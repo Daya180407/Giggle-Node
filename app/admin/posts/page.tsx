@@ -8,7 +8,7 @@ import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-const PER_PAGE = 30;
+const PER_PAGE = 100;
 
 export default async function AdminPostsPage({
   searchParams,

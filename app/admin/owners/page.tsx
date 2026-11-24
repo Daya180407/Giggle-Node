@@ -187,8 +187,9 @@ export default async function AdminOwnersPage({
 
       <section className="space-y-2">
         <h3 className="text-sm font-bold">Owner logins</h3>
-        <div className="card overflow-x-auto">
-          <table className="w-full break-words text-xs sm:text-sm">
+        <div className="card overflow-hidden">
+          <div className="admin-table-scroll">
+          <table className="admin-table admin-table--sticky w-full text-xs sm:text-sm">
             <thead>
               <tr className="border-b border-line bg-slate-50/70 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="p-3">Owner</th>
@@ -253,6 +254,7 @@ export default async function AdminOwnersPage({
               })}
             </tbody>
           </table>
+          </div>
           {owners.length === 0 ? (
             <p className="p-6 text-center text-xs text-muted">No owner logins yet.</p>
           ) : null}

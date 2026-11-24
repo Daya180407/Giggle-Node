@@ -35,7 +35,7 @@ export default async function AdminActivityPage({
     if (!query) return true;
     return [entry.userName, entry.action, entry.target, entry.detail].join(" ").toLowerCase().includes(query);
   });
-  const perPage = 60;
+  const perPage = 100;
   const current = Math.max(1, Number(page) || 1);
   const pages = Math.max(1, Math.ceil(filtered.length / perPage));
   const pageNo = Math.min(current, pages);

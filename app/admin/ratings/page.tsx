@@ -14,7 +14,7 @@ import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-const PER_PAGE = 60;
+const PER_PAGE = 100;
 
 export default async function AdminRatingsPage({
   searchParams,
@@ -135,21 +135,16 @@ export default async function AdminRatingsPage({
       <div className="card divide-y divide-line">
         {rows.map(({ r, model, ai, user }) => (
           <div key={r.id} className="p-3">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
               <Stars value={r.stars} size={12} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">
-                  <span className="font-semibold">{model?.name ?? "Overall rating"}</span>{" "}
-                  <span className="text-muted">· {ai?.name ?? "unknown AI"}</span>
-                  {r.modelId ? null : <span className="chip ml-1.5 bg-indigo-50 text-indigo-700">Overall</span>}
-                </p>
-                <p className="truncate text-xs text-muted">
-                  {user?.name ?? "unknown user"}
-                  {user?.verified ? <span className="ml-1 font-semibold text-emerald-600">✓ verified</span> : null} ·{" "}
-                  {user?.email ?? "no email"} · {timeAgo(r.updatedAt)}
-                  {r.lastEditedAt ? " · user edited" : ""}
-                </p>
-              </div>
+              <span className="text-sm font-semibold">{model?.name ?? "Overall rating"}</span>
+              <span className="text-xs text-muted">· {ai?.name ?? "unknown AI"}</span>
+              {r.modelId ? null : <span className="chip bg-indigo-50 text-indigo-700">Overall</span>}
+              <span className="text-xs font-medium text-slate-700">{user?.name ?? "unknown user"}</span>
+              {user?.verified ? <span className="text-[11px] font-semibold text-emerald-600">✓ verified</span> : null}
+              <span className="break-all text-xs text-muted">{user?.email ?? "no email"}</span>
+              <span className="text-[11px] text-muted">{timeAgo(r.updatedAt)}</span>
+              {r.lastEditedAt ? <span className="text-[11px] text-muted">· user edited</span> : null}
               <span
                 className={`chip ${
                   (r.status ?? "approved") === "pending"
@@ -228,7 +223,7 @@ export default async function AdminRatingsPage({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] text-muted">
           Showing {filtered.length ? (pageNo - 1) * PER_PAGE + 1 : 0}–{Math.min(pageNo * PER_PAGE, filtered.length)} of{" "}
-          {filtered.length}
+          {filtered.length} · 100 per page
         </p>
         {pages > 1 ? (
           <div className="flex items-center gap-1.5">

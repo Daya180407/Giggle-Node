@@ -75,8 +75,9 @@ export default async function AdminBulkPage({
           </div>
           <button className="btn btn-primary !py-2 text-xs">Import catalogue</button>
         </div>
-        <div className="mt-3 rounded-xl border border-line">
-          <table className="w-full break-words text-[11px] sm:text-xs">
+        <div className="mt-3 overflow-hidden rounded-xl border border-line">
+          <div className="admin-table-scroll">
+          <table className="admin-table w-full text-[11px] sm:text-xs">
             <thead className="bg-slate-50/70 text-left text-[10px] uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="p-2">Column</th>
@@ -105,6 +106,7 @@ export default async function AdminBulkPage({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
         <p className="mt-2 text-[11px] text-muted">
           Each imported AI gets a “Standard” model so ratings work immediately. Unknown categories fall back to{" "}

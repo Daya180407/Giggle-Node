@@ -9,7 +9,7 @@ import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-const PER_PAGE = 40;
+const PER_PAGE = 100;
 
 export default async function AdminAiListPage({
   searchParams,
@@ -46,6 +46,7 @@ export default async function AdminAiListPage({
     `/admin/ai?${new URLSearchParams({
       ...(q ? { q } : {}),
       ...(cat !== "all" ? { cat } : {}),
+      ...(visibility !== "all" ? { visibility } : {}),
       ...(sort !== "name" ? { sort } : {}),
       page: String(nextPage),
     }).toString()}`;
@@ -109,8 +110,10 @@ export default async function AdminAiListPage({
         </span>
       </form>
 
-      <div className="card">
-        <table className="w-full break-words text-xs sm:text-sm">
+      <div className="card overflow-hidden">
+        <p className="px-3 pt-2 text-[10.5px] text-muted lg:hidden">Swipe the table sideways to see every column →</p>
+        <div className="admin-table-scroll">
+        <table className="admin-table admin-table--sticky w-full text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-line bg-slate-50/70 text-left text-xs uppercase tracking-wide text-slate-500">
               <th className="p-3">AI</th>
@@ -134,7 +137,9 @@ export default async function AdminAiListPage({
                     </span>
                   </Link>
                 </td>
-                <td className="p-3 text-xs text-muted">{categoryName(s.ai.category)}</td>
+                <td className="p-3">
+                  <span className="chip bg-slate-100 text-slate-600">{categoryName(s.ai.category)}</span>
+                </td>
                 <td className="p-3">
                   <span className="flex items-center gap-1.5">
                     <Stars value={s.score} size={11} />
@@ -197,6 +202,7 @@ export default async function AdminAiListPage({
             ))}
           </tbody>
         </table>
+        </div>
         {rows.length === 0 ? (
           <p className="p-8 text-center text-sm text-muted">No AI tools match these filters.</p>
         ) : null}
@@ -204,7 +210,8 @@ export default async function AdminAiListPage({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] text-muted">
-          Showing {all.length ? (pageNo - 1) * PER_PAGE + 1 : 0}–{Math.min(pageNo * PER_PAGE, all.length)} of {all.length}
+          Showing {all.length ? (pageNo - 1) * PER_PAGE + 1 : 0}–{Math.min(pageNo * PER_PAGE, all.length)} of {all.length} ·
+          100 per page
         </p>
         {pages > 1 ? (
           <div className="flex items-center gap-1.5">

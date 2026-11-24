@@ -339,6 +339,43 @@
     border: 1px solid #e0e7ff;
   }
 
+  /* --------------------------- admin tables -------------------------- */
+  /* Admin lists hold a lot of columns. On a phone they scroll sideways
+     instead of squeezing name/email/category/rating into stacked lines, so
+     every field stays on one inline row. */
+  .admin-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-table {
+    width: 100%;
+    min-width: max-content;
+    max-width: none;
+    border-collapse: collapse;
+  }
+  .admin-table th,
+  .admin-table td {
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+  .admin-table .chip,
+  .admin-table .btn {
+    white-space: nowrap;
+  }
+  .admin-table--sticky th:first-child,
+  .admin-table--sticky td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #fff;
+  }
+  .admin-table--sticky thead th:first-child {
+    background: #f8fafc;
+  }
+
   /* ---------------------------- forms ------------------------------- */
   .field {
     width: 100%;

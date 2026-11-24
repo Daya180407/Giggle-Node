@@ -9,7 +9,7 @@ import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-const PER_PAGE = 50;
+const PER_PAGE = 100;
 
 export default async function AdminUsersPage({
   searchParams,
@@ -119,8 +119,10 @@ export default async function AdminUsersPage({
         <span className="ml-auto text-[11px] text-muted">{filtered.length} results</span>
       </form>
 
-      <div className="card">
-        <table className="w-full break-words text-xs sm:text-sm">
+      <div className="card overflow-hidden">
+        <p className="px-3 pt-2 text-[10.5px] text-muted lg:hidden">Swipe the table sideways to see every column →</p>
+        <div className="admin-table-scroll">
+        <table className="admin-table admin-table--sticky w-full text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-line bg-slate-50/70 text-left text-xs uppercase tracking-wide text-slate-500">
               <th className="p-3">User</th>
@@ -236,12 +238,15 @@ export default async function AdminUsersPage({
             })}
           </tbody>
         </table>
+        </div>
         {users.length === 0 ? <p className="p-8 text-center text-sm text-muted">No users match these filters.</p> : null}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] text-muted">
-          Banned users cannot sign in or keep an active session. Deleting a user removes their ratings and saved tools.
+          Showing {filtered.length ? (pageNo - 1) * PER_PAGE + 1 : 0}–{Math.min(pageNo * PER_PAGE, filtered.length)} of{" "}
+          {filtered.length} · 100 per page. Banned users cannot sign in or keep an active session. Deleting a user removes
+          their ratings and saved tools.
         </p>
         {pages > 1 ? (
           <div className="flex items-center gap-1.5">
