@@ -149,6 +149,76 @@ export function placementListLabel(
     : appListLabel(placement.listKey);
 }
 
+export type SponsorSlotRevenue = {
+  slot: SponsorSlotKey;
+  label: string;
+  count: number;
+  booked: number;
+  month: number;
+  pending: number;
+  pendingCount: number;
+};
+
+export type SponsorRevenue = {
+  /** month shown in the summary, e.g. "November 2026" */
+  monthLabel: string;
+  monthTotal: number;
+  monthCount: number;
+  bookedTotal: number;
+  bookedCount: number;
+  pendingTotal: number;
+  pendingCount: number;
+  rows: SponsorSlotRevenue[];
+};
+
+/**
+ * Manual-payment ledger for the admin summary. Booked amounts come from every
+ * placement (paused or expired ones were still paid for), the month column from
+ * placements created this calendar month, and pending from open requests where
+ * no money has arrived yet.
+ */
+export function sponsorRevenue(db: DB, now = new Date()): SponsorRevenue {
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const placements = db.sponsorPlacements ?? [];
+  const pending = (db.sponsorRequests ?? []).filter((request) => request.status === "pending");
+  const amountOf = (value: unknown) => {
+    const amount = Number(value);
+    return Number.isFinite(amount) && amount > 0 ? amount : 0;
+  };
+  const thisMonth = (createdAt: string) => {
+    const at = new Date(createdAt).getTime();
+    return Number.isFinite(at) && at >= monthStart;
+  };
+
+  const rows: SponsorSlotRevenue[] = SPONSOR_SLOTS.map((slot) => {
+    const slotPlacements = placements.filter((placement) => placement.slot === slot.key);
+    const slotRequests = pending.filter((request) => request.slot === slot.key);
+    return {
+      slot: slot.key,
+      label: slot.short,
+      count: slotPlacements.length,
+      booked: slotPlacements.reduce((sum, placement) => sum + amountOf(placement.amount), 0),
+      month: slotPlacements
+        .filter((placement) => thisMonth(placement.createdAt))
+        .reduce((sum, placement) => sum + amountOf(placement.amount), 0),
+      pending: slotRequests.reduce((sum, request) => sum + amountOf(request.price), 0),
+      pendingCount: slotRequests.length,
+    };
+  });
+
+  const monthPlacements = placements.filter((placement) => thisMonth(placement.createdAt));
+  return {
+    monthLabel: now.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+    monthTotal: rows.reduce((sum, row) => sum + row.month, 0),
+    monthCount: monthPlacements.length,
+    bookedTotal: rows.reduce((sum, row) => sum + row.booked, 0),
+    bookedCount: placements.length,
+    pendingTotal: rows.reduce((sum, row) => sum + row.pending, 0),
+    pendingCount: pending.length,
+    rows,
+  };
+}
+
 export type PlacedItem<T> = {
   item: T;
   /** set when this row is a paid insertion rather than a ranked row */

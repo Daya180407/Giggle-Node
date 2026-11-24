@@ -23,6 +23,7 @@ import {
   slotMeta,
   SPONSOR_SLOTS,
   sponsorPrices,
+  sponsorRevenue,
 } from "@/lib/sponsors";
 import { readDb } from "@/lib/store";
 
@@ -69,6 +70,7 @@ export default async function AdminSponsorsPage({
   const requests = [...(db.sponsorRequests ?? [])].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   const pendingRequests = requests.filter((request) => request.status === "pending");
   const liveCount = placements.filter((placement) => isPlacementLive(placement)).length;
+  const revenue = sponsorRevenue(db);
   const aisForForm = ranked
     .map((s) => ({ id: s.ai.id, name: s.ai.name, categoryName: catName(s.ai.category) }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -102,6 +104,80 @@ export default async function AdminSponsorsPage({
           {ERRORS[error] ?? "That placement could not be saved."}
         </div>
       ) : null}
+
+      {/* Revenue summary */}
+      <section className="card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold">Revenue</h3>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+              Manual payments only — booked amounts are the amounts you entered on each placement. Pending quotes are
+              requests where the money has not arrived yet.
+            </p>
+          </div>
+          <span className="chip bg-slate-100 text-slate-500">{revenue.monthLabel}</span>
+        </div>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">This month</p>
+            <p className="mt-1 text-xl font-extrabold text-ink">{money(revenue.monthTotal, currency)}</p>
+            <p className="text-[10.5px] text-emerald-800">
+              {revenue.monthCount} placement{revenue.monthCount === 1 ? "" : "s"} booked
+            </p>
+          </div>
+          <div className="rounded-xl border border-line bg-slate-50/70 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">All-time booked</p>
+            <p className="mt-1 text-xl font-extrabold text-ink">{money(revenue.bookedTotal, currency)}</p>
+            <p className="text-[10.5px] text-muted">
+              {revenue.bookedCount} placement{revenue.bookedCount === 1 ? "" : "s"} · {liveCount} live now
+            </p>
+          </div>
+          <div className={`rounded-xl border p-3 ${revenue.pendingTotal ? "border-amber-200 bg-amber-50/60" : "border-line bg-slate-50/70"}`}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">Pending requests</p>
+            <p className="mt-1 text-xl font-extrabold text-ink">{money(revenue.pendingTotal, currency)}</p>
+            <p className="text-[10.5px] text-amber-800">
+              {revenue.pendingCount} request{revenue.pendingCount === 1 ? "" : "s"} waiting
+            </p>
+          </div>
+        </div>
+
+        <div className="admin-table-scroll mt-3">
+          <table className="admin-table w-full text-xs">
+            <thead>
+              <tr className="border-b border-line bg-slate-50/70 text-left text-[10px] uppercase tracking-wide text-slate-500">
+                <th className="p-2">Slot</th>
+                <th className="p-2 text-right">Placements</th>
+                <th className="p-2 text-right">Booked</th>
+                <th className="p-2 text-right">This month</th>
+                <th className="p-2 text-right">Pending</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {revenue.rows.map((row) => (
+                <tr key={row.slot} className="hover:bg-slate-50/60">
+                  <td className="p-2 font-medium text-ink">{row.label}</td>
+                  <td className="p-2 text-right text-muted">{row.count}</td>
+                  <td className="p-2 text-right font-semibold text-ink">{money(row.booked, currency)}</td>
+                  <td className="p-2 text-right text-slate-600">{money(row.month, currency)}</td>
+                  <td className="p-2 text-right text-amber-700">
+                    {row.pending ? `${money(row.pending, currency)} · ${row.pendingCount}` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-line bg-slate-50/70 text-xs font-bold text-ink">
+                <td className="p-2">Total</td>
+                <td className="p-2 text-right">{revenue.bookedCount}</td>
+                <td className="p-2 text-right">{money(revenue.bookedTotal, currency)}</td>
+                <td className="p-2 text-right">{money(revenue.monthTotal, currency)}</td>
+                <td className="p-2 text-right text-amber-700">{money(revenue.pendingTotal, currency)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
 
       {/* Advertiser requests */}
       <section className="card p-4">
