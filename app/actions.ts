@@ -1249,6 +1249,7 @@ export async function saveDemoDataAction(formData: FormData) {
       `${users.toLocaleString("en-IN")} sample members, no stored rows`,
     );
   });
+  await flushPendingWrites();
   revalidatePath("/", "layout");
   redirect(`/admin/demo?saved=${enabled ? "on" : "off"}`);
 }
@@ -1266,6 +1267,8 @@ export async function removeDemoDataAction() {
     };
     logAdminAction(db, admin, "demo dataset removed", "Demo dataset", "All sample members and ratings hidden in one tap");
   });
+  // The redirect can be served by another isolate, so land the write before leaving this one.
+  await flushPendingWrites();
   revalidatePath("/", "layout");
   redirect("/admin/demo?removed=1");
 }

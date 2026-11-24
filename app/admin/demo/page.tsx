@@ -37,7 +37,9 @@ export default async function AdminDemoPage({
   const snapshot = demoSnapshot(db);
 
   const startedAt = performance.now();
-  const sample = demoUsersPage(config, { page: Number(page) || 1, perPage: PER_PAGE, query: q });
+  const sample = config.enabled
+    ? demoUsersPage(config, { page: Number(page) || 1, perPage: PER_PAGE, query: q })
+    : { rows: [], total: 0, page: 1, pages: 1, scanned: 0 };
   const sampleMs = performance.now() - startedAt;
 
   const ratingList = demoRatingList(db, 54);
@@ -339,7 +341,9 @@ export default async function AdminDemoPage({
         </div>
 
         {sample.rows.length === 0 ? (
-          <p className="p-8 text-center text-sm text-muted">No sample member matches that search.</p>
+          <p className="p-8 text-center text-sm text-muted">
+            {config.enabled ? "No sample member matches that search." : "Demo dataset is off — turn it on to see sample members."}
+          </p>
         ) : null}
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line p-3">
