@@ -7,6 +7,10 @@ import type { Ai, DB, SponsorPlacement, SponsorSlotKey } from "./types";
  * `top3` is the extra card on a category podium, placed between #1 and #2 — it
  * carries no rank badge at all. The list slots keep the sponsored listing's real
  * rank: a tool ranked 120th shown after the 5th row still reads "#120".
+ *
+ * List slots repeat every fifth row (#5, #10, #15 … #50). Because each inserted
+ * card adds a row, a fully booked list shows ads after the 5th, 11th, 17th …
+ * rendered element — one ad for every five tools.
  */
 export type SponsorSlot = {
   key: SponsorSlotKey;
@@ -60,12 +64,60 @@ export const SPONSOR_SLOTS: SponsorSlot[] = [
     defaultPrice: 4500,
   },
   {
+    key: "list20",
+    label: "List — after 20th",
+    short: "After #20",
+    position: 20,
+    blurb: "The next five-row position. With every list slot booked the ads repeat after each fifth row.",
+    defaultPrice: 3800,
+  },
+  {
+    key: "list25",
+    label: "List — after 25th",
+    short: "After #25",
+    position: 25,
+    blurb: "Five-row interval: still on the first screen of a long leaderboard.",
+    defaultPrice: 3400,
+  },
+  {
+    key: "list30",
+    label: "List — after 30th",
+    short: "After #30",
+    position: 30,
+    blurb: "Five-row interval, mid-list. The sponsored row keeps its real rank.",
+    defaultPrice: 3000,
+  },
+  {
+    key: "list35",
+    label: "List — after 35th",
+    short: "After #35",
+    position: 35,
+    blurb: "Five-row interval, below the fold of most screens.",
+    defaultPrice: 2700,
+  },
+  {
+    key: "list40",
+    label: "List — after 40th",
+    short: "After #40",
+    position: 40,
+    blurb: "Five-row interval for a lower-cost entry further down the list.",
+    defaultPrice: 2400,
+  },
+  {
+    key: "list45",
+    label: "List — after 45th",
+    short: "After #45",
+    position: 45,
+    blurb: "The last five-row interval before the #50 budget placement.",
+    defaultPrice: 2200,
+  },
+  {
     key: "list50",
     label: "List — after 50th",
     short: "After #50",
     position: 50,
     blurb: "The budget placement at the back of a long list, still labelled as sponsored.",
-    defaultPrice: 2500,
+    defaultPrice: 2000,
   },
 ];
 
@@ -260,9 +312,10 @@ export type PlacedItem<T> = {
 };
 
 /**
- * Inserts sponsored rows after the requested position without touching the
+ * Inserts sponsored rows after the requested card position without touching the
  * ranked order of the real items. Positions past the end of the list append the
- * sponsored row at the bottom.
+ * sponsored row at the bottom. Inserted rows shift the rendered order, which is
+ * why ads booked after cards 5, 10, 15 … appear after rendered rows 5, 11, 17 …
  */
 export function insertSponsors<T>(
   items: T[],

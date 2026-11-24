@@ -105,9 +105,24 @@ export type SponsorTargetType = "ai" | "app";
 /**
  * Where a paid placement is inserted inside a public list. `top3` is the extra
  * card inside a category's champions podium (after #1); the list slots are the
- * position of the row after which the sponsored card appears.
+ * card position after which the sponsored card appears. List slots repeat every
+ * fifth row from #5 to #50, so a fully booked list shows an ad after each 5th,
+ * 10th, 15th … 50th card (rendered after element 5, 11, 17 … because the ads
+ * themselves take a row).
  */
-export type SponsorSlotKey = "trending" | "top3" | "list5" | "list10" | "list15" | "list50";
+export type SponsorSlotKey =
+  | "trending"
+  | "top3"
+  | "list5"
+  | "list10"
+  | "list15"
+  | "list20"
+  | "list25"
+  | "list30"
+  | "list35"
+  | "list40"
+  | "list45"
+  | "list50";
 
 /** A paid placement: the listing is inserted at `slot` but keeps its real rank. */
 export type SponsorPlacement = {
@@ -657,6 +672,8 @@ export type CommunityMessage = {
   createdAt: string;
   /** seeded demo conversation, removable with the demo ads button */
   demo?: boolean;
+  /** the site's own profile (GigleNode team): shows the golden verified tick */
+  official?: boolean;
 };
 
 /** Admin controls for the per-AI community rooms. */
@@ -1091,6 +1108,8 @@ export type DB = {
   chatAdCpm?: number;
   /** set once the demo ads were installed, so they are never re-added after cleanup */
   demoAdsSeededAt?: string | null;
+  /** version of the demo seed that already ran; a newer seed adds the new slots once */
+  demoAdsVersion?: number | null;
   /** blind arena picks, the basis of the community win-rate table */
   arenaVotes?: ArenaVote[];
   /** anonymous yes/no "was this helpful?" signals, not part of the ranking */

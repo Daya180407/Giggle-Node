@@ -1,19 +1,25 @@
+import { getCategories } from "./categories";
+import { buildView, rankedAis } from "./rank";
 import { allApps } from "./software";
 import { sponsorPrices } from "./sponsors";
 import type { Ai, ChatAd, DB, SponsorPlacement, SponsorSlotKey } from "./types";
 
 /**
- * One-time demo ads.
+ * Demo ads.
  *
- * The owner asked to see every ad product on the live site, so the first boot
- * after this release installs one labelled demo of each type: the trending
- * card, a category top-3 card, the four list positions, a mobile app and a
+ * The owner asked to see every ad product on the live site, so the seed installs
+ * one labelled demo of each type: the trending card, a top-3 podium card in
+ * every category, a card after every fifth row up to #50, a mobile app and a
  * desktop software placement, plus two sponsored chat campaigns (AI + app).
  *
  * Every demo row carries `demo: true` and a clear name/note, and can be removed
  * in one click from /admin/ads. `demoAdsSeededAt` is kept after removal so the
- * rows are never silently re-added.
+ * rows are never silently re-added; `demoAdsVersion` lets a later release add
+ * the new slots once without touching the old demo rows.
  */
+
+/** Bump when the demo set changes, so existing installs receive the new rows. */
+export const DEMO_ADS_VERSION = 2;
 
 function demoId(prefix: string): string {
   return `${prefix}_demo_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -26,7 +32,7 @@ function demoToken(): string {
 export const DEMO_AD_NOTE = "Demo ad — remove from /admin/ads with “Remove demo ads”.";
 
 export function seedDemoAds(db: DB): boolean {
-  if (db.demoAdsSeededAt) return false;
+  if (db.demoAdsSeededAt && (db.demoAdsVersion ?? 1) >= DEMO_ADS_VERSION) return false;
   const ais = db.ai.filter((row) => !row.hidden);
   if (ais.length === 0) return false;
 
@@ -73,7 +79,25 @@ export function seedDemoAds(db: DB): boolean {
   addAiPlacement(pick(2), "all", "list5", 2230, 61);
   addAiPlacement(pick(3), "all", "list10", 1360, 29);
   addAiPlacement(pick(4), "all", "list15", 980, 18);
+  addAiPlacement(pick(7), "all", "list20", 910, 17);
+  addAiPlacement(pick(8), "all", "list25", 860, 15);
+  addAiPlacement(pick(9), "all", "list30", 790, 13);
+  addAiPlacement(pick(10), "all", "list35", 730, 12);
+  addAiPlacement(pick(11), "all", "list40", 690, 10);
+  addAiPlacement(pick(12), "all", "list45", 660, 9);
   addAiPlacement(pick(5), "all", "list50", 640, 9);
+
+  // A podium card in each category, so the champions section shows a paid card
+  // on every tab. The 4th ranked tool is used so no demo repeats a champion.
+  const view = buildView(db);
+  for (const category of getCategories(db)) {
+    const alreadyBooked = existing.some(
+      (row) => row.targetType === "ai" && row.listKey === category.slug && row.slot === "top3",
+    );
+    if (alreadyBooked) continue;
+    const fourth = rankedAis(view, category.slug)[3];
+    if (fourth) addAiPlacement(fourth.ai, category.slug, "top3", 1200, 32);
+  }
 
   const apps = allApps(db.customApps);
   const addAppPlacement = (
@@ -169,6 +193,12 @@ export function seedDemoAds(db: DB): boolean {
   }
   db.chatAds = [...(db.chatAds ?? []), ...chatAds];
 
+  // Demo messages come from the site's own demo profile, so they carry the
+  // golden official tick. Older seeds are upgraded here too.
+  for (const row of db.communityMessages ?? []) {
+    if (row.demo) row.official = true;
+  }
+
   // Chat ads sit after every 20 messages, so an empty room would hide the demo.
   // A labelled demo conversation fills the pinned Everyone room just enough to
   // show the card; the cleanup button removes these rows too.
@@ -213,6 +243,7 @@ export function seedDemoAds(db: DB): boolean {
       attachment: null,
       createdAt: new Date(base + index * 60000).toISOString(),
       demo: true,
+      official: true,
     }));
     db.communityMessages = [...(db.communityMessages ?? []), ...demoMessages];
     if (!Array.isArray(db.communityMembers)) db.communityMembers = [];
@@ -228,5 +259,6 @@ export function seedDemoAds(db: DB): boolean {
   }
 
   db.demoAdsSeededAt = now;
+  db.demoAdsVersion = DEMO_ADS_VERSION;
   return true;
 }

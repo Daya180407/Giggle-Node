@@ -6,7 +6,7 @@ import AdTrackerView from "@/components/AdTrackerView";
 import { AiLogo, PriceBadge, Stars } from "@/components/ui";
 import { formatVotes } from "@/lib/format";
 import { RATED_MIN_VOTES } from "@/lib/rank";
-import type { PriceType } from "@/lib/types";
+import type { PriceType, SponsorSlotKey } from "@/lib/types";
 
 export type ChampionRow = {
   rank: number;
@@ -22,6 +22,8 @@ export type ChampionRow = {
   sponsored?: boolean;
   /** placement id, so the paid card counts its impressions */
   sponsorId?: string;
+  /** the booked slot, so a non-podium placement is labelled correctly */
+  sponsorSlot?: SponsorSlotKey;
 };
 
 export type ChampionCategory = {
@@ -63,7 +65,8 @@ function SponsoredChampionCard({ row }: { row: ChampionRow }) {
       </div>
 
       <p className="mt-2 text-[10.5px] font-medium text-amber-700">
-        Sponsored card · real rank #{row.rank} in the full list
+        {row.sponsorSlot && row.sponsorSlot !== "top3" ? "Sponsored placement" : "Sponsored card"} · real rank #
+        {row.rank} in the full list
       </p>
 
       <div className="mt-3 w-full">

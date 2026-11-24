@@ -1207,3 +1207,65 @@ html[data-theme="dark"] .matrix-table tbody th {
   border-color: #1e2537;
   color: #8b97ab;
 }
+
+/* ----------------------------- official tick ----------------------------- */
+/* Golden verified tick shown next to the site's own profile in the community. */
+
+.tick-gold {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 9999px;
+  color: #f3a712;
+  filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.55));
+  animation: tick-glow 2.8s ease-in-out infinite;
+  vertical-align: -0.15em;
+}
+
+.tick-gold svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tick-gold::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.9) 48%, transparent 66%);
+  background-size: 260% 100%;
+  animation: tick-shine 3.4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes tick-shine {
+  0% {
+    background-position: 170% 0;
+  }
+  55%,
+  100% {
+    background-position: -70% 0;
+  }
+}
+
+@keyframes tick-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.45));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.9));
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tick-gold,
+  .tick-gold::after {
+    animation: none;
+  }
+}

@@ -6,6 +6,7 @@ import ChatSponsoredAd from "@/components/ChatSponsoredAd";
 import CommunityAd from "@/components/CommunityAd";
 import CommunityChatScroll from "@/components/CommunityChatScroll";
 import CommunityComposer from "@/components/CommunityComposer";
+import OfficialTick from "@/components/OfficialTick";
 import { AiLogo } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
@@ -87,6 +88,13 @@ export default async function CommunityRoomPage({ params, searchParams }: Props)
   const found = findCommunityRoom(db, slug);
   if (!found) notFound();
   const { ai, room } = found;
+  // Official profiles: the site team (admin role or a giglenode.com mailbox).
+  // Seeded demo messages carry the flag themselves.
+  const officialUserIds = new Set(
+    db.users
+      .filter((row) => row.role === "admin" || row.email.toLowerCase().endsWith("@giglenode.com"))
+      .map((row) => row.id),
+  );
 
   const settings = getSiteSettings(db);
   const community = settings.community;
@@ -231,6 +239,8 @@ export default async function CommunityRoomPage({ params, searchParams }: Props)
           <div className="mx-auto w-full max-w-4xl">
             {messages.map((message, index) => {
               const own = user?.id === message.userId;
+              const official = Boolean(message.official) || officialUserIds.has(message.userId);
+              const showName = !own || official;
               return (
                 <div key={message.id} className="mb-2">
                   <div className={`flex items-end gap-1.5 ${own ? "justify-end" : "justify-start"}`}>
@@ -247,11 +257,15 @@ export default async function CommunityRoomPage({ params, searchParams }: Props)
                         own ? "chat-bubble-out" : "chat-bubble-in"
                       }`}
                     >
-                      {own ? null : (
-                        <p className="text-[13.5px] font-semibold leading-tight" style={{ color: senderTone(message.userId) }}>
-                          {message.userName}
+                      {showName ? (
+                        <p
+                          className="flex items-center gap-1 text-[13.5px] font-semibold leading-tight"
+                          style={{ color: senderTone(message.userId) }}
+                        >
+                          <span className="truncate">{message.userName}</span>
+                          {official ? <OfficialTick /> : null}
                         </p>
-                      )}
+                      ) : null}
 
                       {message.body ? (
                         <p className="mt-0.5 whitespace-pre-line break-words text-[15px] leading-[1.45] text-[#111b21]">

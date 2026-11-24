@@ -177,10 +177,13 @@ export default async function HomePage({
           priceType: s.ai.priceType,
           bestFor: s.ai.bestFor.slice(0, 2).join(" · "),
         }));
-      // Paid top-three card: inserted after the champion, never given a podium rank.
-      const top3 = sponsorRows.find(
-        (row) => row.targetType === "ai" && row.listKey === category.slug && row.slot === "top3",
+      // Paid card in this category's champions list: the top-three podium booking
+      // when there is one, otherwise any live placement booked for the category,
+      // so the section never hides a paid ad that is running on that list.
+      const categoryAds = sponsorRows.filter(
+        (row) => row.targetType === "ai" && row.listKey === category.slug && row.slot !== "trending",
       );
+      const top3 = categoryAds.find((row) => row.slot === "top3") ?? categoryAds[0];
       const sponsoredStat = top3 ? ranked.find((s) => s.ai.id === top3.targetId) : undefined;
       if (sponsoredStat) {
         rows.splice(1, 0, {
@@ -194,7 +197,8 @@ export default async function HomePage({
           priceType: sponsoredStat.ai.priceType,
           bestFor: sponsoredStat.ai.bestFor.slice(0, 2).join(" · "),
           sponsored: true,
-          sponsorId: top3?.id,
+          sponsorId: top3.id,
+          sponsorSlot: top3.slot,
         });
       }
       return { slug: category.slug, label: category.name, emoji: category.emoji, rows };

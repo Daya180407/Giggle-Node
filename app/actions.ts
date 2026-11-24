@@ -22,6 +22,7 @@ import {
   UNIVERSAL_ROOM_SLUG,
 } from "@/lib/community-chat";
 import { CHAT_AD_MAX_VIEWS, CHAT_AD_MIN_VIEWS, chatAdCpm } from "@/lib/ads";
+import { DEMO_ADS_VERSION } from "@/lib/demo-ads";
 import { getCurrentUser, requestIp } from "@/lib/auth";
 import { CATEGORIES, getCategories, slugifyCategory } from "@/lib/categories";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
@@ -1365,6 +1366,9 @@ export async function removeDemoAdsAction() {
     db.communityMessages = (db.communityMessages ?? []).filter((row) => !row.demo);
     db.communityMembers = (db.communityMembers ?? []).filter((row) => row.id !== "cmm_demo");
     removed += messagesBefore - (db.communityMessages?.length ?? 0);
+    // Remember that this demo version was already installed, so the seed never
+    // brings the rows back after the admin removes them.
+    db.demoAdsVersion = DEMO_ADS_VERSION;
     logAdminAction(db, admin, "removed demo ads", "Demo ads", `${removed} demo rows removed`);
   });
   revalidatePath("/");
