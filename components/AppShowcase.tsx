@@ -66,15 +66,17 @@ export default function AppShowcase({
   }, [items, group, query]);
 
   const showAll = expanded || group !== "all" || query.trim().length > 0;
-  const visible = showAll ? filtered : filtered.slice(0, 9);
   // Sponsored rows only sit inside the clean, unfiltered list, so a search never
   // shows a paid card that does not match the query.
   const sponsorMode = group === "all" && query.trim().length === 0;
+  const tabSponsors = sponsored.filter((row) => row.item.kind === tab);
+  // Sponsored positions are counted on the full tab list. A collapsed showcase
+  // must still place them against that list, so the window grows to the furthest
+  // paid slot instead of dropping the card at the end of the nine preview rows.
+  const sponsorWindow = sponsorMode ? tabSponsors.reduce((max, row) => Math.max(max, row.position), 0) : 0;
+  const visible = showAll ? filtered : filtered.slice(0, Math.max(9, sponsorWindow));
   const rows: PlacedItem<AppShowcaseItem>[] = sponsorMode
-    ? insertSponsors(
-        visible,
-        sponsored.filter((row) => row.item.kind === tab),
-      )
+    ? insertSponsors(visible, tabSponsors)
     : visible.map((item) => ({ item, sponsor: null }));
   const scored = items.filter((item) => typeof item.score === "number");
   const average = scored.length ? scored.reduce((sum, item) => sum + (item.score ?? 0), 0) / scored.length : 0;
