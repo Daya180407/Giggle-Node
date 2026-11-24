@@ -47,6 +47,7 @@ import type {
   Rating,
   RatingStatus,
   SubscriptionPlan,
+  User,
   UserRole,
 } from "@/lib/types";
 
@@ -1207,6 +1208,53 @@ export async function saveSettingsAction(formData: FormData) {
 }
 
 /* ------------------------------- users ------------------------------- */
+
+/** Admin panel: create a member account directly, without the signup mail. */
+export async function createUserAction(formData: FormData) {
+  const admin = await assertAdmin("users");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 60);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 140);
+  const password = String(formData.get("password") ?? "");
+  const roleRaw = String(formData.get("role") ?? "user") as UserRole;
+  const verified = formData.get("verified") === "on";
+
+  const db = readDb();
+  const roles = resolveRoles(db.roles);
+  const role = roles.some((row) => row.id === roleRaw) ? roleRaw : "user";
+  // Only a full admin may hand out staff roles (same rule as setUserAccessAction).
+  if (admin.role !== "admin" && role !== "user") redirect("/admin/users?error=roleguard");
+  if (name.length < 2) redirect("/admin/users?error=name");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect("/admin/users?error=email");
+  if (db.users.some((u) => u.email.toLowerCase() === email)) redirect("/admin/users?error=exists");
+  if (password.length < 8) redirect("/admin/users?error=password");
+
+  const passwordHash = await hashPassword(password);
+  const created: User = {
+    id: uid("u"),
+    name,
+    email,
+    avatar: name.slice(0, 1).toUpperCase(),
+    role,
+    createdAt: new Date().toISOString(),
+    passwordHash,
+    emailVerified: verified,
+  };
+
+  mutateDb((d) => {
+    if (d.users.some((u) => u.email.toLowerCase() === email)) return;
+    d.users.push({ ...created });
+    logAdminAction(
+      d,
+      admin,
+      "created user",
+      `User: ${email}`,
+      `${name} · role ${role}${verified ? " · email verified" : " · email not verified"}`,
+    );
+  });
+  await flushPendingWrites();
+  revalidatePath("/admin/users");
+  redirect(`/admin/users?saved=user&email=${encodeURIComponent(email)}`);
+}
 
 export async function toggleBanAction(formData: FormData) {
   const admin = await assertAdmin("users");

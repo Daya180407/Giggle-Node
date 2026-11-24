@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { deleteUserAction, setUserAccessAction, toggleBanAction } from "@/app/actions";
+import { createUserAction, deleteUserAction, setUserAccessAction, toggleBanAction } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { getCurrentUser } from "@/lib/auth";
 import { requireAreaPage } from "@/lib/permissions";
@@ -11,13 +11,21 @@ export const dynamic = "force-dynamic";
 
 const PER_PAGE = 100;
 
+const ERRORS: Record<string, string> = {
+  name: "Enter a name with at least 2 characters.",
+  email: "That email address is not valid.",
+  exists: "An account with this email already exists.",
+  password: "The password must be at least 8 characters long.",
+  roleguard: "Only a Super admin can create staff accounts. Create a normal user instead.",
+};
+
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; role?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; role?: string; page?: string; saved?: string; error?: string; email?: string }>;
 }) {
   await requireAreaPage("users");
-  const { q = "", role: roleParam = "all", page = "1" } = await searchParams;
+  const { q = "", role: roleParam = "all", page = "1", saved = "", error = "", email: newEmail = "" } = await searchParams;
   const db = readDb();
   const roles = resolveRoles(db.roles);
   const role = roleParam !== "all" && roles.some((row) => row.id === roleParam) ? roleParam : "all";
@@ -64,6 +72,18 @@ export default async function AdminUsersPage({
           🔐 Roles &amp; permissions
         </Link>
       </div>
+
+      {saved === "user" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          Account created{newEmail ? ` for ${newEmail}` : ""} — they can sign in from the login page with the password you
+          set.
+        </div>
+      ) : null}
+      {error && ERRORS[error] ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
+          {ERRORS[error]}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {[
@@ -118,6 +138,67 @@ export default async function AdminUsersPage({
         ) : null}
         <span className="ml-auto text-[11px] text-muted">{filtered.length} results</span>
       </form>
+
+      <section className="card p-3">
+        <details>
+          <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm font-bold">
+            <span>➕ Add a user</span>
+            <span className="text-[11px] font-normal text-muted">
+              Create an account directly — no signup mail needed
+            </span>
+          </summary>
+          <form action={createUserAction} className="mt-3 grid gap-2 border-t border-line/70 pt-3 sm:grid-cols-3">
+            <label className="block text-[11px] font-semibold text-slate-600">
+              Name
+              <input name="name" required minLength={2} maxLength={60} className="field mt-1 w-full" />
+            </label>
+            <label className="block text-[11px] font-semibold text-slate-600">
+              Email
+              <input name="email" type="email" required maxLength={140} className="field mt-1 w-full" />
+            </label>
+            <label className="block text-[11px] font-semibold text-slate-600">
+              Password (8+)
+              <input
+                name="password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="field mt-1 w-full"
+              />
+            </label>
+            {admin?.role === "admin" ? (
+              <label className="block text-[11px] font-semibold text-slate-600">
+                Role
+                <select name="role" defaultValue="user" className="field mt-1 w-full">
+                  {roles.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <input type="hidden" name="role" value="user" />
+            )}
+            <label className="flex items-center gap-2 self-end pb-1 text-[11px] font-medium text-slate-700">
+              <input
+                type="checkbox"
+                name="verified"
+                defaultChecked
+                className="h-3.5 w-3.5 accent-emerald-600"
+              />
+              Email already verified
+            </label>
+            <div className="flex flex-wrap items-center gap-2 sm:col-span-3">
+              <button className="btn btn-primary !px-3 !py-1 text-[11px]">Create user</button>
+              <span className="text-[10.5px] text-muted">
+                Share the password with them yourself. Role, ban and delete stay editable in the table below.
+              </span>
+            </div>
+          </form>
+        </details>
+      </section>
 
       <div className="card overflow-hidden">
         <p className="px-3 pt-2 text-[10.5px] text-muted lg:hidden">Swipe the table sideways to see every column →</p>
