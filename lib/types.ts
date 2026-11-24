@@ -21,6 +21,7 @@ export type Ai = {
   id: string;
   name: string;
   slug: string;
+  /** emoji, an image (media-library data URL, /path or https URL) or inline SVG */
   logo: string;
   color: string;
   website: string;
@@ -95,6 +96,61 @@ export type SubscriptionPlan = {
   priceInr: number | null;
   /** what the plan includes, limits or credits */
   note: string;
+};
+
+/* ---------------------------- sponsored slots ---------------------------- */
+
+export type SponsorTargetType = "ai" | "app";
+
+/**
+ * Where a paid placement is inserted inside a public list. `top3` is the extra
+ * card inside a category's champions podium (after #1); the list slots are the
+ * position of the row after which the sponsored card appears.
+ */
+export type SponsorSlotKey = "top3" | "list5" | "list10" | "list15" | "list50";
+
+/** A paid placement: the listing is inserted at `slot` but keeps its real rank. */
+export type SponsorPlacement = {
+  id: string;
+  targetType: SponsorTargetType;
+  /** AI id, or app slug for an app / desktop software entry */
+  targetId: string;
+  targetName: string;
+  /** AI slug, or the app catalogue slug */
+  targetSlug: string;
+  /** AI: "all" or a category slug. App: "mobile" or "desktop". */
+  listKey: string;
+  slot: SponsorSlotKey;
+  /** amount charged for the booking, in the site currency */
+  amount: number;
+  /** last day the placement is live; null = open-ended */
+  until: string | null;
+  active: boolean;
+  note?: string;
+  createdAt: string;
+};
+
+/** An advertiser request submitted through the public /sponsor form. */
+export type SponsorRequest = {
+  id: string;
+  company: string;
+  contactName: string;
+  email: string;
+  website: string;
+  targetType: SponsorTargetType;
+  targetId: string;
+  targetName: string;
+  targetSlug: string;
+  listKey: string;
+  slot: SponsorSlotKey;
+  /** price quoted by the site when the request was made */
+  price: number;
+  message: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  note?: string;
 };
 
 /** Admin override for a model's API price; replaces the curated/estimated rate. */
@@ -919,6 +975,12 @@ export type DB = {
   contributions?: Contribution[];
   /** apps and desktop software approved from user requests */
   customApps?: AppEntry[];
+  /** paid placements inserted inside public AI and app lists */
+  sponsorPlacements?: SponsorPlacement[];
+  /** advertiser requests submitted through /sponsor */
+  sponsorRequests?: SponsorRequest[];
+  /** admin-set price per sponsored slot; missing keys fall back to defaults */
+  sponsorPrices?: Partial<Record<SponsorSlotKey, number>>;
   /** admin-managed roles and their permissions */
   roles?: RoleDefinition[];
   /** admin-created extra community rooms; default AI rooms need no row */

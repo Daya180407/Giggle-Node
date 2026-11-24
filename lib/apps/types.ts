@@ -28,4 +28,6 @@ export type AppEntry = {
   kind: AppKind;
   color: string;
   emoji: string;
+  /** affiliate / partner URL; the public card opens this instead of `website` */
+  affiliateUrl?: string;
 };

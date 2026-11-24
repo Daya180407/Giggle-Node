@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import AiLogo from "@/components/AiLogo";
 import { formatVotes } from "@/lib/format";
 
 export type PlannerTool = {
@@ -138,13 +139,7 @@ export default function StackPlanner({ tools, categories }: { tools: PlannerTool
               key={pick.category}
               className={`card flex flex-wrap items-center gap-3 p-3 ${pick.skipped ? "opacity-60" : ""}`}
             >
-              <span
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-lg"
-                style={{ background: `${tool.color}18`, color: tool.color }}
-                aria-hidden
-              >
-                {tool.logo}
-              </span>
+              <AiLogo slug={tool.slug} logo={tool.logo} color={tool.color} size={40} rounded="rounded-xl" />
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{pick.categoryName}</p>
                 <Link href={`/ai/${tool.slug}`} className="block truncate text-sm font-semibold text-ink hover:text-brand">

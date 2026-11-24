@@ -6,7 +6,7 @@ import PlanFields from "@/components/admin/PlanFields";
 import { appPricingFor, formatPlanPrice } from "@/lib/plans";
 import { requireAreaPage } from "@/lib/permissions";
 import { getSiteSettings } from "@/lib/settings";
-import { APP_ENTRIES } from "@/lib/software";
+import { allApps } from "@/lib/software";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +21,9 @@ export default async function AdminAppPricingPage({
   await requireAreaPage("catalogue");
   const { slug } = await params;
   const { saved } = await searchParams;
-  const entry = APP_ENTRIES.find((row) => row.slug === slug);
-  if (!entry) notFound();
-
   const db = readDb();
+  const entry = allApps(db.customApps).find((row) => row.slug === slug);
+  if (!entry) notFound();
   const settings = getSiteSettings(db);
   const ai = entry.aiSlug ? db.ai.find((row) => row.slug === entry.aiSlug) : undefined;
   const savedPricing = db.appPricing?.[slug];

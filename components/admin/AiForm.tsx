@@ -1,4 +1,5 @@
 import { saveAiAction } from "@/app/actions";
+import LogoField from "@/components/admin/LogoField";
 import PlanFields from "@/components/admin/PlanFields";
 import { getCategories } from "@/lib/categories";
 import { readDb } from "@/lib/store";
@@ -11,7 +12,9 @@ const PLATFORMS: { key: Platform; label: string }[] = [
 ];
 
 export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
-  const categories = getCategories(readDb());
+  const db = readDb();
+  const categories = getCategories(db);
+  const media = (db.media ?? []).map(({ id, name, url }) => ({ id, name, url }));
   return (
     <form action={saveAiAction} className="space-y-3">
       {ai ? <input type="hidden" name="id" value={ai.id} /> : null}
@@ -57,25 +60,20 @@ export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
           </label>
           <input id="website" name="website" defaultValue={ai?.website} className="field" placeholder="https://" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label" htmlFor="logo">
-              Logo emoji
-            </label>
-            <input id="logo" name="logo" defaultValue={ai?.logo ?? "🤖"} maxLength={4} className="field" />
-          </div>
-          <div>
-            <label className="label" htmlFor="color">
-              Brand colour
-            </label>
-            <input
-              id="color"
-              name="color"
-              type="color"
-              defaultValue={ai?.color ?? "#4F46E5"}
-              className="field h-11 p-1"
-            />
-          </div>
+        <div>
+          <label className="label" htmlFor="color">
+            Brand colour
+          </label>
+          <input
+            id="color"
+            name="color"
+            type="color"
+            defaultValue={ai?.color ?? "#4F46E5"}
+            className="field h-11 p-1"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <LogoField defaultValue={ai?.logo ?? "🤖"} media={media} />
         </div>
         <div>
           <label className="label" htmlFor="startPrice">

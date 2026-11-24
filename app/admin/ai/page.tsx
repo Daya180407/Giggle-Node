@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { deleteAiAction, toggleAiFlagAction } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
-import { Stars } from "@/components/ui";
+import { AiLogo, Stars } from "@/components/ui";
 import { categoryName, getCategories } from "@/lib/categories";
 import { requireAreaPage } from "@/lib/permissions";
 import { buildView } from "@/lib/rank";
@@ -130,7 +130,7 @@ export default async function AdminAiListPage({
               <tr key={s.ai.id} className="hover:bg-slate-50/60">
                 <td className="p-3">
                   <Link href={`/admin/ai/${s.ai.slug}`} className="flex items-center gap-2 font-medium hover:text-brand">
-                    <span aria-hidden>{s.ai.logo}</span>
+                    <AiLogo slug={s.ai.slug} logo={s.ai.logo} color={s.ai.color} size={26} rounded="rounded-lg" />
                     <span className="min-w-0">
                       <span className="block truncate">{s.ai.name}</span>
                       <span className="block truncate text-[10.5px] font-normal text-muted">{s.ai.slug}</span>

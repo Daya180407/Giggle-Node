@@ -11,6 +11,7 @@ import { getCategories } from "@/lib/categories";
 import type { CategorySlug } from "@/lib/types";
 import { buildView, publishedPosts, rankedAis, risingAis } from "@/lib/rank";
 import { getSiteSettings } from "@/lib/settings";
+import { placementsFor } from "@/lib/sponsors";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,13 @@ export default async function CategoryPage({ params }: Props) {
   const view = buildView(db);
   const settings = getSiteSettings(db);
   const stats = rankedAis(view, slug === "all" ? "all" : (slug as CategorySlug));
+  // Paid rows for this exact list. Top-three podium bookings stay on the home page.
+  const sponsors = placementsFor(db, "ai", slug === "all" ? "all" : slug)
+    .filter((placement) => placement.slot !== "top3")
+    .flatMap((placement) => {
+      const stat = stats.find((s) => s.ai.id === placement.targetId);
+      return stat ? [{ placement, stat }] : [];
+    });
   const saved = new Set(user ? db.bookmarks.filter((b) => b.userId === user.id).map((b) => b.aiId) : []);
   const rising = risingAis(view, 4);
   const relatedPosts = publishedPosts(db)
@@ -125,7 +133,7 @@ export default async function CategoryPage({ params }: Props) {
             </div>
             <span className="chip chip-brand">Weighted + recency</span>
           </div>
-          <RankingTable stats={stats} />
+          <RankingTable stats={stats} sponsors={sponsors} />
         </section>
 
         <aside className="min-w-0 space-y-4">

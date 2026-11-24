@@ -61,6 +61,8 @@ export async function migrateDb(db: DB): Promise<boolean> {
     "aiOwners",
     "ownerRequests",
     "ownerChanges",
+    "sponsorPlacements",
+    "sponsorRequests",
   ] as const;
   for (const key of collections) {
     if (!Array.isArray(db[key])) {

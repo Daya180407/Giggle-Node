@@ -805,6 +805,11 @@
   .ai-logo img {
     display: block;
   }
+  .ai-logo svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
 
   /* ------------------------ editorial hero ------------------------ */
   .hero-gradient {

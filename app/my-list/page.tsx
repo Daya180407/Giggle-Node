@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import AiCard from "@/components/AiCard";
+import AiLogo from "@/components/AiLogo";
 import { getCurrentUser } from "@/lib/auth";
 import { buildView } from "@/lib/rank";
 import { readDb } from "@/lib/store";
@@ -82,12 +83,7 @@ export default async function MyListPage() {
                 href={`/ai/${s.ai.slug}`}
                 className="flex items-center gap-3 p-3 transition hover:bg-slate-50/80 sm:p-4"
               >
-                <span
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-xl ring-1 ring-line"
-                  style={{ background: `${s.ai.color}14` }}
-                >
-                  {s.ai.logo}
-                </span>
+                <AiLogo slug={s.ai.slug} logo={s.ai.logo} color={s.ai.color} size={40} rounded="rounded-xl" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-ink">{s.ai.name}</p>
                   <p className="text-xs text-muted">

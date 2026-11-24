@@ -116,6 +116,11 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/sponsor" className="text-slate-300 transition hover:text-white">
+                  Sponsor GigleNode
+                </Link>
+              </li>
+              <li>
                 <Link href="/owner/claim" className="text-slate-300 transition hover:text-white">
                   Claim an AI listing
                 </Link>

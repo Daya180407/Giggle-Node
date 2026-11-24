@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { logoKind } from "@/lib/logo";
 
 /**
- * Official tool mark. Icons live in /public/logos and fall back to the emoji
- * stored in the database if a new tool has no icon yet.
+ * Tool mark from the database. `logo` may be an emoji, an image (media-library
+ * data URL, /path or https URL) or inline SVG. Older tools without a custom
+ * logo fall back to /logos/<slug>.png and then to the emoji.
  */
 export default function AiLogo({
   slug,
@@ -26,8 +28,11 @@ export default function AiLogo({
   alt?: string;
 }) {
   const [failed, setFailed] = useState(false);
-  const imageSrc = src ?? (slug ? `/logos/${slug}.png` : undefined);
+  const raw = (logo ?? "").trim();
+  const kind = logoKind(raw);
+  const imageSrc = src ?? (kind === "image" ? raw : kind === "emoji" && slug ? `/logos/${slug}.png` : undefined);
   const showImage = Boolean(imageSrc) && !failed;
+  const showSvg = !showImage && kind === "svg";
   const pad = Math.max(3, Math.round(size * 0.13));
 
   return (
@@ -54,8 +59,10 @@ export default function AiLogo({
           onError={() => setFailed(true)}
           className="h-full w-full object-contain"
         />
+      ) : showSvg ? (
+        <span className="block h-full w-full" aria-hidden dangerouslySetInnerHTML={{ __html: raw }} />
       ) : (
-        <span aria-hidden>{logo}</span>
+        <span aria-hidden>{raw}</span>
       )}
     </span>
   );

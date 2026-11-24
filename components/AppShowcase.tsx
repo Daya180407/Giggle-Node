@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import AiLogo from "@/components/AiLogo";
 import PricingReport from "@/components/PricingReport";
-import { PriceBadge, Stars } from "@/components/ui";
+import { PriceBadge, SponsoredTag, Stars } from "@/components/ui";
 import type { AppGroup } from "@/lib/apps/types";
-import type { PriceType } from "@/lib/types";
+import { insertSponsors, type PlacedItem } from "@/lib/sponsors";
+import type { PriceType, SponsorPlacement } from "@/lib/types";
 
 export type AppShowcaseItem = {
   slug: string;
@@ -20,6 +21,8 @@ export type AppShowcaseItem = {
   note: string;
   href: string;
   external: boolean;
+  /** the external link is an affiliate link, so it carries a sponsored rel */
+  affiliate?: boolean;
   iconSrc: string;
   kind: "mobile" | "desktop";
   plans: { name: string; price: string; note?: string }[];
@@ -36,11 +39,14 @@ export default function AppShowcase({
   desktop,
   mobileGroups,
   desktopGroups,
+  sponsored = [],
 }: {
   mobile: AppShowcaseItem[];
   desktop: AppShowcaseItem[];
   mobileGroups: AppGroup[];
   desktopGroups: AppGroup[];
+  /** paid rows inserted after the chosen position in the app list */
+  sponsored?: { position: number; placement: SponsorPlacement; item: AppShowcaseItem }[];
 }) {
   const [tab, setTab] = useState<"mobile" | "desktop">("mobile");
   const [group, setGroup] = useState("all");
@@ -61,6 +67,15 @@ export default function AppShowcase({
 
   const showAll = expanded || group !== "all" || query.trim().length > 0;
   const visible = showAll ? filtered : filtered.slice(0, 9);
+  // Sponsored rows only sit inside the clean, unfiltered list, so a search never
+  // shows a paid card that does not match the query.
+  const sponsorMode = group === "all" && query.trim().length === 0;
+  const rows: PlacedItem<AppShowcaseItem>[] = sponsorMode
+    ? insertSponsors(
+        visible,
+        sponsored.filter((row) => row.item.kind === tab),
+      )
+    : visible.map((item) => ({ item, sponsor: null }));
   const scored = items.filter((item) => typeof item.score === "number");
   const average = scored.length ? scored.reduce((sum, item) => sum + (item.score ?? 0), 0) / scored.length : 0;
   const selectedGroup = groups.find((g) => g.key === group);
@@ -163,7 +178,7 @@ export default function AppShowcase({
         key={`${tab}-${group}-${query}`}
         className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
       >
-        {visible.map((item, i) => {
+        {rows.map(({ item, sponsor }, i) => {
           const body = (
             <>
               <AiLogo
@@ -177,8 +192,16 @@ export default function AppShowcase({
               <span className="min-w-0 flex-1">
                 <span className="flex items-start justify-between gap-2">
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold text-ink group-hover:text-brand">{item.name}</span>
+                    <span className="flex flex-wrap items-center gap-1">
+                      <span className="truncate text-sm font-bold text-ink group-hover:text-brand">{item.name}</span>
+                      {sponsor ? <SponsoredTag /> : null}
+                    </span>
                     <span className="mt-0.5 block truncate text-[11px] text-muted">{item.note}</span>
+                    {sponsor ? (
+                      <span className="mt-0.5 block text-[10px] font-semibold text-amber-700">
+                        Sponsored placement · keeps its real position
+                      </span>
+                    ) : null}
                   </span>
                   {item.external ? (
                     <span aria-hidden className="mt-0.5 text-xs text-slate-300 transition group-hover:text-brand">
@@ -218,16 +241,21 @@ export default function AppShowcase({
             </>
           );
 
-          const className =
-            "app-card anim-rise group flex flex-col rounded-xl border border-line bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md";
+          const className = `app-card anim-rise group flex flex-col rounded-xl border bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md ${
+            sponsor ? "border-amber-200 bg-amber-50/40" : "border-line"
+          }`;
 
           return (
-            <div key={`${tab}-${item.slug}`} className={className} style={{ animationDelay: `${i * 30}ms` }}>
+            <div
+              key={`${tab}-${item.slug}${sponsor ? `-${sponsor.id}` : ""}`}
+              className={className}
+              style={{ animationDelay: `${i * 30}ms` }}
+            >
               {item.external ? (
                 <a
                   href={item.href}
                   target="_blank"
-                  rel="nofollow noopener noreferrer"
+                  rel={item.affiliate ? "nofollow noopener noreferrer sponsored" : "nofollow noopener noreferrer"}
                   className="flex items-start gap-3"
                 >
                   {body}
@@ -237,17 +265,19 @@ export default function AppShowcase({
                   {body}
                 </Link>
               )}
-              <PricingReport
-                targetType="app"
-                targetId={item.slug}
-                targetName={item.name}
-                back="/#apps"
-                compact
-              />
+              {sponsor ? null : (
+                <PricingReport
+                  targetType="app"
+                  targetId={item.slug}
+                  targetName={item.name}
+                  back="/#apps"
+                  compact
+                />
+              )}
             </div>
           );
         })}
-        {visible.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="col-span-full py-8 text-center text-sm text-muted">
             No apps matched. Try another category or search.
           </p>

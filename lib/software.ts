@@ -19,6 +19,13 @@ const GROUP_META: Record<string, { color: string; emoji: string }> = {
   developer: { color: "#111827", emoji: "🛠️" },
 };
 
+export const APP_GROUPS: AppGroup[] = [...MOBILE_GROUPS, ...DESKTOP_GROUPS];
+
+/** Default colour and emoji for an app group, used when an admin adds a new app. */
+export function appGroupMeta(group: string): { color: string; emoji: string } {
+  return GROUP_META[group] ?? { color: "#4F46E5", emoji: "📱" };
+}
+
 function normalize(rows: AppRow[], kind: AppKind): AppEntry[] {
   return rows.map(([name, slug, group, price, website, note, aiSlug, platforms]) => ({
     name,

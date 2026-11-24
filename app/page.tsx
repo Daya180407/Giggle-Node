@@ -3,7 +3,7 @@ import AdSlot from "@/components/AdSlot";
 import AiCard from "@/components/AiCard";
 import AnimatedStats, { type HomeStat } from "@/components/AnimatedStats";
 import AppShowcase, { type AppShowcaseItem } from "@/components/AppShowcase";
-import ChampionPodium, { type ChampionCategory } from "@/components/ChampionPodium";
+import ChampionPodium, { type ChampionCategory, type ChampionRow } from "@/components/ChampionPodium";
 import FeatureRotator from "@/components/FeatureRotator";
 import HeroSearch from "@/components/HeroSearch";
 import PaidPromo, { type PromoItem } from "@/components/PaidPromo";
@@ -18,6 +18,7 @@ import { categoryName, getCategories } from "@/lib/categories";
 import { communityTotals } from "@/lib/community-chat";
 import { getSiteSettings } from "@/lib/settings";
 import { appPricingFor, formatPlanPrice } from "@/lib/plans";
+import { activeSponsorPlacements, slotMeta } from "@/lib/sponsors";
 import { allApps, DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
 import {
   buildView,
@@ -71,6 +72,7 @@ export default async function HomePage({
   const leaders = rankedAis(view).slice(0, 3);
 
   const bySlug = new Map([...view.aiStats.values()].map((s) => [s.ai.slug, s]));
+  const sponsorRows = activeSponsorPlacements(db);
 
   const paidPicks: PromoItem[] = [...view.aiStats.values()]
     .filter((s) => !s.ai.hidden && s.ai.priceType === "paid")
@@ -107,8 +109,9 @@ export default async function HomePage({
       price: stat?.ai.priceType ?? entry.price,
       platforms: entry.platforms,
       note: entry.note,
-      href: stat ? `/ai/${stat.ai.slug}` : entry.website,
+      href: stat ? `/ai/${stat.ai.slug}` : entry.affiliateUrl ?? entry.website,
       external: !stat,
+      affiliate: Boolean(!stat && entry.affiliateUrl),
       iconSrc: stat ? `/logos/${stat.ai.slug}.png` : `/app-icons/${entry.slug}.png`,
       kind: entry.kind,
       plans: pricing.plans.map((plan) => ({
@@ -121,6 +124,15 @@ export default async function HomePage({
   });
   const mobileApps = appItems.filter((item) => item.kind === "mobile");
   const desktopApps = appItems.filter((item) => item.kind === "desktop");
+  const sponsoredApps = sponsorRows
+    .filter((placement) => placement.targetType === "app" && placement.slot !== "top3")
+    .flatMap((placement) => {
+      const item = appItems.find(
+        (entry) => entry.slug === placement.targetId && entry.kind === placement.listKey,
+      );
+      const slot = slotMeta(placement.slot);
+      return item && slot ? [{ position: slot.position, placement, item }] : [];
+    });
 
   const tabs: RankTab[] = [
     { slug: "all", label: "All", rows: toRows(rankedAis(view).slice(0, 5)) },
@@ -131,24 +143,44 @@ export default async function HomePage({
     })),
   ];
 
-  const champions: ChampionCategory[] = categories.map((category) => ({
-    slug: category.slug,
-    label: category.name,
-    emoji: category.emoji,
-    rows: championFor(view, category.slug, settings.championOverrides)
-      .slice(0, 3)
-      .map((s, i) => ({
-        rank: i + 1,
-        slug: s.ai.slug,
-        name: s.ai.name,
-        logo: s.ai.logo,
-        color: s.ai.color,
-        score: s.score,
-        votes: s.votes,
-        priceType: s.ai.priceType,
-        bestFor: s.ai.bestFor.slice(0, 2).join(" · "),
-      })),
-  })).filter((category) => category.rows.length >= 3);
+  const champions: ChampionCategory[] = categories
+    .map((category) => {
+      const ranked = rankedAis(view, category.slug);
+      const rows: ChampionRow[] = championFor(view, category.slug, settings.championOverrides)
+        .slice(0, 3)
+        .map((s, i) => ({
+          rank: i + 1,
+          slug: s.ai.slug,
+          name: s.ai.name,
+          logo: s.ai.logo,
+          color: s.ai.color,
+          score: s.score,
+          votes: s.votes,
+          priceType: s.ai.priceType,
+          bestFor: s.ai.bestFor.slice(0, 2).join(" · "),
+        }));
+      // Paid top-three card: inserted after the champion, never given a podium rank.
+      const top3 = sponsorRows.find(
+        (row) => row.targetType === "ai" && row.listKey === category.slug && row.slot === "top3",
+      );
+      const sponsoredStat = top3 ? ranked.find((s) => s.ai.id === top3.targetId) : undefined;
+      if (sponsoredStat) {
+        rows.splice(1, 0, {
+          rank: ranked.findIndex((s) => s.ai.id === sponsoredStat.ai.id) + 1,
+          slug: sponsoredStat.ai.slug,
+          name: sponsoredStat.ai.name,
+          logo: sponsoredStat.ai.logo,
+          color: sponsoredStat.ai.color,
+          score: sponsoredStat.score,
+          votes: sponsoredStat.votes,
+          priceType: sponsoredStat.ai.priceType,
+          bestFor: sponsoredStat.ai.bestFor.slice(0, 2).join(" · "),
+          sponsored: true,
+        });
+      }
+      return { slug: category.slug, label: category.name, emoji: category.emoji, rows };
+    })
+    .filter((category) => category.rows.filter((row) => !row.sponsored).length >= 3);
 
   const stats: HomeStat[] = [
     {
@@ -533,6 +565,7 @@ export default async function HomePage({
             desktop={desktopApps}
             mobileGroups={MOBILE_GROUPS}
             desktopGroups={DESKTOP_GROUPS}
+            sponsored={sponsoredApps}
           />
         </section>
 

@@ -13,10 +13,10 @@ const PER_PAGE = 100;
 export default async function AdminAppsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; kind?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; kind?: string; page?: string; added?: string }>;
 }) {
   await requireAreaPage("catalogue");
-  const { q = "", kind = "all", page = "1" } = await searchParams;
+  const { q = "", kind = "all", page = "1", added } = await searchParams;
   const db = readDb();
   const settings = getSiteSettings(db);
   const hidden = new Set(settings.hiddenAppSlugs ?? []);
@@ -53,13 +53,24 @@ export default async function AdminAppsPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="eyebrow">Catalogue</p>
-        <h2 className="display mt-1 text-2xl text-ink">Apps & desktop software</h2>
-        <p className="mt-1 text-xs text-muted">
-          {mobileCount} mobile apps · {desktopCount} desktop tools · {hidden.size} hidden from the public showcase
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="eyebrow">Catalogue</p>
+          <h2 className="display mt-1 text-2xl text-ink">Apps &amp; desktop software</h2>
+          <p className="mt-1 text-xs text-muted">
+            {mobileCount} mobile apps · {desktopCount} desktop tools · {hidden.size} hidden from the public showcase
+          </p>
+        </div>
+        <Link href="/admin/apps/new" className="btn btn-primary text-xs">
+          + Add app / software
+        </Link>
       </div>
+
+      {added ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          App saved and live in the public showcase.
+        </div>
+      ) : null}
 
       <form className="card flex flex-wrap items-center gap-2 p-3" action="/admin/apps">
         <input
@@ -102,6 +113,7 @@ export default async function AdminAppsPage({
                     {entry.kind === "mobile" ? "Mobile" : "PC"}
                   </span>
                   {entry.aiSlug ? <span className="chip bg-brand-soft text-brand">AI-backed</span> : null}
+                  {entry.affiliateUrl ? <span className="chip bg-amber-50 text-amber-700">Affiliate</span> : null}
                   {customSlugs.has(entry.slug) ? (
                     <span className="chip bg-emerald-50 text-emerald-700">From requests</span>
                   ) : null}
@@ -117,18 +129,21 @@ export default async function AdminAppsPage({
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1">
-                {customSlugs.has(entry.slug) ? null : (
-                  <Link href={`/admin/apps/${entry.slug}`} className="btn btn-primary !px-2 !py-1 text-xs">
-                    Plans &amp; pricing
+                <Link href={`/admin/apps/${entry.slug}`} className="btn btn-primary !px-2 !py-1 text-xs">
+                  Plans &amp; pricing
+                </Link>
+                {customSlugs.has(entry.slug) ? (
+                  <Link href={`/admin/apps/new?slug=${entry.slug}`} className="btn btn-ghost !px-2 !py-1 text-xs">
+                    Edit
                   </Link>
-                )}
+                ) : null}
                 {entry.aiSlug ? (
                   <Link href={`/ai/${entry.aiSlug}`} className="btn btn-ghost !px-2 !py-1 text-xs">
                     AI page
                   </Link>
                 ) : (
                   <a
-                    href={entry.website}
+                    href={entry.affiliateUrl ?? entry.website}
                     target="_blank"
                     rel="nofollow noopener noreferrer"
                     className="btn btn-ghost !px-2 !py-1 text-xs"

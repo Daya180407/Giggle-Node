@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { logAdminAction } from "@/lib/admin-log";
-import { allApps, APP_ENTRIES } from "@/lib/software";
+import { allApps, APP_ENTRIES, appGroupMeta } from "@/lib/software";
 import { CONTRIBUTION_LABEL, contributionType } from "@/lib/contributions";
 import { DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
 import type { AppEntry } from "@/lib/apps/types";
@@ -26,6 +26,8 @@ import { criteriaOverall, readCriteria } from "@/lib/criteria";
 import { findBadWord, isBlockedIp, normalizeIpList, normalizeWordList } from "@/lib/guard";
 import { deliverEmails, mailerConfigured } from "@/lib/mailer";
 import { pushNotification, queueEmail, renderTemplate } from "@/lib/notify";
+import { normalizeAiLogo } from "@/lib/logo";
+import { money, SPONSOR_SLOTS, SPONSOR_SLOT_KEYS, sponsorPrices } from "@/lib/sponsors";
 import { PAGE_SLUGS } from "@/lib/pages";
 import { ALL_AREAS, canAccess, isStaffRole, resolveRoles, type AdminArea } from "@/lib/roles";
 import { AI_SEARCH_PROMPT, DEFAULT_SITE_SETTINGS, getSiteSettings } from "@/lib/settings";
@@ -46,6 +48,7 @@ import type {
   PriceType,
   Rating,
   RatingStatus,
+  SponsorSlotKey,
   SubscriptionPlan,
   User,
   UserRole,
@@ -388,7 +391,7 @@ export async function saveAiAction(formData: FormData) {
       priceType: String(formData.get("priceType") ?? "freemium") as PriceType,
       // Only http(s) targets: the Visit button redirects to these values.
       website: /^https?:\/\//i.test(websiteRaw) ? websiteRaw : "",
-      logo: String(formData.get("logo") ?? "🤖").slice(0, 4) || "🤖",
+      logo: normalizeAiLogo(String(formData.get("logo") ?? "")) || "🤖",
       color: String(formData.get("color") ?? "#4F46E5"),
       description: String(formData.get("description") ?? "").trim(),
       bestFor,
@@ -1418,7 +1421,7 @@ export async function setPostStatusAction(formData: FormData) {
 export async function toggleAppVisibilityAction(formData: FormData) {
   const admin = await assertAdmin("catalogue");
   const slug = String(formData.get("slug") ?? "");
-  const app = APP_ENTRIES.find((entry) => entry.slug === slug);
+  const app = allApps(readDb().customApps).find((entry) => entry.slug === slug);
   if (!app) redirect("/admin/apps");
 
   mutateDb((db) => {
@@ -1445,10 +1448,91 @@ export async function toggleAppVisibilityAction(formData: FormData) {
   redirect("/admin/apps");
 }
 
+/** Adds or edits an app / desktop software entry, including its affiliate link. */
+export async function saveAppAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const original = String(formData.get("originalSlug") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  const rawSlug = String(formData.get("slug") ?? "").trim();
+  const kind: "mobile" | "desktop" = String(formData.get("kind") ?? "mobile") === "desktop" ? "desktop" : "mobile";
+  const group = String(formData.get("group") ?? "").trim();
+  const priceRaw = String(formData.get("priceType") ?? "freemium");
+  const price: PriceType = priceRaw === "free" || priceRaw === "paid" ? priceRaw : "freemium";
+  const website = normalizeUrl(String(formData.get("website") ?? ""));
+  const affiliateUrl = normalizeUrl(String(formData.get("affiliateUrl") ?? ""));
+  const note = String(formData.get("note") ?? "").trim().slice(0, 140);
+  const platforms = String(formData.get("platforms") ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+  const emoji = String(formData.get("emoji") ?? "").trim().slice(0, 4);
+  const colorRaw = String(formData.get("color") ?? "").trim();
+  const aiSlugRaw = String(formData.get("aiSlug") ?? "").trim();
+
+  if (name.length < 2) redirect("/admin/apps/new?error=name");
+  if (!website) redirect("/admin/apps/new?error=website");
+
+  let savedSlug = "";
+  let problem = "";
+
+  mutateDb((db) => {
+    if (APP_ENTRIES.some((entry) => entry.slug === original)) {
+      problem = "builtin";
+      return;
+    }
+    if (!Array.isArray(db.customApps)) db.customApps = [];
+    const groups = kind === "mobile" ? MOBILE_GROUPS : DESKTOP_GROUPS;
+    const safeGroup = groups.some((row) => row.key === group) ? group : groups[0].key;
+    const meta = appGroupMeta(safeGroup);
+    const base = slugify(rawSlug || name) || "app";
+    const taken = [
+      ...APP_ENTRIES.map((entry) => entry.slug),
+      ...db.customApps.filter((entry) => entry.slug !== original).map((entry) => entry.slug),
+    ];
+    const slug = uniqueSlug(base, taken);
+    const payload: AppEntry = {
+      name,
+      slug,
+      group: safeGroup,
+      price,
+      website,
+      note,
+      aiSlug: db.ai.some((ai) => ai.slug === aiSlugRaw) ? aiSlugRaw : undefined,
+      platforms: platforms.length ? platforms : kind === "mobile" ? ["iOS", "Android"] : ["Windows", "macOS"],
+      kind,
+      color: /^#[0-9a-f]{6}$/i.test(colorRaw) ? colorRaw : meta.color,
+      emoji: emoji || meta.emoji,
+      affiliateUrl: affiliateUrl || undefined,
+    };
+    const index = db.customApps.findIndex((entry) => entry.slug === original);
+    if (index >= 0) db.customApps[index] = { ...db.customApps[index], ...payload };
+    else db.customApps.push(payload);
+    if (original && original !== slug && db.appPricing?.[original]) {
+      db.appPricing[slug] = db.appPricing[original];
+      delete db.appPricing[original];
+    }
+    savedSlug = slug;
+    logAdminAction(
+      db,
+      admin,
+      index >= 0 ? "updated app" : "added app",
+      `${kind === "mobile" ? "Mobile" : "PC"}: ${name}`,
+      `${safeGroup}${affiliateUrl ? " · affiliate link" : ""}`,
+    );
+  });
+
+  if (problem) redirect(`/admin/apps/new?error=${problem}${original ? `&slug=${original}` : ""}`);
+  revalidatePath("/");
+  revalidatePath("/admin/apps");
+  revalidatePath("/sponsor");
+  redirect(`/admin/apps?added=${savedSlug}`);
+}
+
 export async function saveAppPricingAction(formData: FormData) {
   const admin = await assertAdmin("catalogue");
   const slug = String(formData.get("slug") ?? "");
-  const app = APP_ENTRIES.find((entry) => entry.slug === slug);
+  const app = allApps(readDb().customApps).find((entry) => entry.slug === slug);
   if (!app) redirect("/admin/apps");
 
   const plans = readPlans(formData);
@@ -1569,6 +1653,299 @@ export async function saveSponsorshipAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/admin/sponsors");
   redirect("/admin/sponsors?saved=1");
+}
+
+/* --------------------------- sponsored slots --------------------------- */
+
+const SPONSOR_SLOT_KEY_SET = new Set<string>(SPONSOR_SLOT_KEYS);
+
+/** Reads the combined `ai:<id>` / `app:<slug>` target posted by the admin form. */
+function sponsoredTarget(db: DB, raw: string) {
+  const [kind, value] = raw.split(":");
+  if (kind === "ai") {
+    const ai = db.ai.find((row) => row.id === value);
+    return ai
+      ? { targetType: "ai" as const, targetId: ai.id, targetName: ai.name, targetSlug: ai.slug }
+      : null;
+  }
+  if (kind === "app") {
+    const app = allApps(db.customApps).find((row) => row.slug === value);
+    return app
+      ? { targetType: "app" as const, targetId: app.slug, targetName: app.name, targetSlug: app.slug }
+      : null;
+  }
+  return null;
+}
+
+/** A placement can only point at a list that matches its target type. */
+function sponsoredListKey(db: DB, targetType: "ai" | "app", raw: string): string {
+  if (targetType === "app") return raw === "mobile" || raw === "desktop" ? raw : "";
+  if (raw === "all") return "all";
+  return getCategories(db).some((category) => category.slug === raw) ? raw : "";
+}
+
+function sponsorAmount(formData: FormData): number {
+  const value = Number(formData.get("amount") ?? 0);
+  if (!Number.isFinite(value) || value < 0) return 0;
+  return Math.min(100000000, Math.round(value));
+}
+
+function sponsorUntil(formData: FormData): string | null {
+  const days = Number(formData.get("days") ?? 0);
+  if (!Number.isFinite(days) || days <= 0) return null;
+  return new Date(Date.now() + Math.min(3650, Math.round(days)) * 86400000).toISOString().slice(0, 10);
+}
+
+export async function saveSponsorPricesAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  mutateDb((db) => {
+    const prices: Partial<Record<SponsorSlotKey, number>> = {};
+    for (const key of SPONSOR_SLOT_KEYS) {
+      const value = Number(formData.get(`price_${key}`) ?? 0);
+      prices[key] = Number.isFinite(value) && value > 0 ? Math.min(100000000, Math.round(value)) : 0;
+    }
+    db.sponsorPrices = prices;
+    logAdminAction(
+      db,
+      admin,
+      "sponsor rates",
+      "Sponsored slots",
+      SPONSOR_SLOTS.map((slot) => `${slot.short}: ${money(prices[slot.key] ?? 0)}`).join(" · "),
+    );
+  });
+  revalidatePath("/admin/sponsors");
+  revalidatePath("/sponsor");
+  redirect("/admin/sponsors?saved=rates");
+}
+
+export async function addSponsorPlacementAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const slot = String(formData.get("slot") ?? "") as SponsorSlotKey;
+  const amount = sponsorAmount(formData);
+  const until = sponsorUntil(formData);
+  const note = String(formData.get("note") ?? "").trim().slice(0, 200);
+  let problem = "";
+
+  mutateDb((db) => {
+    if (!SPONSOR_SLOT_KEY_SET.has(slot)) {
+      problem = "slot";
+      return;
+    }
+    const target = sponsoredTarget(db, String(formData.get("target") ?? ""));
+    if (!target) {
+      problem = "target";
+      return;
+    }
+    const listKey = sponsoredListKey(db, target.targetType, String(formData.get("listKey") ?? ""));
+    if (!listKey) {
+      problem = "list";
+      return;
+    }
+    if (target.targetType === "app" && slot === "top3") {
+      problem = "slot";
+      return;
+    }
+    if (target.targetType === "ai" && listKey !== "all") {
+      const ai = db.ai.find((row) => row.id === target.targetId);
+      if (ai && ai.category !== listKey) {
+        problem = "target";
+        return;
+      }
+    }
+    if (!Array.isArray(db.sponsorPlacements)) db.sponsorPlacements = [];
+    const existing = db.sponsorPlacements.find(
+      (row) =>
+        row.targetType === target.targetType &&
+        row.targetId === target.targetId &&
+        row.listKey === listKey &&
+        row.slot === slot,
+    );
+    if (existing) {
+      existing.targetName = target.targetName;
+      existing.targetSlug = target.targetSlug;
+      existing.amount = amount;
+      existing.until = until;
+      existing.note = note;
+      existing.active = true;
+      logAdminAction(db, admin, "sponsor placement updated", `${target.targetName} · ${slot}`, `List ${listKey} · ${money(amount)}`);
+    } else {
+      db.sponsorPlacements.unshift({
+        id: uid("sp"),
+        ...target,
+        listKey,
+        slot,
+        amount,
+        until,
+        active: true,
+        note,
+        createdAt: new Date().toISOString(),
+      });
+      logAdminAction(db, admin, "sponsor placement added", `${target.targetName} · ${slot}`, `List ${listKey} · ${money(amount)}`);
+    }
+  });
+
+  if (problem) redirect(`/admin/sponsors?error=${problem}`);
+  revalidatePath("/");
+  revalidatePath("/category/all");
+  revalidatePath("/admin/sponsors");
+  redirect("/admin/sponsors?saved=placement");
+}
+
+export async function toggleSponsorPlacementAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const id = String(formData.get("id") ?? "");
+  mutateDb((db) => {
+    const placement = (db.sponsorPlacements ?? []).find((row) => row.id === id);
+    if (!placement) return;
+    placement.active = !placement.active;
+    logAdminAction(
+      db,
+      admin,
+      placement.active ? "sponsor placement on" : "sponsor placement paused",
+      `${placement.targetName} · ${placement.slot}`,
+      `List ${placement.listKey}`,
+    );
+  });
+  revalidatePath("/");
+  revalidatePath("/admin/sponsors");
+  redirect("/admin/sponsors?saved=placement");
+}
+
+export async function deleteSponsorPlacementAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const id = String(formData.get("id") ?? "");
+  mutateDb((db) => {
+    const placement = (db.sponsorPlacements ?? []).find((row) => row.id === id);
+    if (!placement) return;
+    db.sponsorPlacements = (db.sponsorPlacements ?? []).filter((row) => row.id !== id);
+    logAdminAction(db, admin, "sponsor placement removed", `${placement.targetName} · ${placement.slot}`, `List ${placement.listKey}`);
+  });
+  revalidatePath("/");
+  revalidatePath("/admin/sponsors");
+  redirect("/admin/sponsors?saved=placement");
+}
+
+/** Public advertiser request from /sponsor. The price is always read server-side. */
+export async function submitSponsorRequestAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const company = String(formData.get("company") ?? "").trim().slice(0, 90);
+  const contactName = String(formData.get("contactName") ?? "").trim().slice(0, 80);
+  const email = String(formData.get("email") ?? "").trim().slice(0, 160);
+  const website = normalizeUrl(String(formData.get("website") ?? ""));
+  const message = String(formData.get("message") ?? "").trim().slice(0, 1200);
+  const slot = String(formData.get("slot") ?? "") as SponsorSlotKey;
+
+  if (company.length < 2) return { ok: false, error: "Please enter your company or product name." };
+  if (contactName.length < 2) return { ok: false, error: "Please enter a contact name." };
+  if (!isEmail(email)) return { ok: false, error: "Please enter a valid email address." };
+  if (!SPONSOR_SLOT_KEY_SET.has(slot)) return { ok: false, error: "Please choose where you want to appear." };
+  if (message.length < 15) return { ok: false, error: "Please tell us a little about the listing (at least 15 characters)." };
+
+  const db = readDb();
+  const target = sponsoredTarget(db, String(formData.get("target") ?? ""));
+  if (!target) return { ok: false, error: "Please choose the AI, app or software you want to promote." };
+  const listKey = sponsoredListKey(db, target.targetType, String(formData.get("listKey") ?? ""));
+  if (!listKey) return { ok: false, error: "Please choose where the sponsored row should appear." };
+  if (target.targetType === "app" && slot === "top3") {
+    return { ok: false, error: "The top-three card is only available inside an AI category. Pick a list position instead." };
+  }
+  if (target.targetType === "ai" && listKey !== "all") {
+    const ai = db.ai.find((row) => row.id === target.targetId);
+    if (ai && ai.category !== listKey) {
+      return {
+        ok: false,
+        error: "That tool is not in this category's ranking. Choose its own category or the all-AI leaderboard.",
+      };
+    }
+  }
+
+  const price = sponsorPrices(db)[slot] ?? 0;
+  const duplicate = (db.sponsorRequests ?? []).find(
+    (row) =>
+      row.status === "pending" &&
+      row.email.toLowerCase() === email.toLowerCase() &&
+      row.targetId === target.targetId &&
+      row.slot === slot,
+  );
+  if (duplicate) {
+    return { ok: true, message: "We already have this request. Our team will contact you with the payment details." };
+  }
+
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.sponsorRequests)) draft.sponsorRequests = [];
+    draft.sponsorRequests.unshift({
+      id: uid("spr"),
+      company,
+      contactName,
+      email,
+      website,
+      ...target,
+      listKey,
+      slot,
+      price,
+      message,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      reviewedAt: null,
+      reviewedBy: null,
+    });
+    pushNotification(draft, {
+      title: `Sponsorship request: ${company}`,
+      body: `${contactName} wants ${target.targetName} at ${slot} — quoted ${money(price, getSiteSettings(draft).appearance.currency)}.`,
+      href: "/admin/sponsors",
+      kind: "system",
+      audience: "staff",
+    });
+  });
+  revalidatePath("/admin/sponsors");
+  return {
+    ok: true,
+    message: `Request sent. Quoted price: ${money(price, getSiteSettings(db).appearance.currency)} for 30 days. Our team will contact you with the payment details — nothing is charged automatically.`,
+  };
+}
+
+export async function reviewSponsorRequestAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const id = String(formData.get("id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  if (decision !== "approve" && decision !== "reject") redirect("/admin/sponsors");
+  const note = String(formData.get("note") ?? "").trim().slice(0, 240);
+
+  mutateDb((db) => {
+    const request = (db.sponsorRequests ?? []).find((row) => row.id === id);
+    if (!request || request.status !== "pending") return;
+    request.status = decision === "approve" ? "approved" : "rejected";
+    request.reviewedAt = new Date().toISOString();
+    request.reviewedBy = admin.name;
+    request.note = note;
+
+    if (decision === "approve") {
+      if (!Array.isArray(db.sponsorPlacements)) db.sponsorPlacements = [];
+      db.sponsorPlacements.unshift({
+        id: uid("sp"),
+        targetType: request.targetType,
+        targetId: request.targetId,
+        targetName: request.targetName,
+        targetSlug: request.targetSlug,
+        listKey: request.listKey,
+        slot: request.slot,
+        amount: request.price,
+        until: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+        active: true,
+        note: `Approved request · ${request.company}`,
+        createdAt: new Date().toISOString(),
+      });
+    }
+    logAdminAction(
+      db,
+      admin,
+      decision === "approve" ? "sponsorship approved" : "sponsorship rejected",
+      `${request.company} · ${request.targetName}`,
+      `${request.slot} · ${money(request.price)}${note ? ` · ${note}` : ""}`,
+    );
+  });
+  revalidatePath("/admin/sponsors");
+  revalidatePath("/");
+  redirect("/admin/sponsors?saved=request");
 }
 
 /* ------------------------ rating moderation ------------------------ */
@@ -2375,7 +2752,7 @@ export async function bulkUploadAction(formData: FormData) {
         id,
         name: name.slice(0, 80),
         slug,
-        logo: cell(row, "logo").slice(0, 4) || "🤖",
+        logo: normalizeAiLogo(cell(row, "logo")) || "🤖",
         color: /^#[0-9a-f]{6}$/i.test(cell(row, "color")) ? cell(row, "color") : "#4F46E5",
         website: /^https?:\/\//.test(website) ? website : "",
         category: category.slug,

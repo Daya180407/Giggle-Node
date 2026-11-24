@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import AiLogo from "@/components/AiLogo";
 import { avatarSrc, ownerChangesFor, aiIdsForOwner, ownerDrafts } from "@/lib/owners";
 import { getCurrentOwner } from "@/lib/owner-auth";
 import { refreshDb } from "@/lib/store";
@@ -51,13 +52,7 @@ export default async function OwnerDashboardPage() {
             return (
               <article key={ai.id} className="card p-4">
                 <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="grid h-9 w-9 place-items-center rounded-xl text-base"
-                    style={{ backgroundColor: `${ai.color}1a` }}
-                  >
-                    {ai.logo}
-                  </span>
+                  <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={36} rounded="rounded-xl" />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-ink">{ai.name}</p>
                     <p className="text-[11px] text-muted">

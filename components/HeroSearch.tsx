@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import AiLogo from "@/components/AiLogo";
 
 const PLACEHOLDERS = [
   'Try “best AI for YouTube thumbnails”',
@@ -153,13 +154,7 @@ export default function HeroSearch() {
                       onClick={() => setOpen(false)}
                       className="flex items-center gap-3 px-3 py-2.5 transition hover:bg-slate-50"
                     >
-                      <span
-                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-sm"
-                        style={{ borderColor: `${item.color}40`, color: item.color }}
-                        aria-hidden
-                      >
-                        {item.logo}
-                      </span>
+                      <AiLogo slug={item.slug} logo={item.logo} color={item.color} size={32} rounded="rounded-lg" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-ink">{item.name}</span>
                         <span className="block truncate text-[11px] text-muted">{item.category}</span>

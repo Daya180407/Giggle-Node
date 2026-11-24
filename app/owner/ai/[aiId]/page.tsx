@@ -5,6 +5,7 @@ import {
   saveOwnerPlansAction,
   saveOwnerPriceAction,
 } from "@/app/owner-actions";
+import AiLogo from "@/components/AiLogo";
 import { getCurrentOwner } from "@/lib/owner-auth";
 import { ownsAi, priceChangeWindow, priceWaitHours, verifiedOwnerFor } from "@/lib/owners";
 import { refreshDb } from "@/lib/store";
@@ -136,13 +137,7 @@ export default async function OwnerAiPage({
     <div className="space-y-4">
       <section className="card p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span
-            aria-hidden
-            className="grid h-10 w-10 place-items-center rounded-xl text-lg"
-            style={{ backgroundColor: `${ai.color}1a` }}
-          >
-            {ai.logo}
-          </span>
+          <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={40} rounded="rounded-xl" />
           <div className="min-w-0">
             <h2 className="display text-xl text-ink">{ai.name}</h2>
             <p className="text-[11px] text-muted">
