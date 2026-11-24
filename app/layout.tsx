@@ -148,15 +148,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             ) : null}
           </div>
         ) : null}
-        {settings.demo.enabled ? (
-          <div className="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-center text-[10.5px] font-medium text-amber-900 sm:text-[11px]">
-            Demo dataset on · {settings.demo.users.toLocaleString("en-US")} sample members and virtual ratings are shown.{" "}
-            <a href="/admin/demo" className="font-bold underline underline-offset-2">
-              Admin → Demo data
-            </a>{" "}
-            removes them in one tap.
-          </div>
-        ) : null}
         <SiteHeader />
         <main className="min-h-[60vh]">{children}</main>
         <SiteFooter />

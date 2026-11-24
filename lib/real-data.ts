@@ -34,11 +34,6 @@ export function stripFabricatedRatings(db: DB): boolean {
   );
   db.users = db.users.filter((user) => !fabricatedUsers.has(user.id));
 
-  for (const model of db.models) {
-    delete model.demoStars;
-    delete model.demoVotes;
-  }
-
   for (const key of FAKE_OWNED_COLLECTIONS) {
     const rows = db[key] as { userId?: string }[] | undefined;
     if (Array.isArray(rows)) {

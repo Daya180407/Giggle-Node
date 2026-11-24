@@ -1,7 +1,7 @@
 import { applyCatalogue } from "./catalogue/apply";
 import { CATEGORIES } from "./categories";
 import { backfillCommunity } from "./community";
-import { DEMO_ACCOUNTS } from "./demo-accounts";
+import { SEED_ACCOUNTS } from "./seed-accounts";
 import { localizeContentToEnglish } from "./localize-en";
 import { stripFabricatedRatings } from "./real-data";
 import { resolveRoles } from "./roles";
@@ -10,7 +10,7 @@ import type { DB } from "./types";
 
 /**
  * Backfills fields introduced after the first data snapshot (older R2 documents)
- * and gives the seeded demo accounts a password hash exactly once.
+ * and gives the seeded admin account a password hash exactly once.
  * Deliberately synchronous work only: this runs during Worker startup.
  */
 export async function migrateDb(db: DB): Promise<boolean> {
@@ -82,7 +82,7 @@ export async function migrateDb(db: DB): Promise<boolean> {
   db.settings = { ...DEFAULT_SITE_SETTINGS, ...(db.settings ?? {}) };
   if (JSON.stringify(db.settings) !== settingsBefore) changed = true;
 
-  for (const account of DEMO_ACCOUNTS) {
+  for (const account of SEED_ACCOUNTS) {
     const user = db.users.find((u) => u.email.toLowerCase() === account.email);
     if (!user) continue;
     // 150k-iteration hashes were written by an early build and cannot be verified on Workers.
@@ -91,6 +91,26 @@ export async function migrateDb(db: DB): Promise<boolean> {
       user.passwordHash = account.passwordHash;
       changed = true;
     }
+  }
+
+  // A fresh site keeps no shared demo login and no QA test accounts. This is
+  // idempotent: once removed, nothing matches on later boots.
+  const testAccount = (email: string) =>
+    email.toLowerCase() === "demo@giglenode.com" || email.toLowerCase().endsWith("@giglenode.test");
+  const removable = db.users.filter((user) => testAccount(user.email));
+  if (removable.length) {
+    const ids = new Set(removable.map((user) => user.id));
+    db.users = db.users.filter((user) => !ids.has(user.id));
+    db.ratings = db.ratings.filter((rating) => !ids.has(rating.userId));
+    db.bookmarks = db.bookmarks.filter((bookmark) => !ids.has(bookmark.userId));
+    db.follows = db.follows.filter((follow) => !ids.has(follow.userId));
+    changed = true;
+  }
+
+  // Retire the old virtual-demo settings block so every document is clean.
+  if (db.settings && "demo" in (db.settings as unknown as Record<string, unknown>)) {
+    delete (db.settings as unknown as Record<string, unknown>).demo;
+    changed = true;
   }
 
   if (applyCatalogue(db)) changed = true;

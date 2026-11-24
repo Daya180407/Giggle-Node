@@ -1383,25 +1383,14 @@ export function buildSeed(): DB {
 
   // Only real accounts exist. The catalogue is editorial, but every rating,
   // review and vote has to come from a visitor, so no reviewers are pre-seeded.
-  users.push(
-    {
-      id: "u_demo",
-      name: "Demo Reviewer",
-      email: "demo@giglenode.com",
-      avatar: "D",
-      role: "user",
-      createdAt: isoDaysAgo(60),
-    },
-    {
-      id: "u_admin",
-      name: "GigleNode Admin",
-      email: "admin@giglenode.com",
-      avatar: "G",
-      role: "admin",
-      createdAt: isoDaysAgo(400),
-    },
-  );
-  const ratingPool = users.filter((u) => u.isSeed);
+  users.push({
+    id: "u_admin",
+    name: "GigleNode Admin",
+    email: "admin@giglenode.com",
+    avatar: "G",
+    role: "admin",
+    createdAt: isoDaysAgo(400),
+  });
 
   AI_SEED.forEach((seed, aiIndex) => {
     const aiId = `ai_${seed.slug}`;
@@ -1506,19 +1495,8 @@ export function buildSeed(): DB {
     updatedAt: isoDaysAgo(1),
   });
 
-  const bookmarks: Bookmark[] = ["ai_chatgpt", "ai_midjourney", "ai_cursor"].map((aiId, i) => ({
-    id: `bm_demo_${i}`,
-    userId: "u_demo",
-    aiId,
-    createdAt: isoDaysAgo(5 - i),
-  }));
-
-  const follows: Follow[] = ["ai_claude", "ai_elevenlabs"].map((aiId, i) => ({
-    id: `fl_demo_${i}`,
-    userId: "u_demo",
-    aiId,
-    createdAt: isoDaysAgo(3 - i),
-  }));
+  const bookmarks: Bookmark[] = [];
+  const follows: Follow[] = [];
 
   return {
     version: 1,

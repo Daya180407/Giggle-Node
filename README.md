@@ -1,7 +1,7 @@
 # GigleNode — Har AI, Ek Jagah, Sahi Rating Ke Saath
 
 AI tools ka trust-driven directory: real user ratings, model-wise detail, honest comparison aur expert blog posts.
-Built with **Next.js 15 (App Router) + TypeScript + Tailwind CSS v4**, ready for **Supabase + Vercel** (PRD ka stack).
+Built with **Next.js 16 (App Router) + TypeScript + Tailwind CSS v4**, ready for **Supabase + Vercel** aur **Cloudflare Workers** dono par.
 
 ## Run kijiye
 
@@ -11,20 +11,19 @@ npm run dev      # http://localhost:3000
 npm run build && npm start
 ```
 
-Data pehli request par `data/db.json` me automatically seed ho jata hai (40 AI, 100+ models, ~15k ratings,
-12 posts, 200 prompts). Reset karna ho to `data/db.json` delete kar dijiye.
+Data pehli request par `data/db.json` me automatically seed ho jata hai (catalogue, models, prompts aur posts).
+Koi sample member, review ya rating pre-seeded nahi hai: har rating aur review kisi real signed-in visitor se aata hai.
+Fresh start ke liye `data/db.json` delete kar dijiye.
 
-### Demo logins
+### Admin login
 
 | Role | Email | Password |
 | --- | --- | --- |
-| User (ratings + bookmarks pre-seeded) | `demo@giglenode.com` | `demo12345` |
 | Admin | `admin@giglenode.com` | `admin12345` |
 
-Auth email + password par chalta hai: `/signup` se naya account, `/login` se login, `/forgot-password` se reset link.
-Passwords PBKDF2-SHA256 (100k iterations, per-user salt) se hash hote hain aur session cookie HMAC-signed hai
-(`SESSION_SECRET`). Reset link email se nahi bhejta — demo me screen par dikhta hai, production me Supabase Auth
-(email delivery + OAuth) use karein.
+Pehle login ke turant baad `/admin/settings` se password badal dijiye. Signup `/signup` se hota hai,
+reset link `/forgot-password` se. Passwords PBKDF2-SHA256 (100k iterations, per-user salt) se hash hote hain aur
+session cookie HMAC-signed hai (`SESSION_SECRET`, production me zaroori).
 
 ## Pages
 
@@ -67,20 +66,31 @@ Weighted Score = (Votes / (Votes + 50)) × avg + (50 / (Votes + 50)) × globalAv
 
 ## Data layer
 
-`lib/store.ts` ek single JSON document store hai: local Node dev me `data/db.json`, Cloudflare Workers par R2
-`FILES` bucket (`giglenode/db.json`). Worker start par hydrate hota hai aur writes `waitUntil` se persist hote hain.
-Production me Supabase ke liye `supabase/schema.sql` ready hai — tables, RLS, rating edit-lock trigger aur
-`model_rankings` view (same weighted formula SQL me).
+`lib/store.ts` ek single JSON document store hai jo host ke hisaab se backend chunta hai:
 
-> Vercel par filesystem read-only hota hai. Freebuff Sites (Workers) par writes R2 me persist hote hain;
-> relational queries ya bade scale ke liye `supabase/schema.sql` migration recommended hai.
+- **Local dev** → `data/db.json`.
+- **Vercel / koi bhi Node host** → Supabase table `giglenode_state` (`doc` jsonb + `version` column, compare-and-swap
+  writes se concurrent updates safe rehte hain).
+- **Cloudflare Workers** → R2 `FILES` bucket (`giglenode/db.json`).
+- Kuch bhi configured na ho → in-memory seed (persist nahi hota).
 
-Supabase wire karne ke steps:
+Owner avatars `lib/assets.ts` se jaate hain: Supabase Storage bucket (default `giglenode-media`), R2, ya local
+`data/blobs/`. Uploads server-side rehte hain, public bucket ki zaroorat nahi.
 
-1. Supabase project banaiye, `supabase/schema.sql` SQL editor me chala dijiye.
-2. `.env.local` me `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` (aur server ke liye
-   `SUPABASE_SERVICE_ROLE_KEY`) daaliye — keys chat me paste na karein, secret store me rakhein.
-3. `lib/store.ts` ke functions ko Supabase queries se replace kijiye (function signatures already async-friendly hain).
+### Vercel + Supabase deploy
+
+1. Supabase project banaiye aur `supabase/schema.sql` SQL editor me chala dijiye (tables, RLS, `giglenode_state`,
+   storage bucket).
+2. Vercel → Project → Settings → Environment Variables me daaliye:
+   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET` (long random), aur optionally
+   `SUPABASE_STORAGE_BUCKET`, `RESEND_API_KEY`, `EMAIL_FROM`.
+   `SUPABASE_SERVICE_ROLE_KEY` sirf server-side hai — kabhi `NEXT_PUBLIC_*` me na daalein aur chat me paste na karein.
+3. Repo ko Vercel par import karke deploy kijiye. Build `npm ci && npm run build` hai; Node 22+ chahiye
+   (`package.json` me `engines` set hai).
+4. Deploy ke baad pehli request document seed karti hai. `admin@giglenode.com` / `admin12345` se login karke
+   password badal dijiye.
+
+Cloudflare Workers par Supabase env vars na daalein; wahan R2 binding pehle se configured hai.
 
 ## SEO
 

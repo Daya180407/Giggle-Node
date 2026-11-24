@@ -64,15 +64,6 @@ export default async function LoginPage({
           )}
         </div>
 
-        <div className="mt-5 rounded-xl border border-line bg-slate-50/80 p-3.5 text-xs text-slate-600">
-          <p className="font-semibold text-slate-700">Demo account</p>
-          <p className="mt-1">
-            Email: <code>demo@giglenode.com</code> · Password: <code>demo12345</code>
-          </p>
-          <p className="mt-1 text-muted">
-            Create your own account to keep ratings and saved tools under your name.
-          </p>
-        </div>
 
         <p className="mt-3 text-center text-xs text-muted">
           Waiting for a verification email?{" "}

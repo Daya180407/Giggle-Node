@@ -291,3 +291,26 @@ create policy "admin search cache" on public.search_cache
   for all using (public.is_admin()) with check (public.is_admin());
 create policy "admin search logs" on public.search_logs
   for all using (public.is_admin()) with check (public.is_admin());
+
+-- ---------- app state document (used by lib/store.ts) ----------
+-- One JSON document holds the whole site database. `version` gives compare-and-swap
+-- writes so two requests cannot overwrite each other. The server uses the service
+-- role key, so no public policy is created for this table.
+create table if not exists public.giglenode_state (
+  id text primary key,
+  doc jsonb not null,
+  version bigint not null default 1,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.giglenode_state enable row level security;
+revoke all on public.giglenode_state from anon, authenticated;
+grant all on public.giglenode_state to service_role;
+
+-- ---------- media storage ----------
+-- Create a Storage bucket named `giglenode-media` (or set SUPABASE_STORAGE_BUCKET)
+-- for owner avatars and other uploads. Keep it private: reads go through the app's
+-- server routes, which use the service role key.
+insert into storage.buckets (id, name, public)
+values ('giglenode-media', 'giglenode-media', false)
+on conflict (id) do nothing;

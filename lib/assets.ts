@@ -1,16 +1,18 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 /**
  * Small binary store for owner avatars. Kept out of the JSON document on
- * purpose: `db.json` is read on every request, so pictures must not live there.
- * Cloudflare Workers use the existing `FILES` R2 bucket; local dev uses
- * `data/blobs/`.
+ * purpose: the database document is read on every request, so pictures must not
+ * live there.
+ * - Supabase Storage when SUPABASE_URL + service key are configured (Vercel).
+ * - Cloudflare Workers use the existing `FILES` R2 bucket.
+ * - Local dev uses `data/blobs/`.
  */
 
 const BLOB_DIR = path.join(process.cwd(), "data", "blobs");
+const SUPABASE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "giglenode-media";
 
 type R2ObjectLike = { arrayBuffer(): Promise<ArrayBuffer>; httpMetadata?: { contentType?: string } };
 type R2BucketLike = {
@@ -23,9 +25,24 @@ type R2BucketLike = {
   delete(key: string): Promise<void>;
 };
 
-function bucket(): R2BucketLike | null {
+function supabaseStorage(): { url: string; key: string } | null {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return { url: url.replace(/\/+$/, ""), key };
+}
+
+function storageHeaders(config: { key: string }, extra: Record<string, string> = {}) {
+  return { apikey: config.key, Authorization: `Bearer ${config.key}`, ...extra };
+}
+
+async function bucket(): Promise<R2BucketLike | null> {
   try {
-    const env = getCloudflareContext().env as Record<string, unknown> | undefined;
+    const mod = await import("@opennextjs/cloudflare");
+    const env = (await mod.getCloudflareContext({ async: true })).env as Record<string, unknown> | undefined;
     const files = env?.FILES as R2BucketLike | undefined;
     return files && typeof files.put === "function" && typeof files.get === "function" ? files : null;
   } catch {
@@ -43,7 +60,25 @@ function localPath(key: string): string {
 }
 
 export async function putAsset(key: string, bytes: Uint8Array, contentType: string): Promise<boolean> {
-  const r2 = bucket();
+  const supabase = supabaseStorage();
+  if (supabase) {
+    try {
+      const response = await fetch(`${supabase.url}/storage/v1/object/${SUPABASE_BUCKET}/${key}`, {
+        method: "POST",
+        headers: storageHeaders(supabase, {
+          "Content-Type": contentType,
+          "Cache-Control": "max-age=31536000",
+          "x-upsert": "true",
+        }),
+        body: bytes as unknown as BodyInit,
+      });
+      if (response.ok) return true;
+    } catch {
+      // fall through to R2 / local disk
+    }
+  }
+
+  const r2 = await bucket();
   if (r2) {
     try {
       await r2.put(key, bytes, { httpMetadata: { contentType, cacheControl: "public, max-age=31536000, immutable" } });
@@ -66,7 +101,25 @@ export async function getAsset(
   key: string,
   fallbackType = "application/octet-stream",
 ): Promise<{ body: ArrayBuffer; contentType: string } | null> {
-  const r2 = bucket();
+  const supabase = supabaseStorage();
+  if (supabase) {
+    try {
+      const response = await fetch(`${supabase.url}/storage/v1/object/${SUPABASE_BUCKET}/${key}`, {
+        headers: storageHeaders(supabase),
+        cache: "no-store",
+      });
+      if (response.ok) {
+        return {
+          body: await response.arrayBuffer(),
+          contentType: response.headers.get("content-type") ?? fallbackType,
+        };
+      }
+    } catch {
+      // fall through to R2 / local disk
+    }
+  }
+
+  const r2 = await bucket();
   if (r2) {
     try {
       const object = await r2.get(key);
@@ -87,7 +140,20 @@ export async function getAsset(
 }
 
 export async function deleteAsset(key: string): Promise<void> {
-  const r2 = bucket();
+  const supabase = supabaseStorage();
+  if (supabase) {
+    try {
+      const response = await fetch(`${supabase.url}/storage/v1/object/${SUPABASE_BUCKET}/${key}`, {
+        method: "DELETE",
+        headers: storageHeaders(supabase),
+      });
+      if (response.ok) return;
+    } catch {
+      // fall through to R2 / local disk
+    }
+  }
+
+  const r2 = await bucket();
   if (r2) {
     try {
       await r2.delete(key);

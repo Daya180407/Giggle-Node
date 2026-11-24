@@ -114,12 +114,6 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     festiveLogoUntil: null,
     usdRate: 88,
   },
-  demo: {
-    enabled: true,
-    users: 1_000_000,
-    seed: 20261123,
-    startedAt: null,
-  },
   socials: [],
   menu: [],
   changelogEnabled: true,
@@ -157,7 +151,6 @@ export function getSiteSettings(db: DB): SiteSettings {
       badWords: saved.security?.badWords ?? [],
     },
     appearance: { ...DEFAULT_SITE_SETTINGS.appearance, ...(saved.appearance ?? {}) },
-    demo: { ...DEFAULT_SITE_SETTINGS.demo, ...(saved.demo ?? {}) },
     community: { ...DEFAULT_SITE_SETTINGS.community, ...(saved.community ?? {}) },
     quizQuestions: DEFAULT_SITE_SETTINGS.quizQuestions.map(
       (q) => saved.quizQuestions?.find((saved) => saved.id === q.id) ?? q,

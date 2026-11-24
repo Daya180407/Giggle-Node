@@ -26,7 +26,6 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/admin/submissions", label: "Submissions & Claims", icon: "📨", area: "catalogue" },
       { href: "/admin/owners", label: "AI Owners", icon: "🪪", area: "owners" },
       { href: "/admin/users", label: "Users & Roles", icon: "👥", area: "users" },
-      { href: "/admin/demo", label: "Demo Dataset", icon: "🧪", area: "users" },
       { href: "/admin/roles", label: "Roles & Permissions", icon: "🔐", area: "users" },
       { href: "/admin/gamification", label: "Gamification", icon: "🏅", area: "gamification" },
       { href: "/admin/feedback", label: "Feedback Inbox", icon: "📬", area: "feedback" },

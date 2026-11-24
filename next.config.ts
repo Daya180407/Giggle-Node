@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: { remotePatterns: [{ protocol: "https", hostname: "**" }] },
+  // Keep the Cloudflare adapter out of the Vercel/Node server bundle. It is only
+  // imported lazily when a Worker context or R2 binding is actually present.
+  serverExternalPackages: ["@opennextjs/cloudflare"],
   // Media uploads and JSON restores arrive through server actions.
   experimental: { serverActions: { bodySizeLimit: "12mb" } },
   // Allows the cloud preview host to load dev assets in this workspace.

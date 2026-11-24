@@ -1,4 +1,3 @@
-import { demoSnapshot } from "./demo";
 import type { Ai, CategorySlug, DB, Model, Post, Prompt, User } from "./types";
 
 export const PRIOR_VOTES = 50;
@@ -122,22 +121,6 @@ export function buildView(db: DB): View {
     });
   }
 
-  // Demo totals count as old, full-weight votes, so a seeded 4.9★ average is
-  // not pulled toward the directory average by the 50-vote prior. Real votes
-  // keep landing on top of them.
-  for (const m of db.models) {
-    const demoVotes = Math.max(0, Math.round(m.demoVotes ?? 0));
-    const demoStars = Math.max(0, Math.min(5, m.demoStars ?? 0));
-    const a = acc.get(m.id);
-    if (!a || demoVotes === 0 || demoStars === 0) continue;
-    a.votes += demoVotes;
-    a.wSum += demoVotes;
-    a.wStars += demoVotes * demoStars;
-    const spread = [1, 2, 3, 4, 5].map((stars) => Math.exp(-Math.pow(stars - demoStars, 2) / 0.8));
-    const spreadTotal = spread.reduce((sum, n) => sum + n, 0);
-    for (let i = 0; i < 5; i++) a.dist[i] += Math.round((spread[i] / spreadTotal) * demoVotes);
-  }
-
   for (const r of ratings) {
     // AI-level rows carry no model; they are scored separately below.
     if (!r.modelId) continue;
@@ -174,37 +157,6 @@ export function buildView(db: DB): View {
     aiAcc.set(r.aiId, a);
   }
 
-  // Virtual demo votes: added as full-weight aggregates, never as stored rows.
-  // They keep real votes on top so a new visitor rating still moves the number.
-  const demo = demoSnapshot(db);
-  if (demo) {
-    for (const [modelId, d] of demo.byModel) {
-      const a = acc.get(modelId);
-      if (!a || d.votes <= 0) continue;
-      a.votes += d.votes;
-      a.wSum += d.votes;
-      a.wStars += d.votes * d.avg;
-      for (let i = 0; i < 5; i++) a.dist[i] += d.dist[i];
-      a.last7 += d.last7;
-      const recent = Math.round(d.votes * 0.012);
-      a.recentVotes += recent;
-      a.recentStars += recent * d.avg;
-    }
-    for (const [aiId, d] of demo.byAi) {
-      if (d.overallVotes <= 0) continue;
-      const a = aiAcc.get(aiId) ?? { votes: 0, wSum: 0, wStars: 0, dist: [0, 0, 0, 0, 0], last7: 0 };
-      a.votes += d.overallVotes;
-      a.wSum += d.overallVotes;
-      a.wStars += d.overallVotes * d.avg;
-      const dist = [0, 0, 0, 0, 0];
-      const total = d.dist.reduce((s, n) => s + n, 0) || 1;
-      for (let i = 0; i < 5; i++) dist[i] = Math.round((d.dist[i] / total) * d.overallVotes);
-      for (let i = 0; i < 5; i++) a.dist[i] += dist[i];
-      a.last7 += Math.max(1, Math.round(d.last7 * 0.22));
-      aiAcc.set(aiId, a);
-    }
-  }
-
   const aiStats = new Map<string, AiStat>();
   for (const ai of db.ai) {
     const models = modelsByAi.get(ai.id) ?? [];
@@ -216,8 +168,7 @@ export function buildView(db: DB): View {
           ? (a.votes / (a.votes + PRIOR_VOTES)) * avg + (PRIOR_VOTES / (a.votes + PRIOR_VOTES)) * globalAvg
           : globalAvg;
       const recentAvg = a.recentVotes > 0 ? a.recentStars / a.recentVotes : avg;
-      // Trend compares real recent votes with the model's own real average, so
-      // demo totals do not turn every arrow into a downward one.
+      // Trend compares recent votes with the model's own real average.
       const realAvg = a.realVotes > 0 ? a.realStars / a.realVotes : 0;
       const trend: Trend =
         a.realVotes === 0 || a.recentVotes === 0

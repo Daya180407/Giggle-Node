@@ -493,8 +493,6 @@ export async function saveOwnerModelAction(formData: FormData): Promise<void> {
     priceType: (String(formData.get("priceType") ?? existing?.priceType ?? "freemium") as PriceType) ?? "freemium",
     pin: existing?.pin,
     editorRating: existing?.editorRating ?? null,
-    demoStars: existing?.demoStars ?? null,
-    demoVotes: existing?.demoVotes ?? null,
     pricing: useCustomPricing
       ? {
           available: formData.get("pricingAvailable") === "on",
