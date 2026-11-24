@@ -356,6 +356,31 @@ async function assertAdmin(area: AdminArea = "settings") {
   return user;
 }
 
+/**
+ * Stores a logo image uploaded through the AI form in the shared media library.
+ * The same mark can then be picked from the library on the next listing, and a
+ * data URL that is already stored is never duplicated.
+ */
+function rememberLogoInMedia(db: DB, admin: User, aiName: string, logo: string) {
+  if (!logo.startsWith("data:image/")) return;
+  if (!Array.isArray(db.media)) db.media = [];
+  if (db.media.some((item) => item.url === logo)) return;
+  if (db.media.length >= 80) return;
+  const separator = logo.indexOf(";");
+  const mime = (separator > 5 ? logo.slice(5, separator) : "image/png").slice(0, 60);
+  const base64 = logo.slice(logo.indexOf(",") + 1);
+  db.media.unshift({
+    id: uid("media"),
+    name: `${aiName} logo`.slice(0, 80),
+    url: logo,
+    mime,
+    bytes: Math.round((base64.length * 3) / 4),
+    createdAt: new Date().toISOString(),
+    uploadedBy: admin.name,
+  });
+  logAdminAction(db, admin, "media added", `Media: ${aiName} logo`, "Saved from the AI logo upload");
+}
+
 export async function saveAiAction(formData: FormData) {
   const admin = await assertAdmin("catalogue");
   const id = String(formData.get("id") ?? "");
@@ -424,6 +449,8 @@ export async function saveAiAction(formData: FormData) {
       sponsored: formData.get("sponsored") === "on",
       boost: Number(formData.get("boost") ?? 0) || 0,
     };
+    // An uploaded logo also lands in the media library for reuse.
+    rememberLogoInMedia(db, admin, name, payload.logo);
     if (id) {
       const ai = db.ai.find((a) => a.id === id);
       if (ai) {
