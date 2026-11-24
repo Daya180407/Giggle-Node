@@ -11,13 +11,17 @@ import { activeSubscribers, hasVerifiedUse, recordPriceSnapshot } from "@/lib/co
 import {
   addCommunityMember,
   ATTACHMENT_LIMITS,
+  communityBanFor,
   communityKindAllowed,
+  isCommunityBanned,
   isCommunityMember,
   pruneCommunityMessages,
+  REPORT_REASONS,
   UNIVERSAL_AI_ID,
   UNIVERSAL_ROOM_ID,
   UNIVERSAL_ROOM_SLUG,
 } from "@/lib/community-chat";
+import { CHAT_AD_MAX_VIEWS, CHAT_AD_MIN_VIEWS, chatAdCpm } from "@/lib/ads";
 import { getCurrentUser, requestIp } from "@/lib/auth";
 import { CATEGORIES, getCategories, slugifyCategory } from "@/lib/categories";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
@@ -806,6 +810,18 @@ export async function postCommunityMessageAction(_prev: ActionState, formData: F
   }
 
   const targetRoomId = isUniversal ? UNIVERSAL_ROOM_ID : room?.id ?? null;
+  // A ban blocks posting (staff keep their moderation access). It is checked
+  // before the membership rule so a banned member never sees "join first".
+  const staffMember = isStaffRole(user.role, resolveRoles(db.roles));
+  if (
+    !staffMember &&
+    isCommunityBanned(db, user.id, isUniversal ? UNIVERSAL_AI_ID : aiId, targetRoomId)
+  ) {
+    return {
+      ok: false,
+      error: "You are banned from this community. Contact the site team if you think this is a mistake.",
+    };
+  }
   if (!isCommunityMember(db, user.id, isUniversal ? UNIVERSAL_AI_ID : aiId, targetRoomId)) {
     return { ok: false, error: "Join this community before posting a message." };
   }
@@ -876,6 +892,8 @@ export async function joinCommunityAction(formData: FormData) {
       roomId = room.id;
     }
   }
+
+  if (isCommunityBanned(db, user.id, aiId, roomId)) redirect(`${back}?banned=1`);
 
   mutateDb((draft) => {
     addCommunityMember(draft, user.id, aiId, roomId);
@@ -993,6 +1011,373 @@ export async function deleteCommunityMessageAction(formData: FormData) {
   revalidatePath(back);
   revalidatePath("/community");
   redirect(back);
+}
+
+/** One member report per message; the queue groups reports by message. */
+export async function reportCommunityMessageAction(formData: FormData) {
+  const user = await getCurrentUser();
+  const backRaw = String(formData.get("back") ?? "/community");
+  const back = backRaw.startsWith("/community") ? backRaw : "/community";
+  if (!user) redirect(`/login?next=${encodeURIComponent(back)}`);
+
+  const id = String(formData.get("id") ?? "");
+  const rawReason = String(formData.get("reason") ?? "other");
+  const reason = (rawReason in REPORT_REASONS ? rawReason : "other") as keyof typeof REPORT_REASONS;
+  const note = String(formData.get("note") ?? "").trim().slice(0, 300);
+
+  const db = readDb();
+  const message = (db.communityMessages ?? []).find((row) => row.id === id);
+  // Own messages are deleted by their author, not reported.
+  if (!message || message.userId === user.id) redirect(`${back}?reported=self`);
+
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.communityReports)) draft.communityReports = [];
+    const duplicate = draft.communityReports.some(
+      (row) => row.messageId === id && row.reporterId === user.id && row.status === "open",
+    );
+    if (duplicate) return;
+    draft.communityReports.unshift({
+      id: uid("crp"),
+      messageId: message.id,
+      messageBody: message.body.slice(0, 400),
+      messageUserId: message.userId,
+      messageUserName: message.userName,
+      aiId: message.aiId,
+      roomId: message.roomId ?? null,
+      reporterId: user.id,
+      reporterName: user.name,
+      reason,
+      note,
+      status: "open",
+      createdAt: new Date().toISOString(),
+      reviewedAt: null,
+      reviewedBy: null,
+      action: "",
+    });
+    pushNotification(draft, {
+      title: `Message reported: ${message.userName}`,
+      body: `${REPORT_REASONS[reason]}${message.body ? ` — ${message.body.slice(0, 120)}` : ""}`,
+      href: "/admin/community/reports",
+      kind: "system",
+      audience: "staff",
+    });
+  });
+
+  revalidatePath(back);
+  revalidatePath("/admin/community/reports");
+  redirect(`${back}?reported=1`);
+}
+
+function banDaysUntil(days: number): string | null {
+  if (!Number.isFinite(days) || days <= 0) return null;
+  return new Date(Date.now() + Math.min(3650, Math.round(days)) * 86400000).toISOString().slice(0, 10);
+}
+
+/**
+ * Adds or refreshes a ban. A member can be blocked from the room where the
+ * problem happened, from every room of that AI, or from every community.
+ */
+function writeCommunityBan(
+  db: DB,
+  admin: User,
+  input: {
+    userId: string;
+    scope: "room" | "ai" | "all";
+    aiId: string | null;
+    roomId: string | null;
+    reason: string;
+    days: number;
+  },
+) {
+  if (!Array.isArray(db.communityBans)) db.communityBans = [];
+  const target = db.users.find((row) => row.id === input.userId);
+  const until = banDaysUntil(input.days);
+  // Replace an earlier active ban with the same reach instead of stacking rows.
+  const existing = db.communityBans.find(
+    (ban) =>
+      ban.userId === input.userId &&
+      ban.active &&
+      ban.scope === input.scope &&
+      (ban.aiId ?? null) === (input.aiId ?? null) &&
+      (ban.roomId ?? null) === (input.roomId ?? null),
+  );
+  if (existing) {
+    existing.reason = input.reason;
+    existing.until = until;
+    existing.bannedBy = admin.name;
+    existing.createdAt = new Date().toISOString();
+    return existing;
+  }
+  const ban = {
+    id: uid("cban"),
+    userId: input.userId,
+    userName: target?.name ?? input.userId,
+    userEmail: target?.email ?? "",
+    scope: input.scope,
+    aiId: input.aiId,
+    roomId: input.roomId,
+    reason: input.reason,
+    bannedBy: admin.name,
+    createdAt: new Date().toISOString(),
+    until,
+    active: true,
+  };
+  db.communityBans.unshift(ban);
+  return ban;
+}
+
+/** Admin ban from the moderation queue, a room page or the reports table. */
+export async function banCommunityUserAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const userId = String(formData.get("userId") ?? "").trim();
+  const rawScope = String(formData.get("scope") ?? "room");
+  const scope = rawScope === "all" || rawScope === "ai" ? rawScope : "room";
+  const aiId = String(formData.get("aiId") ?? "").trim() || null;
+  const roomId = String(formData.get("roomId") ?? "").trim() || null;
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 240) || "Community guideline violation";
+  const days = Number(formData.get("days") ?? 0);
+  const backRaw = String(formData.get("back") ?? "/admin/community/reports");
+  const back = backRaw.startsWith("/admin/") || backRaw.startsWith("/community") ? backRaw : "/admin/community/reports";
+
+  if (!userId) redirect(`${back}?error=user`);
+
+  mutateDb((db) => {
+    const target = db.users.find((row) => row.id === userId);
+    if (!target) return;
+    const ban = writeCommunityBan(db, admin, {
+      userId,
+      scope,
+      aiId: scope === "all" ? null : aiId,
+      roomId: scope === "room" ? roomId : null,
+      reason,
+      days,
+    });
+    logAdminAction(
+      db,
+      admin,
+      "community ban",
+      `Member: ${target.email}`,
+      `${scope === "all" ? "All communities" : scope === "ai" ? `AI ${aiId}` : `Room ${roomId ?? "default"}`} · ${ban.until ?? "permanent"}`,
+    );
+  });
+
+  revalidatePath("/admin/community/reports");
+  revalidatePath("/admin/community/inbox");
+  revalidatePath("/community");
+  redirect(`${back}${back.includes("?") ? "&" : "?"}banned=1`);
+}
+
+export async function unbanCommunityUserAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  const backRaw = String(formData.get("back") ?? "/admin/community/reports");
+  const back = backRaw.startsWith("/admin/") ? backRaw : "/admin/community/reports";
+  mutateDb((db) => {
+    const ban = (db.communityBans ?? []).find((row) => row.id === id);
+    if (!ban) return;
+    ban.active = false;
+    logAdminAction(db, admin, "community unban", `Member: ${ban.userEmail || ban.userName}`, "Ban lifted");
+  });
+  revalidatePath("/admin/community/reports");
+  revalidatePath("/admin/community/inbox");
+  revalidatePath("/community");
+  redirect(back);
+}
+
+/**
+ * Resolves a report: delete the message, delete and ban its author, or dismiss
+ * the report. Deleting resolves every open report on that message.
+ */
+export async function reviewCommunityReportAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  const intent = String(formData.get("intent") ?? "dismiss");
+  const rawScope = String(formData.get("scope") ?? "room");
+  const scope = rawScope === "all" || rawScope === "ai" ? rawScope : "room";
+  const days = Number(formData.get("days") ?? 0);
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 240) || "Community guideline violation";
+  const backRaw = String(formData.get("back") ?? "/admin/community/reports");
+  const back = backRaw.startsWith("/admin/") ? backRaw : "/admin/community/reports";
+
+  mutateDb((db) => {
+    const report = (db.communityReports ?? []).find((row) => row.id === id);
+    if (!report || report.status !== "open") return;
+    const now = new Date().toISOString();
+    const resolveReports = (action: "deleted" | "banned" | "dismissed") => {
+      for (const row of db.communityReports ?? []) {
+        if (row.messageId !== report.messageId || row.status !== "open") continue;
+        row.status = "resolved";
+        row.action = action;
+        row.reviewedAt = now;
+        row.reviewedBy = admin.name;
+      }
+    };
+
+    if (intent === "dismiss") {
+      report.status = "resolved";
+      report.action = "dismissed";
+      report.reviewedAt = now;
+      report.reviewedBy = admin.name;
+      logAdminAction(db, admin, "report dismissed", `Message by ${report.messageUserName}`, report.id);
+      return;
+    }
+
+    // Both other choices remove the offending message from the room.
+    db.communityMessages = (db.communityMessages ?? []).filter((row) => row.id !== report.messageId);
+
+    if (intent === "ban") {
+      writeCommunityBan(db, admin, {
+        userId: report.messageUserId,
+        scope,
+        aiId: scope === "all" ? null : report.aiId,
+        roomId: scope === "room" ? report.roomId ?? null : null,
+        reason,
+        days,
+      });
+      resolveReports("banned");
+      logAdminAction(
+        db,
+        admin,
+        "report: message deleted + author banned",
+        `Member: ${report.messageUserName}`,
+        `${scope} · ${days > 0 ? `${days} days` : "permanent"} · ${reason}`,
+      );
+      return;
+    }
+
+    resolveReports("deleted");
+    logAdminAction(db, admin, "report: message deleted", `Message by ${report.messageUserName}`, report.id);
+  });
+
+  revalidatePath("/admin/community/reports");
+  revalidatePath("/admin/community/inbox");
+  revalidatePath("/community");
+  redirect(back);
+}
+
+/* ------------------------------ chat ads ------------------------------ */
+
+/** Admin default price per 1000 chat impressions. */
+export async function saveChatAdCpmAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const value = Number(formData.get("chatAdCpm") ?? 0);
+  mutateDb((db) => {
+    db.chatAdCpm = Number.isFinite(value) && value >= 0 ? Math.min(100000, Math.round(value)) : 0;
+    logAdminAction(db, admin, "chat ad rate", "Chat CPM", `${money(db.chatAdCpm)} per 1000 views`);
+  });
+  revalidatePath("/admin/ads");
+  redirect("/admin/ads?saved=cpm");
+}
+
+/** Creates a sponsored chat campaign, sold by views with a hard view budget. */
+export async function saveChatAdAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 90);
+  const email = String(formData.get("advertiserEmail") ?? "").trim().slice(0, 160);
+  const headline = String(formData.get("headline") ?? "").trim().slice(0, 80);
+  const body = String(formData.get("body") ?? "").trim().slice(0, 160);
+  const ctaLabel = String(formData.get("ctaLabel") ?? "").trim().slice(0, 24) || "Learn more";
+  const rawUrl = String(formData.get("url") ?? "").trim();
+  const viewsPurchased = Math.round(Number(formData.get("viewsPurchased") ?? 0));
+  const cpm = Math.round(Number(formData.get("cpm") ?? 0));
+  const days = Math.round(Number(formData.get("days") ?? 0));
+
+  if (name.length < 2) redirect("/admin/ads?error=name");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect("/admin/ads?error=email");
+  if (headline.length < 4) redirect("/admin/ads?error=headline");
+  if (body.length < 4) redirect("/admin/ads?error=body");
+  if (!Number.isFinite(viewsPurchased) || viewsPurchased < CHAT_AD_MIN_VIEWS || viewsPurchased > CHAT_AD_MAX_VIEWS) {
+    redirect("/admin/ads?error=views");
+  }
+  if (!Number.isFinite(cpm) || cpm < 0 || cpm > 100000) redirect("/admin/ads?error=cpm");
+  if (rawUrl && !/^https?:\/\//i.test(rawUrl)) redirect("/admin/ads?error=url");
+
+  let problem = "";
+  let savedId = "";
+  mutateDb((db) => {
+    const rawTarget = String(formData.get("target") ?? "");
+    const isApp = rawTarget.startsWith("app:");
+    const targetId = rawTarget.slice(isApp ? 4 : 3);
+    const ai = isApp ? undefined : db.ai.find((row) => row.id === targetId && !row.hidden);
+    const app = isApp ? allApps(db.customApps).find((row) => row.slug === targetId) : undefined;
+    if (!ai && !app) {
+      problem = "target";
+      return;
+    }
+    const fallbackUrl =
+      ai?.website || app?.affiliateUrl || app?.website || (ai ? `/ai/${ai.slug}` : "/#apps");
+    if (!Array.isArray(db.chatAds)) db.chatAds = [];
+    const id = uid("cad");
+    savedId = id;
+    db.chatAds.unshift({
+      id,
+      name,
+      advertiserEmail: email,
+      targetType: isApp ? "app" : "ai",
+      targetId,
+      targetName: ai?.name ?? app?.name ?? targetId,
+      targetSlug: ai?.slug ?? app?.slug ?? targetId,
+      headline,
+      body,
+      ctaLabel,
+      url: rawUrl || fallbackUrl,
+      cpm: Number.isFinite(cpm) ? cpm : chatAdCpm(db),
+      viewsPurchased,
+      viewsServed: 0,
+      clicks: 0,
+      until: banDaysUntil(days),
+      active: true,
+      reportToken: uid("adrep"),
+      createdAt: new Date().toISOString(),
+      createdBy: admin.name,
+    });
+    logAdminAction(
+      db,
+      admin,
+      "chat ad created",
+      `${name} · ${ai?.name ?? app?.name ?? targetId}`,
+      `${viewsPurchased.toLocaleString("en-IN")} views at ${money(cpm)} CPM`,
+    );
+  });
+
+  if (problem) redirect(`/admin/ads?error=${problem}`);
+  revalidatePath("/admin/ads");
+  revalidatePath("/community");
+  redirect(`/admin/ads?saved=${savedId}`);
+}
+
+export async function toggleChatAdAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const id = String(formData.get("id") ?? "");
+  mutateDb((db) => {
+    const ad = (db.chatAds ?? []).find((row) => row.id === id);
+    if (!ad) return;
+    ad.active = !ad.active;
+    logAdminAction(
+      db,
+      admin,
+      ad.active ? "chat ad resumed" : "chat ad paused",
+      ad.name,
+      `${ad.viewsServed}/${ad.viewsPurchased} views served`,
+    );
+  });
+  revalidatePath("/admin/ads");
+  revalidatePath("/community");
+  redirect("/admin/ads?saved=campaign");
+}
+
+export async function deleteChatAdAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const id = String(formData.get("id") ?? "");
+  mutateDb((db) => {
+    const ad = (db.chatAds ?? []).find((row) => row.id === id);
+    if (!ad) return;
+    db.chatAds = (db.chatAds ?? []).filter((row) => row.id !== id);
+    logAdminAction(db, admin, "chat ad removed", ad.name, `${ad.viewsServed} views served before removal`);
+  });
+  revalidatePath("/admin/ads");
+  revalidatePath("/community");
+  redirect("/admin/ads?saved=campaign");
 }
 
 export async function savePostAction(formData: FormData) {
@@ -1805,6 +2190,9 @@ export async function addSponsorPlacementAction(formData: FormData) {
         until,
         active: true,
         note,
+        views: 0,
+        clicks: 0,
+        reportToken: uid("sprpt"),
         createdAt: new Date().toISOString(),
       });
       logAdminAction(db, admin, "sponsor placement added", `${target.targetName} · ${slot}`, `List ${listKey} · ${money(amount)}`);
@@ -1959,6 +2347,9 @@ export async function reviewSponsorRequestAction(formData: FormData) {
         until: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
         active: true,
         note: `Approved request · ${request.company}`,
+        views: 0,
+        clicks: 0,
+        reportToken: uid("sprpt"),
         createdAt: new Date().toISOString(),
       });
     }

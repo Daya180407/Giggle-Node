@@ -1,6 +1,15 @@
 import { getSiteSettings } from "./settings";
 import { mutateDb, readDb, uid } from "./store";
-import type { Ai, CommunityMessage, CommunityMessageKind, CommunityRoom, CommunitySettings, DB } from "./types";
+import type {
+  Ai,
+  CommunityBan,
+  CommunityMessage,
+  CommunityMessageKind,
+  CommunityReport,
+  CommunityRoom,
+  CommunitySettings,
+  DB,
+} from "./types";
 
 /**
  * Per-AI community rooms.
@@ -298,18 +307,27 @@ export function sweepCommunityMessages(): void {
   });
 }
 
-/** Human-readable room label for the admin moderation inbox. */
-export function describeCommunityMessage(db: DB, message: CommunityMessage): { label: string; href: string } {
-  if (message.aiId === UNIVERSAL_AI_ID) {
+/** Human-readable room label for any AI + room pair (also used by reports). */
+export function describeCommunityTarget(
+  db: DB,
+  aiId: string,
+  roomId: string | null | undefined,
+): { label: string; href: string } {
+  if (aiId === UNIVERSAL_AI_ID) {
     return { label: "Everyone community · any AI", href: `/community/${UNIVERSAL_ROOM_SLUG}` };
   }
-  const ai = db.ai.find((row) => row.id === message.aiId);
+  const ai = db.ai.find((row) => row.id === aiId);
   const aiName = ai?.name ?? "Unknown AI";
-  if (message.roomId) {
-    const room = (db.communityRooms ?? []).find((row) => row.id === message.roomId);
+  if (roomId) {
+    const room = (db.communityRooms ?? []).find((row) => row.id === roomId);
     if (room) return { label: `${aiName} · ${room.title}`, href: `/community/${room.slug}` };
   }
   return { label: `${aiName} · default room`, href: ai ? `/community/${ai.slug}` : "/community" };
+}
+
+/** Human-readable room label for the admin moderation inbox. */
+export function describeCommunityMessage(db: DB, message: CommunityMessage): { label: string; href: string } {
+  return describeCommunityTarget(db, message.aiId, message.roomId);
 }
 
 export function humanBytes(bytes: number): string {
@@ -326,3 +344,77 @@ export function messagePreview(message: CommunityMessage): string {
   if (message.kind === "file") return "Shared a file";
   return "";
 }
+
+/* ------------------------- bans & member reports ------------------------- */
+
+function banEnded(ban: Pick<CommunityBan, "until">, now = Date.now()): boolean {
+  if (!ban.until) return false;
+  const end = new Date(`${ban.until.slice(0, 10)}T23:59:59`).getTime();
+  return Number.isFinite(end) ? end < now : false;
+}
+
+/** Bans that are switched on and not past their end date. */
+export function activeCommunityBans(db: DB, now = Date.now()): CommunityBan[] {
+  return (db.communityBans ?? []).filter((ban) => ban.active && !banEnded(ban, now));
+}
+
+/**
+ * The ban that applies to this member in this room, if any. A site-wide ban
+ * covers every room, an AI ban covers every room of that tool, and a room ban
+ * covers only the room it names (the default room is its own scope).
+ */
+export function communityBanFor(
+  db: DB,
+  userId: string,
+  aiId: string,
+  roomId: string | null,
+  now = Date.now(),
+): CommunityBan | null {
+  return (
+    activeCommunityBans(db, now).find((ban) => {
+      if (ban.userId !== userId) return false;
+      if (ban.scope === "all") return true;
+      if (ban.scope === "ai") return ban.aiId === aiId;
+      return ban.aiId === aiId && (ban.roomId ?? null) === roomId;
+    }) ?? null
+  );
+}
+
+export function isCommunityBanned(db: DB, userId: string, aiId: string, roomId: string | null, now = Date.now()): boolean {
+  return communityBanFor(db, userId, aiId, roomId, now) !== null;
+}
+
+/** Readable scope for the admin bans table. */
+export function describeCommunityBan(db: DB, ban: CommunityBan): string {
+  if (ban.scope === "all") return "All communities";
+  const aiName = db.ai.find((row) => row.id === ban.aiId)?.name ?? "Unknown AI";
+  if (ban.scope === "ai") return `${aiName} · all rooms`;
+  if (ban.roomId) {
+    const room = (db.communityRooms ?? []).find((row) => row.id === ban.roomId);
+    return `${aiName} · ${room?.title ?? "room"}`;
+  }
+  return `${aiName} · default room`;
+}
+
+/** Reports on a message, newest first. */
+export function communityReportsFor(db: DB, messageId: string): CommunityReport[] {
+  return (db.communityReports ?? []).filter((report) => report.messageId === messageId);
+}
+
+/** Open report counts keyed by message id, for the moderation inbox. */
+export function openReportCounts(db: DB): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const report of db.communityReports ?? []) {
+    if (report.status !== "open") continue;
+    counts.set(report.messageId, (counts.get(report.messageId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** Human-readable reason used in the admin queue and audit log. */
+export const REPORT_REASONS: Record<CommunityReport["reason"], string> = {
+  spam: "Spam or repeated advertising",
+  abuse: "Abuse or harassment",
+  scam: "Scam or misleading link",
+  other: "Something else",
+};

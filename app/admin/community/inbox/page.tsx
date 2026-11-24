@@ -5,6 +5,7 @@ import {
   describeCommunityMessage,
   humanBytes,
   KIND_LABELS,
+  openReportCounts,
   roomSummaryKey,
   UNIVERSAL_AI_ID,
 } from "@/lib/community-chat";
@@ -25,6 +26,8 @@ export default async function AdminCommunityInboxPage({
   const { q = "", ai = "all", kind = "all", page = "1" } = await searchParams;
   const db = readDb();
   const query = q.trim().toLowerCase();
+  const reportCounts = openReportCounts(db);
+  const openReports = [...reportCounts.values()].reduce((sum, count) => sum + count, 0);
 
   const messages = [...(db.communityMessages ?? [])].sort(
     (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
@@ -81,6 +84,9 @@ export default async function AdminCommunityInboxPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/admin/community/reports" className="btn btn-ghost text-xs">
+            ⚑ Reports &amp; bans{openReports ? ` (${openReports})` : ""}
+          </Link>
           <Link href="/admin/community" className="btn btn-ghost text-xs">
             Rooms
           </Link>
@@ -152,6 +158,14 @@ export default async function AdminCommunityInboxPage({
                   {room.label}
                 </Link>
                 <span className="text-[10.5px] text-muted">{timeAgo(message.createdAt)}</span>
+                {reportCounts.get(message.id) ? (
+                  <Link
+                    href="/admin/community/reports"
+                    className="chip bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                  >
+                    ⚑ {reportCounts.get(message.id)} report{reportCounts.get(message.id) === 1 ? "" : "s"}
+                  </Link>
+                ) : null}
                 <form action={deleteCommunityMessageAction} className="ml-auto">
                   <input type="hidden" name="id" value={message.id} />
                   <input type="hidden" name="back" value={back} />

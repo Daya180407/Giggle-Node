@@ -63,6 +63,9 @@ export async function migrateDb(db: DB): Promise<boolean> {
     "ownerChanges",
     "sponsorPlacements",
     "sponsorRequests",
+    "chatAds",
+    "communityReports",
+    "communityBans",
   ] as const;
   for (const key of collections) {
     if (!Array.isArray(db[key])) {
@@ -82,6 +85,10 @@ export async function migrateDb(db: DB): Promise<boolean> {
 
   const settingsBefore = JSON.stringify(db.settings ?? null);
   db.settings = { ...DEFAULT_SITE_SETTINGS, ...(db.settings ?? {}) };
+  // The old built-in default was 8; ads now sit after every 20 messages.
+  if (db.settings.community && db.settings.community.adEvery === 8) {
+    db.settings = { ...db.settings, community: { ...db.settings.community, adEvery: 20 } };
+  }
   if (JSON.stringify(db.settings) !== settingsBefore) changed = true;
 
   for (const account of SEED_ACCOUNTS) {

@@ -176,6 +176,7 @@ export default async function HomePage({
           priceType: sponsoredStat.ai.priceType,
           bestFor: sponsoredStat.ai.bestFor.slice(0, 2).join(" · "),
           sponsored: true,
+          sponsorId: top3?.id,
         });
       }
       return { slug: category.slug, label: category.name, emoji: category.emoji, rows };

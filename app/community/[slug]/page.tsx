@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { deleteCommunityMessageAction, joinCommunityAction } from "@/app/actions";
+import { deleteCommunityMessageAction, joinCommunityAction, reportCommunityMessageAction } from "@/app/actions";
+import ChatSponsoredAd from "@/components/ChatSponsoredAd";
 import CommunityAd from "@/components/CommunityAd";
 import CommunityChatScroll from "@/components/CommunityChatScroll";
 import CommunityComposer from "@/components/CommunityComposer";
@@ -10,14 +11,17 @@ import { getCurrentUser } from "@/lib/auth";
 import { categoryName } from "@/lib/categories";
 import {
   allowedCommunityKinds,
+  communityBanFor,
   communityMemberCount,
   communityMessagesForRoom,
   findCommunityRoom,
   humanBytes,
   isCommunityMember,
   KIND_LABELS,
+  REPORT_REASONS,
   sweepCommunityMessages,
 } from "@/lib/community-chat";
+import { chatAdCreative, chatAdForSlot, liveChatAds } from "@/lib/ads";
 import { buildView } from "@/lib/rank";
 import { isStaffRole, resolveRoles } from "@/lib/roles";
 import { getSiteSettings } from "@/lib/settings";
@@ -25,7 +29,10 @@ import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ reported?: string; banned?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -71,8 +78,9 @@ function DeliveredTicks() {
   );
 }
 
-export default async function CommunityRoomPage({ params }: Props) {
+export default async function CommunityRoomPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { reported, banned: bannedNotice } = await searchParams;
   sweepCommunityMessages();
 
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
@@ -89,7 +97,12 @@ export default async function CommunityRoomPage({ params }: Props) {
   const joined = user ? isCommunityMember(db, user.id, room.aiId, room.roomId) : false;
   const stat = ai ? buildView(db).aiStats.get(ai.id) : undefined;
   const staff = user ? isStaffRole(user.role, resolveRoles(db.roles)) : false;
+  const ban = user ? communityBanFor(db, user.id, room.aiId, room.roomId) : null;
   const back = `/community/${room.slug}`;
+  // Paid chat campaigns share the slot with AdSense/house ads. A live campaign
+  // wins the slot; when its bought views run out it disappears automatically.
+  const sponsoredAds = community.adsEnabled ? liveChatAds(db) : [];
+  let chatAdSlot = 0;
 
   const adsReady = settings.adsEnabled && /^ca-pub-\d{16}$/.test(settings.adsClientId);
   const clientId = community.adsEnabled && adsReady ? settings.adsClientId : "";
@@ -97,8 +110,8 @@ export default async function CommunityRoomPage({ params }: Props) {
   const inlineSlot = community.adsEnabled ? community.adInlineSlot || settings.adsArticleSlot : "";
   const houseText = community.adsEnabled ? community.houseAdText : "";
   const houseHref = community.adsEnabled ? community.houseAdHref : "";
-  // Exactly one inline ad after every ten messages.
-  const adEvery = 10;
+  // One inline ad after every N messages (admin setting, default 20).
+  const adEvery = Math.max(3, Math.min(50, community.adEvery || 20));
 
   return (
     <div data-community-shell="" className="w-full">
@@ -144,8 +157,35 @@ export default async function CommunityRoomPage({ params }: Props) {
           🔒 Free for every signed-in member · messages delete after {community.retentionDays} days
         </p>
 
+        {reported === "1" ? (
+          <p className="border-b border-emerald-200 bg-emerald-50 px-3 py-1.5 text-center text-[12px] font-medium text-emerald-800">
+            Report sent to the moderators. Thank you — they will review the message.
+          </p>
+        ) : null}
+        {reported === "self" ? (
+          <p className="border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-center text-[12px] font-medium text-amber-800">
+            You can delete your own message instead of reporting it.
+          </p>
+        ) : null}
+        {bannedNotice === "1" ? (
+          <p className="border-b border-rose-200 bg-rose-50 px-3 py-1.5 text-center text-[12px] font-medium text-rose-700">
+            Your account is banned from joining this community.
+          </p>
+        ) : null}
+
         {community.enabled ? (
-          user ? (
+          ban ? (
+            <div className="border-b border-rose-200 bg-rose-50 px-3 py-2 sm:px-4">
+              <p className="text-[13.5px] font-semibold text-rose-800">
+                You are banned from posting in {room.title}.
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug text-rose-700">
+                {ban.reason}
+                {ban.until ? ` · until ${ban.until}` : " · permanent"}. You can still read the room; contact the site
+                team if you think this is a mistake.
+              </p>
+            </div>
+          ) : user ? (
             joined ? null : (
               <form
                 action={joinCommunityAction}
@@ -246,7 +286,42 @@ export default async function CommunityRoomPage({ params }: Props) {
                         </a>
                       ) : null}
 
-                      <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[11.5px] leading-none text-[#667781]">
+                                            <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[11.5px] leading-none text-[#667781]">
+                        {user && !own ? (
+                          <details className="relative">
+                            <summary className="cursor-pointer font-medium text-[#667781] transition hover:text-rose-600">
+                              Report
+                            </summary>
+                            <form
+                              action={reportCommunityMessageAction}
+                              className="absolute bottom-5 right-0 z-20 w-56 space-y-1 rounded-lg border border-[#d1d7db] bg-white p-2 text-left shadow-lg"
+                            >
+                              <input type="hidden" name="id" value={message.id} />
+                              <input type="hidden" name="back" value={back} />
+                              <select
+                                name="reason"
+                                defaultValue="spam"
+                                aria-label="Report reason"
+                                className="w-full rounded border border-[#d1d7db] px-1 py-1 text-[11px] text-[#111b21]"
+                              >
+                                {Object.entries(REPORT_REASONS).map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                name="note"
+                                maxLength={300}
+                                placeholder="Optional note for the admin"
+                                className="w-full rounded border border-[#d1d7db] px-1 py-1 text-[11px] text-[#111b21]"
+                              />
+                              <button className="w-full rounded-full bg-rose-500 px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-rose-600">
+                                Send report
+                              </button>
+                            </form>
+                          </details>
+                        ) : null}
                         {user && (own || staff) ? (
                           <form action={deleteCommunityMessageAction} className="flex items-center">
                             <input type="hidden" name="id" value={message.id} />
@@ -268,13 +343,20 @@ export default async function CommunityRoomPage({ params }: Props) {
                   {(index + 1) % adEvery === 0 && index + 1 < messages.length ? (
                     <div className="my-2 flex justify-center px-2">
                       <div className="w-full max-w-sm">
-                        <CommunityAd
-                          clientId={clientId}
-                          slotId={inlineSlot}
-                          houseText={houseText}
-                          houseHref={houseHref}
-                          variant="inline"
-                        />
+                        {(() => {
+                          const ad = chatAdForSlot(sponsoredAds, chatAdSlot++);
+                          return ad ? (
+                            <ChatSponsoredAd ad={ad} creative={chatAdCreative(db, ad)} />
+                          ) : (
+                            <CommunityAd
+                              clientId={clientId}
+                              slotId={inlineSlot}
+                              houseText={houseText}
+                              houseHref={houseHref}
+                              variant="inline"
+                            />
+                          );
+                        })()}
                       </div>
                     </div>
                   ) : null}
@@ -300,7 +382,12 @@ export default async function CommunityRoomPage({ params }: Props) {
             <CommunityAd clientId={clientId} slotId={topSlot} houseText={houseText} houseHref={houseHref} />
           </div>
           {community.enabled ? (
-            user ? (
+            ban ? (
+              <p className="mx-auto w-full max-w-3xl rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-center text-[13px] font-medium text-rose-700">
+                Posting is blocked for your account in this community
+                {ban.until ? ` until ${ban.until}` : ""}.
+              </p>
+            ) : user ? (
               joined ? (
                 <CommunityComposer
                   aiId={room.aiId}

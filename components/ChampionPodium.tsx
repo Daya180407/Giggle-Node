@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import AdTrackerView from "@/components/AdTrackerView";
 import { AiLogo, PriceBadge, Stars } from "@/components/ui";
 import { formatVotes } from "@/lib/format";
 import { RATED_MIN_VOTES } from "@/lib/rank";
@@ -19,6 +20,8 @@ export type ChampionRow = {
   bestFor: string;
   /** paid insertion: shown with a Sponsored tag and no podium position */
   sponsored?: boolean;
+  /** placement id, so the paid card counts its impressions */
+  sponsorId?: string;
 };
 
 export type ChampionCategory = {
@@ -33,6 +36,7 @@ const TITLES = ["Champion", "Runner-up", "Third place"];
 function SponsoredChampionCard({ row }: { row: ChampionRow }) {
   return (
     <article className="anim-pop relative flex h-full flex-col items-center overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50/90 to-white p-5 text-center">
+      {row.sponsorId ? <AdTrackerView kind="placement" id={row.sponsorId} /> : null}
       <div className="flex w-full items-center justify-between gap-2">
         <span className="chip bg-amber-100 text-amber-800 ring-1 ring-amber-200">Sponsored</span>
         <span className="text-xs font-bold text-slate-400">Paid placement</span>

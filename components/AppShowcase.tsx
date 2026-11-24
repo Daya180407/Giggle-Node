@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import AdTrackerView from "@/components/AdTrackerView";
 import AiLogo from "@/components/AiLogo";
 import PricingReport from "@/components/PricingReport";
 import { PriceBadge, SponsoredTag, Stars } from "@/components/ui";
@@ -247,23 +248,27 @@ export default function AppShowcase({
             sponsor ? "border-amber-200 bg-amber-50/40" : "border-line"
           }`;
 
+          const cardHref = sponsor
+            ? `/api/ads/click?k=placement&id=${encodeURIComponent(sponsor.id)}`
+            : item.href;
           return (
             <div
               key={`${tab}-${item.slug}${sponsor ? `-${sponsor.id}` : ""}`}
               className={className}
               style={{ animationDelay: `${i * 30}ms` }}
             >
-              {item.external ? (
+              {sponsor ? <AdTrackerView kind="placement" id={sponsor.id} /> : null}
+              {item.external || sponsor ? (
                 <a
-                  href={item.href}
+                  href={cardHref}
                   target="_blank"
-                  rel={item.affiliate ? "nofollow noopener noreferrer sponsored" : "nofollow noopener noreferrer"}
+                  rel="nofollow noopener noreferrer sponsored"
                   className="flex items-start gap-3"
                 >
                   {body}
                 </a>
               ) : (
-                <Link href={item.href} className="flex items-start gap-3">
+                <Link href={cardHref} className="flex items-start gap-3">
                   {body}
                 </Link>
               )}

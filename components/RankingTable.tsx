@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AdTrackerView from "@/components/AdTrackerView";
 import { AiLogo, PriceBadge, SponsoredTag, Stars, Trend } from "@/components/ui";
 import { formatVotes } from "@/lib/format";
 import { RATED_MIN_VOTES, type AiStat } from "@/lib/rank";
@@ -45,6 +46,7 @@ export default function RankingTable({
               sponsor ? "border border-amber-200 bg-amber-50/40" : ""
             }`}
           >
+            {sponsor ? <AdTrackerView kind="placement" id={sponsor.id} /> : null}
             <span
               className={`medal h-8 w-8 shrink-0 ${
                 !sponsor && s.votes >= RATED_MIN_VOTES ? (MEDALS[i] ?? "medal-plain") : "medal-plain"
@@ -117,7 +119,11 @@ export default function RankingTable({
               <PriceBadge price={s.ai.priceType} />
             </div>
             <a
-              href={`/go/${s.ai.slug}`}
+              href={
+                sponsor
+                  ? `/api/ads/click?k=placement&id=${encodeURIComponent(sponsor.id)}`
+                  : `/go/${s.ai.slug}`
+              }
               target="_blank"
               rel="nofollow noopener noreferrer sponsored"
               aria-label={`Visit ${s.ai.name}`}

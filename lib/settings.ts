@@ -47,7 +47,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     adsEnabled: true,
     adTopSlot: "",
     adInlineSlot: "",
-    adEvery: 8,
+    adEvery: 20,
     houseAdText: "Advertise here — reach people comparing AI tools.",
     houseAdHref: "/contact",
   },

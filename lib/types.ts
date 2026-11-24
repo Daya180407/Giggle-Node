@@ -128,6 +128,92 @@ export type SponsorPlacement = {
   active: boolean;
   note?: string;
   createdAt: string;
+  /** impressions counted from the public list rows */
+  views?: number;
+  /** outbound clicks counted on the sponsored row */
+  clicks?: number;
+  /** public token for the advertiser's own performance report */
+  reportToken?: string;
+};
+
+/**
+ * A sponsored card inside the community chat, sold per thousand views (CPM).
+ * The campaign stops by itself once `viewsServed` reaches `viewsPurchased`, or
+ * after `until` when the admin also set a calendar cap.
+ */
+export type ChatAd = {
+  id: string;
+  /** advertiser or campaign name, shown in the admin table */
+  name: string;
+  advertiserEmail: string;
+  targetType: SponsorTargetType;
+  /** AI id or app slug */
+  targetId: string;
+  targetName: string;
+  targetSlug: string;
+  headline: string;
+  body: string;
+  ctaLabel: string;
+  /** where the CTA goes; must be http(s) */
+  url: string;
+  /** price per 1000 impressions, in the site currency */
+  cpm: number;
+  /** impressions bought; the campaign stops when viewsServed reaches this */
+  viewsPurchased: number;
+  viewsServed: number;
+  clicks: number;
+  /** optional calendar cap alongside the view budget */
+  until: string | null;
+  active: boolean;
+  /** public, unguessable token for the advertiser's performance report */
+  reportToken: string;
+  createdAt: string;
+  createdBy: string;
+};
+
+/** A member's report on a community message, reviewed by an admin. */
+export type CommunityReport = {
+  id: string;
+  messageId: string;
+  /** snapshots so the report still reads after the message is deleted */
+  messageBody: string;
+  messageUserId: string;
+  messageUserName: string;
+  aiId: string;
+  roomId?: string | null;
+  reporterId: string;
+  reporterName: string;
+  reason: "spam" | "abuse" | "scam" | "other";
+  note: string;
+  status: "open" | "resolved";
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  action: "deleted" | "banned" | "dismissed" | "";
+};
+
+/**
+ * An admin ban. `all` blocks every community, `ai` blocks every room of one AI,
+ * `room` blocks that single room only. A ban can be permanent or time-limited.
+ */
+export type CommunityBanScope = "room" | "ai" | "all";
+
+export type CommunityBan = {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  scope: CommunityBanScope;
+  /** null for a site-wide ban */
+  aiId: string | null;
+  /** null for the AI's default room, or when the ban covers the whole AI */
+  roomId?: string | null;
+  reason: string;
+  bannedBy: string;
+  createdAt: string;
+  /** null = permanent */
+  until: string | null;
+  active: boolean;
 };
 
 /** An advertiser request submitted through the public /sponsor form. */
@@ -989,6 +1075,14 @@ export type DB = {
   communityMessages?: CommunityMessage[];
   /** room memberships; a signed-in user must join before posting */
   communityMembers?: CommunityMember[];
+  /** member reports on community messages, handled in the moderation queue */
+  communityReports?: CommunityReport[];
+  /** admin bans, scoped to one room, one AI or every community */
+  communityBans?: CommunityBan[];
+  /** sponsored chat cards, sold per 1000 impressions and stopped at the bought view count */
+  chatAds?: ChatAd[];
+  /** default CPM (price per 1000 chat impressions) used by the admin form */
+  chatAdCpm?: number;
   /** blind arena picks, the basis of the community win-rate table */
   arenaVotes?: ArenaVote[];
   /** anonymous yes/no "was this helpful?" signals, not part of the ranking */

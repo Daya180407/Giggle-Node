@@ -22,6 +22,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/admin/ratings", label: "Ratings & Reviews", icon: "★", area: "ratings" },
       { href: "/admin/community", label: "Community Rooms", icon: "🗨️", area: "catalogue" },
       { href: "/admin/community/inbox", label: "Community Inbox", icon: "📥", area: "catalogue" },
+      { href: "/admin/community/reports", label: "Reports & Bans", icon: "⚑", area: "catalogue" },
       { href: "/admin/prompts", label: "Prompt Library", icon: "💬", area: "catalogue" },
       { href: "/admin/submissions", label: "Submissions & Claims", icon: "📨", area: "catalogue" },
       { href: "/admin/owners", label: "AI Owners", icon: "🪪", area: "owners" },
@@ -44,6 +45,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/homepage", label: "Homepage & Quiz", icon: "🏠", area: "homepage" },
       { href: "/admin/sponsors", label: "Sponsors & Ads", icon: "💼", area: "sponsors" },
+      { href: "/admin/ads", label: "Chat Ads & Insights", icon: "📣", area: "sponsors" },
       { href: "/admin/pricing", label: "Pricing Reports", icon: "💰", area: "catalogue" },
       { href: "/admin/notifications", label: "Notifications & Email", icon: "🔔", area: "notifications" },
       { href: "/admin/analytics", label: "Analytics & Reports", icon: "📊", area: "analytics" },
