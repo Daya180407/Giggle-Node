@@ -149,7 +149,7 @@ export type SponsorPlacement = {
   clicks?: number;
   /** public token for the advertiser's own performance report */
   reportToken?: string;
-  /** seeded demo row, removable with one click from /admin/ads */
+  /** legacy marker from the removed demo seed; purged on boot */
   demo?: boolean;
 };
 
@@ -186,7 +186,7 @@ export type ChatAd = {
   reportToken: string;
   createdAt: string;
   createdBy: string;
-  /** seeded demo row, removable with one click from /admin/ads */
+  /** legacy marker from the removed demo seed; purged on boot */
   demo?: boolean;
 };
 
@@ -670,7 +670,7 @@ export type CommunityMessage = {
   kind: CommunityMessageKind;
   attachment: CommunityAttachment | null;
   createdAt: string;
-  /** seeded demo conversation, removable with the demo ads button */
+  /** legacy marker from the removed demo seed; purged on boot */
   demo?: boolean;
   /** the site's own profile (GigleNode team): shows the golden verified tick */
   official?: boolean;
@@ -1106,10 +1106,6 @@ export type DB = {
   chatAds?: ChatAd[];
   /** default CPM (price per 1000 chat impressions) used by the admin form */
   chatAdCpm?: number;
-  /** set once the demo ads were installed, so they are never re-added after cleanup */
-  demoAdsSeededAt?: string | null;
-  /** version of the demo seed that already ran; a newer seed adds the new slots once */
-  demoAdsVersion?: number | null;
   /** blind arena picks, the basis of the community win-rate table */
   arenaVotes?: ArenaVote[];
   /** anonymous yes/no "was this helpful?" signals, not part of the ranking */

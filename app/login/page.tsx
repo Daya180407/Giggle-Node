@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
 import { getCurrentUser } from "@/lib/auth";
+import { isStaffRole, resolveRoles } from "@/lib/roles";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
@@ -22,7 +23,13 @@ export default async function LoginPage({
 }) {
   const { next = "/", reset, verify } = await searchParams;
   const user = await getCurrentUser();
-  if (user) redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  if (user) {
+    const db = readDb();
+    const target = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+    // Sending a non-staff account to /admin would bounce it straight back here.
+    const staff = isStaffRole(user.role, resolveRoles(db.roles));
+    redirect(target.startsWith("/admin") && !staff ? "/" : target);
+  }
   const settings = getSiteSettings(readDb());
 
   return (

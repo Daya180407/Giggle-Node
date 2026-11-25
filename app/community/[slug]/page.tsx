@@ -89,7 +89,6 @@ export default async function CommunityRoomPage({ params, searchParams }: Props)
   if (!found) notFound();
   const { ai, room } = found;
   // Official profiles: the site team (admin role or a giglenode.com mailbox).
-  // Seeded demo messages carry the flag themselves.
   const officialUserIds = new Set(
     db.users
       .filter((row) => row.role === "admin" || row.email.toLowerCase().endsWith("@giglenode.com"))

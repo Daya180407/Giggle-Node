@@ -1,13 +1,113 @@
 import { applyCatalogue } from "./catalogue/apply";
 import { CATEGORIES } from "./categories";
 import { backfillCommunity } from "./community";
-import { seedDemoAds } from "./demo-ads";
 import { SEED_ACCOUNTS } from "./seed-accounts";
 import { localizeContentToEnglish } from "./localize-en";
 import { stripFabricatedRatings } from "./real-data";
 import { resolveRoles } from "./roles";
 import { DEFAULT_SITE_SETTINGS } from "./settings";
 import type { DB } from "./types";
+
+const LEGACY_DEMO_USER_IDS = new Set(["u_demo", "demo_member"]);
+const LEGACY_DEMO_EMAILS = new Set(["demo@giglenode.com"]);
+
+/**
+ * Sweeps out everything the removed demo seed left in older data documents:
+ * sponsored placements, chat campaigns, the demo chat conversation and member,
+ * and the demo accounts with their saved rows. Idempotent, so documents are
+ * cleaned on the first boot after the deploy and stay clean afterwards.
+ */
+function purgeDemoData(db: DB): boolean {
+  let changed = false;
+
+  const demoUserIds = new Set(
+    db.users
+      .filter(
+        (user) =>
+          LEGACY_DEMO_USER_IDS.has(user.id) ||
+          LEGACY_DEMO_EMAILS.has(user.email.toLowerCase()) ||
+          user.email.toLowerCase().endsWith("@giglenode.test"),
+      )
+      .map((user) => user.id),
+  );
+  if (demoUserIds.size) {
+    db.users = db.users.filter((user) => !demoUserIds.has(user.id));
+    changed = true;
+  }
+
+  const dropDemoFlagged = <T extends { demo?: boolean }>(rows: T[] | undefined): T[] | undefined => {
+    if (!Array.isArray(rows)) return rows;
+    const next = rows.filter((row) => !row.demo);
+    if (next.length !== rows.length) changed = true;
+    return next;
+  };
+
+  db.sponsorPlacements = dropDemoFlagged(db.sponsorPlacements);
+  db.chatAds = dropDemoFlagged(db.chatAds);
+
+  if (Array.isArray(db.communityMessages)) {
+    const next = db.communityMessages.filter(
+      (row) => !row.demo && row.userId !== "demo_member" && !demoUserIds.has(row.userId),
+    );
+    if (next.length !== db.communityMessages.length) {
+      db.communityMessages = next;
+      changed = true;
+    }
+  }
+
+  if (Array.isArray(db.communityMembers)) {
+    const next = db.communityMembers.filter(
+      (row) => row.id !== "cmm_demo" && row.userId !== "demo_member" && !demoUserIds.has(row.userId),
+    );
+    if (next.length !== db.communityMembers.length) {
+      db.communityMembers = next;
+      changed = true;
+    }
+  }
+
+  for (const key of ["ratings", "bookmarks", "follows", "aiVisits", "pointEvents", "priceAlerts"] as const) {
+    const rows = db[key] as { userId?: string }[] | undefined;
+    if (!Array.isArray(rows)) continue;
+    const next = rows.filter((row) => !(row.userId && demoUserIds.has(row.userId)) && row.userId !== "demo_member");
+    if (next.length !== rows.length) {
+      (db[key] as unknown as { userId?: string }[]) = next;
+      changed = true;
+    }
+  }
+
+  if (Array.isArray(db.helpfulVotes)) {
+    const next = db.helpfulVotes.filter(
+      (vote) => !(vote.voter && demoUserIds.has(vote.voter)) && vote.voter !== "demo_member",
+    );
+    if (next.length !== db.helpfulVotes.length) {
+      db.helpfulVotes = next;
+      changed = true;
+    }
+  }
+
+  if (Array.isArray(db.notifications)) {
+    for (const notification of db.notifications) {
+      if (!notification.readBy) continue;
+      const next = notification.readBy.filter(
+        (id) => !demoUserIds.has(id) && id !== "demo_member",
+      );
+      if (next.length !== notification.readBy.length) {
+        notification.readBy = next;
+        changed = true;
+      }
+    }
+  }
+
+  const legacy = db as unknown as Record<string, unknown>;
+  for (const key of ["demoAdsSeededAt", "demoAdsVersion"]) {
+    if (key in legacy) {
+      delete legacy[key];
+      changed = true;
+    }
+  }
+
+  return changed;
+}
 
 /**
  * Backfills fields introduced after the first data snapshot (older R2 documents)
@@ -128,8 +228,7 @@ export async function migrateDb(db: DB): Promise<boolean> {
   if (backfillCommunity(db)) changed = true;
   // Last, so catalogue/ledger migrations cannot reintroduce generated reviews.
   if (stripFabricatedRatings(db)) changed = true;
-  // One-time demo of every ad product; removable from /admin/ads.
-  if (seedDemoAds(db)) changed = true;
+  if (purgeDemoData(db)) changed = true;
 
   return changed;
 }

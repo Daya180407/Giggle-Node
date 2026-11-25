@@ -15,7 +15,10 @@ export function rolesForDb(db = readDb()): RoleDefinition[] {
 export async function requireStaffPage(): Promise<User> {
   const user = await getCurrentUser();
   const roles = rolesForDb();
-  if (!user || !isStaffRole(user.role, roles)) redirect("/login?next=/admin");
+  if (!user) redirect("/login?next=/admin");
+  // A signed-in account without an admin section must not go back to /login:
+  // that page redirects logged-in users to /admin again, an endless loop.
+  if (!isStaffRole(user.role, roles)) redirect("/?admin=no-access");
   return user;
 }
 

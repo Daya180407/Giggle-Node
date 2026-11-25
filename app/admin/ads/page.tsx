@@ -1,10 +1,5 @@
 import Link from "next/link";
-import {
-  deleteChatAdAction,
-  removeDemoAdsAction,
-  saveChatAdCpmAction,
-  toggleChatAdAction,
-} from "@/app/actions";
+import { deleteChatAdAction, saveChatAdCpmAction, toggleChatAdAction } from "@/app/actions";
 import ChatAdForm from "@/components/admin/ChatAdForm";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { AiLogo } from "@/components/ui";
@@ -62,11 +57,7 @@ export default async function AdminAdsPage({
   const cpm = chatAdCpm(db);
   const summary = chatAdsSummary(db);
   const ads = [...(db.chatAds ?? [])].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  const savedAd = saved && saved !== "cpm" && saved !== "campaign" && saved !== "demo-removed"
-    ? ads.find((ad) => ad.id === saved)
-    : undefined;
-  const demoCount =
-    ads.filter((ad) => ad.demo).length + (db.sponsorPlacements ?? []).filter((row) => row.demo).length;
+  const savedAd = saved && saved !== "cpm" && saved !== "campaign" ? ads.find((ad) => ad.id === saved) : undefined;
 
   const categories = getCategories(db);
   const catName = (slug: string) => categories.find((row) => row.slug === slug)?.name ?? categoryName(slug);
@@ -98,9 +89,6 @@ export default async function AdminAdsPage({
         </div>
         <div className="flex flex-wrap gap-2">
           <span className="chip bg-emerald-50 text-emerald-700">{summary.live} live campaigns</span>
-          {demoCount ? (
-            <span className="chip bg-amber-50 text-amber-700">{demoCount} demo ads</span>
-          ) : null}
           <Link href="/admin/sponsors" className="btn btn-ghost text-xs">
             List placements
           </Link>
@@ -119,28 +107,10 @@ export default async function AdminAdsPage({
         </div>
       ) : saved ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
-          {saved === "cpm"
-            ? "Default chat CPM saved."
-            : saved === "demo-removed"
-              ? "Demo ads removed. The site is back to real campaigns only."
-              : "Campaign updated."}
+          {saved === "cpm" ? "Default chat CPM saved." : "Campaign updated."}
         </div>
       ) : null}
 
-      {demoCount ? (
-        <section className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5">
-          <p className="text-xs leading-relaxed text-amber-900">
-            <strong>{demoCount} demo ads are live</strong> so every placement type can be previewed on the site: trending
-            card, category top-3, list rows, app lists and two chat campaigns. They are labelled “Demo” and seed sample
-            views/clicks for the reports.
-          </p>
-          <form action={removeDemoAdsAction}>
-            <button className="btn btn-ghost !border-amber-300 !bg-white/70 !py-1.5 text-xs text-rose-600">
-              Remove demo ads
-            </button>
-          </form>
-        </section>
-      ) : null}
       {error ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
           {ERRORS[error] ?? "That campaign could not be saved."}
