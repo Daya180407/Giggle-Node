@@ -221,7 +221,7 @@ export default function AiSearchResults({ query }: { query: string }) {
           </p>
           <h3 className="display mt-1 text-lg text-ink">No AI found, try another keyword</h3>
           <p className="mx-auto mt-1 max-w-lg text-sm text-slate-600">
-            We only suggest tools that exist in the GigleNode database, so nothing was invented. Try a category name,
+            We only suggest tools that exist in the GiggleNode database, so nothing was invented. Try a category name,
             a task like “video” and “coding”, or request the tool you want.
           </p>
           <div className="mt-3 flex flex-wrap justify-center gap-2">

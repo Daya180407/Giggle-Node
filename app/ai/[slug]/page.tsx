@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         ? `${ai.name} — rated ${stat.score.toFixed(1)}/5 by ${stat.votes} users. Explore models, pricing, free alternatives, prompts and reviews.`
         : `${ai.name} — models, pricing, free alternatives, prompts and reviews. No user ratings yet.`,
     alternates: { canonical: `/ai/${ai.slug}` },
-    openGraph: { title: `${ai.name} — GigleNode Rating`, description: ai.description.slice(0, 160) },
+    openGraph: { title: `${ai.name} — GiggleNode Rating`, description: ai.description.slice(0, 160) },
   };
 }
 
@@ -125,11 +125,11 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
     name: ai.name,
     applicationCategory: "AIApplication",
     operatingSystem: "Web",
-    url: `https://giglenode.com/ai/${ai.slug}`,
+    url: `https://gigglenode.com/ai/${ai.slug}`,
     description: ai.description,
-    image: `https://giglenode.com/logos/${ai.slug}.png`,
+    image: `https://gigglenode.com/logos/${ai.slug}.png`,
     sameAs: ai.website,
-    mainEntityOfPage: `https://giglenode.com/ai/${ai.slug}`,
+    mainEntityOfPage: `https://gigglenode.com/ai/${ai.slug}`,
     offers: { "@type": "Offer", price: ai.priceType === "free" ? 0 : ai.planPrice, priceCurrency: "USD" },
     // Never claim a rating that no real visitor gave.
     ...(stat.votes > 0
@@ -148,9 +148,9 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://giglenode.com" },
-      { "@type": "ListItem", position: 2, name: `${categoryName(ai.category)} AI`, item: `https://giglenode.com/category/${ai.category}` },
-      { "@type": "ListItem", position: 3, name: ai.name, item: `https://giglenode.com/ai/${ai.slug}` },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://gigglenode.com" },
+      { "@type": "ListItem", position: 2, name: `${categoryName(ai.category)} AI`, item: `https://gigglenode.com/category/${ai.category}` },
+      { "@type": "ListItem", position: 3, name: ai.name, item: `https://gigglenode.com/ai/${ai.slug}` },
     ],
   };
 
@@ -236,7 +236,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
               {verified.total > 0 ? (
                 <span
                   className={`chip ${verified.percent >= 50 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
-                  title="Ratings from users who opened this tool from GigleNode"
+                  title="Ratings from users who opened this tool from GiggleNode"
                 >
                   ✓ {verified.percent}% verified
                 </span>
@@ -279,7 +279,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
           <Link href={`/community/${ai.slug}`} className="btn btn-ghost">
             💬 Community
           </Link>
-          <ShareButton title={`${ai.name} — GigleNode rating`} />
+          <ShareButton title={`${ai.name} — GiggleNode rating`} />
           {ownedByOwner ? (
             <Link href="/owner/login" className="btn btn-ghost">
               🏢 Owner login
@@ -757,7 +757,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                         {verifiedPrompt ? (
                           <span
                             className="chip bg-emerald-50 text-emerald-700"
-                            title="Written or checked by the GigleNode team"
+                            title="Written or checked by the GiggleNode team"
                           >
                             ✓ Verified
                           </span>
@@ -768,7 +768,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                     <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{p.promptText}</p>
                     <p className="mt-1 text-[10px] text-muted">
                       {verifiedPrompt && !p.submittedBy
-                        ? "GigleNode team"
+                        ? "GiggleNode team"
                         : `Community · ${p.submittedByName || "a member"}`}
                     </p>
                   </div>
@@ -815,7 +815,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                       <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-soft text-xs font-bold text-brand">
                         {reviewer?.avatar ?? "U"}
                       </span>
-                      <span className="text-sm font-semibold">{reviewer?.name ?? "GigleNode user"}</span>
+                      <span className="text-sm font-semibold">{reviewer?.name ?? "GiggleNode user"}</span>
                       {reviewer?.verified ? (
                         <span className="chip bg-emerald-50 text-emerald-700">✓ Verified account</span>
                       ) : null}
@@ -828,7 +828,7 @@ export default async function AiDetailPage({ params, searchParams }: Props) {
                       {model ? `Rated on ${model.name}` : `Rated ${ai.name} overall`}
                     </p>
                     {rating.verified ? (
-                      <p className="mt-1 text-[10.5px] font-semibold text-emerald-600">✓ Verified — opened from GigleNode</p>
+                      <p className="mt-1 text-[10.5px] font-semibold text-emerald-600">✓ Verified — opened from GiggleNode</p>
                     ) : null}
                     {(replies.get(rating.id) ?? []).map((reply) => (
                       <div key={reply.id} className="mt-2 border-l-2 border-brand pl-3">

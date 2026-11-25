@@ -6,7 +6,7 @@ import { readDb } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "What GigleNode collects, what stays public, where data is stored and your rights.",
+  description: "What GiggleNode collects, what stays public, where data is stored and your rights.",
   alternates: { canonical: "/privacy" },
 };
 
@@ -56,8 +56,8 @@ export default function PrivacyPage() {
           <p className="mt-2">
             You can edit your own rating at any time, subject to the 24-hour edit lock. To delete your account or your
             reviews, email{" "}
-            <a href="mailto:privacy@giglenode.com" className="font-semibold text-brand hover:underline">
-              privacy@giglenode.com
+            <a href="mailto:privacy@gigglenode.com" className="font-semibold text-brand hover:underline">
+              privacy@gigglenode.com
             </a>{" "}
             and we will action the request.
           </p>
@@ -82,7 +82,7 @@ export default function PrivacyPage() {
             tools where enabled.
           </p>
           <p className="mt-2">
-            Ads are placed inside page content only. GigleNode does not use pop-up, pop-under, anchor or vignette ad
+            Ads are placed inside page content only. GiggleNode does not use pop-up, pop-under, anchor or vignette ad
             formats.
           </p>
         </section>
@@ -99,8 +99,8 @@ export default function PrivacyPage() {
           <h2 className="display text-lg text-ink">Contact</h2>
           <p className="mt-2">
             Questions about this policy? Reach us at{" "}
-            <a href="mailto:privacy@giglenode.com" className="font-semibold text-brand hover:underline">
-              privacy@giglenode.com
+            <a href="mailto:privacy@gigglenode.com" className="font-semibold text-brand hover:underline">
+              privacy@gigglenode.com
             </a>{" "}
             or through the <Link href="/contact" className="font-semibold text-brand hover:underline">contact page</Link>.
           </p>

@@ -39,10 +39,10 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.1fr]">
           <div>
-            <Link href="/" className="flex items-center gap-2.5" aria-label="GigleNode home">
+            <Link href="/" className="flex items-center gap-2.5" aria-label="GiggleNode home">
               <BrandLogo size={40} />
               <span className="display text-xl text-white">
-                Gigle<span className="bg-gradient-to-r from-indigo-300 to-cyan-300 bg-clip-text text-transparent">Node</span>
+                Giggle<span className="bg-gradient-to-r from-indigo-300 to-cyan-300 bg-clip-text text-transparent">Node</span>
               </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">
@@ -117,7 +117,7 @@ export default function SiteFooter() {
               </li>
               <li>
                 <Link href="/sponsor" className="text-slate-300 transition hover:text-white">
-                  Sponsor GigleNode
+                  Sponsor GiggleNode
                 </Link>
               </li>
               <li>
@@ -172,7 +172,7 @@ export default function SiteFooter() {
 
         <div className="mt-10 flex flex-col gap-5 border-t border-white/10 pt-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">GigleNode</h3>
+            <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">GiggleNode</h3>
             <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
               {company.map((item) => (
                 <li key={item.href}>
@@ -197,7 +197,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} GigleNode. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} GiggleNode. All rights reserved.</p>
           <p>Built for people who create with AI.</p>
         </div>
       </div>

@@ -9,7 +9,7 @@ import { readDb } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Contact GigleNode",
+  title: "Contact GiggleNode",
   description: "Tool listings, sponsored placements, data corrections, feature requests and bug reports.",
   alternates: { canonical: "/contact" },
 };
@@ -17,17 +17,17 @@ export const metadata: Metadata = {
 const CHANNELS = [
   {
     title: "General & data corrections",
-    email: "hello@giglenode.com",
+    email: "hello@gigglenode.com",
     note: "Wrong pricing, outdated model names or listing updates.",
   },
   {
     title: "Sponsored listings",
-    email: "partners@giglenode.com",
+    email: "partners@gigglenode.com",
     note: "Verified profiles, sponsorship and partnership requests.",
   },
   {
     title: "Report a fake rating",
-    email: "trust@giglenode.com",
+    email: "trust@gigglenode.com",
     note: "Suspicious votes, spam reviews or ranking manipulation.",
   },
 ];
@@ -53,7 +53,7 @@ export default async function ContactPage({
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <header className="page-hero">
         <span className="chip chip-brand">Contact</span>
-        <h1 className="display mt-3 text-3xl text-ink sm:text-4xl">Talk to the GigleNode team</h1>
+        <h1 className="display mt-3 text-3xl text-ink sm:text-4xl">Talk to the GiggleNode team</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
           Whether you want to list a tool, correct data, request an AI or report a bug, use the form below or email{" "}
           <a href={`mailto:${settings.supportEmail}`} className="font-semibold text-brand hover:underline">

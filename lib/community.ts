@@ -24,7 +24,7 @@ export function recordAiVisit(db: DB, userId: string, aiId: string, at = new Dat
   db.aiVisits = db.aiVisits.slice(-MAX_VISITS);
 }
 
-/** True when the user has opened this tool from GigleNode in the last 120 days. */
+/** True when the user has opened this tool from GiggleNode in the last 120 days. */
 export function hasVerifiedUse(db: DB, userId: string, aiId: string, now = Date.now()): boolean {
   return (db.aiVisits ?? []).some(
     (visit) => visit.userId === userId && visit.aiId === aiId && now - new Date(visit.at).getTime() < 120 * DAY,

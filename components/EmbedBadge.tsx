@@ -2,8 +2,8 @@ import CopyButton from "@/components/CopyButton";
 
 /** Shows the vendor how to embed their live rating on their own site. */
 export default function EmbedBadge({ slug, name }: { slug: string; name: string }) {
-  const src = `https://giglenode.com/api/badge/${slug}.svg`;
-  const snippet = `<a href="https://giglenode.com/ai/${slug}" rel="noopener"><img src="${src}" alt="${name} rating on GigleNode" width="250" height="64" loading="lazy"></a>`;
+  const src = `https://gigglenode.com/api/badge/${slug}.svg`;
+  const snippet = `<a href="https://gigglenode.com/ai/${slug}" rel="noopener"><img src="${src}" alt="${name} rating on GiggleNode" width="250" height="64" loading="lazy"></a>`;
 
   return (
     <details className="card p-4">

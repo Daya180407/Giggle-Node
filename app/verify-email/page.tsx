@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Verify your email",
-  description: "Request a new verification link to finish creating your GigleNode account.",
+  description: "Request a new verification link to finish creating your GiggleNode account.",
   robots: { index: false, follow: true },
 };
 

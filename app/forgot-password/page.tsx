@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Password reset",
-  description: "Reset your GigleNode password.",
+  description: "Reset your GiggleNode password.",
 };
 
 export default function ForgotPasswordPage() {

@@ -42,7 +42,7 @@ export default async function AdminAiSearchPage({
           <p className="eyebrow">Catalogue</p>
           <h2 className="display mt-1 text-2xl text-ink">AI search control</h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-            The model only classifies a question into a category and budget. Every AI name comes from the GigleNode
+            The model only classifies a question into a category and budget. Every AI name comes from the GiggleNode
             database, so a wrong or hallucinated name is impossible.
           </p>
         </div>

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Top Contributors",
-  description: "The users earning the most points for helpful ratings and reviews on GigleNode.",
+  description: "The users earning the most points for helpful ratings and reviews on GiggleNode.",
   alternates: { canonical: "/contributors" },
 };
 

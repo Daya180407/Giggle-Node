@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = cat ? `Best ${cat.name} AI Tools (2026) — Real User Ratings` : "All AI Tools Ranked";
   const description = cat
     ? `${cat.blurb} Compare the best ${cat.name.toLowerCase()} AI tools by real user ratings, pricing and model-level detail.`
-    : "Every AI tool on GigleNode, ranked by a transparent weighted score built from real user ratings.";
+    : "Every AI tool on GiggleNode, ranked by a transparent weighted score built from real user ratings.";
   return { title, description, alternates: { canonical: `/category/${slug}` } };
 }
 
@@ -89,7 +89,7 @@ export default async function CategoryPage({ params }: Props) {
               <span className="text-slate-400">2026</span>
             </h1>
             <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
-              {cat?.blurb ?? "Every AI tool listed on GigleNode, ordered by a transparent weighted score."}
+              {cat?.blurb ?? "Every AI tool listed on GiggleNode, ordered by a transparent weighted score."}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="chip border border-line bg-white/80 text-slate-600">

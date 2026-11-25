@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "AI Community — Ask, Share and Help on Every AI Tool",
   description:
-    "Join the GigleNode community for each AI tool. Share problems, ideas, tips, screenshots, voice notes and files with other users. Free to join, messages clean up automatically.",
+    "Join the GiggleNode community for each AI tool. Share problems, ideas, tips, screenshots, voice notes and files with other users. Free to join, messages clean up automatically.",
   alternates: { canonical: "/community" },
 };
 
@@ -149,7 +149,7 @@ export default async function CommunityIndexPage() {
         <header className="bg-[#075e54] px-3 pb-3 pt-4 text-white sm:px-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-[11.5px] font-semibold uppercase tracking-[0.2em] text-white/60">GigleNode</p>
+              <p className="text-[11.5px] font-semibold uppercase tracking-[0.2em] text-white/60">GiggleNode</p>
               <h1 className="mt-1 text-2xl font-extrabold leading-none">Community</h1>
               <p className="mt-1.5 text-[13px] leading-snug text-white/75">
                 {rows.length} {rows.length === 1 ? "community" : "communities"} ·{" "}

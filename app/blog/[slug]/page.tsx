@@ -65,11 +65,11 @@ export default async function PostPage({ params }: Props) {
     author: { "@type": "Person", name: post.author },
     publisher: {
       "@type": "Organization",
-      name: "GigleNode",
-      logo: { "@type": "ImageObject", url: "https://giglenode.com/brand/logo.png" },
+      name: "GiggleNode",
+      logo: { "@type": "ImageObject", url: "https://gigglenode.com/brand/logo.png" },
     },
-    image: "https://giglenode.com/og.png",
-    mainEntityOfPage: { "@type": "WebPage", "@id": `https://giglenode.com/blog/${post.slug}` },
+    image: "https://gigglenode.com/og.png",
+    mainEntityOfPage: { "@type": "WebPage", "@id": `https://gigglenode.com/blog/${post.slug}` },
   };
 
   return (
@@ -109,7 +109,7 @@ export default async function PostPage({ params }: Props) {
         </div>
 
         <div className="mt-6 flex items-center justify-between">
-          <span className="text-xs text-muted">GigleNode Editorial</span>
+          <span className="text-xs text-muted">GiggleNode Editorial</span>
           <ShareButton title={post.title} />
         </div>
 

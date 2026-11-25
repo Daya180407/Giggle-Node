@@ -6,7 +6,7 @@ export type PageSlug = (typeof PAGE_SLUGS)[number];
 export const PAGE_INFO: Record<PageSlug, { title: string; subtitle: string; label: string }> = {
   about: {
     title: "About us",
-    subtitle: "What GigleNode is, how ratings work and why the ranking stays honest.",
+    subtitle: "What GiggleNode is, how ratings work and why the ranking stays honest.",
     label: "Company",
   },
   contact: {
@@ -21,7 +21,7 @@ export const PAGE_INFO: Record<PageSlug, { title: string; subtitle: string; labe
   },
   terms: {
     title: "Terms of use",
-    subtitle: "The rules for using GigleNode, ratings and sponsored listings.",
+    subtitle: "The rules for using GiggleNode, ratings and sponsored listings.",
     label: "Legal",
   },
   disclaimer: {

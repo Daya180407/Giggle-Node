@@ -73,7 +73,7 @@ export function randomToken(): string {
 /* ------------------------------ sessions ------------------------------ */
 
 function sessionSecret(): string {
-  return process.env.SESSION_SECRET || "giglenode-dev-only-secret-change-me";
+  return process.env.SESSION_SECRET || "gigglenode-dev-only-secret-change-me";
 }
 
 async function sign(payload: string): Promise<string> {

@@ -1,4 +1,4 @@
--- GigleNode — Supabase schema
+-- GiggleNode — Supabase schema
 -- PRD section 13 ke hisaab se. Isko Supabase SQL editor me chala kar tables + RLS set kijiye.
 -- App abhi local JSON store (data/db.json) se chalta hai; production me in tables ko use karein.
 
@@ -120,7 +120,7 @@ create table if not exists public.posts (
   related_ai_ids uuid[] default '{}',
   status post_status not null default 'draft',
   sponsored boolean not null default false,
-  author text default 'GigleNode Team',
+  author text default 'GiggleNode Team',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -296,21 +296,21 @@ create policy "admin search logs" on public.search_logs
 -- One JSON document holds the whole site database. `version` gives compare-and-swap
 -- writes so two requests cannot overwrite each other. The server uses the service
 -- role key, so no public policy is created for this table.
-create table if not exists public.giglenode_state (
+create table if not exists public.gigglenode_state (
   id text primary key,
   doc jsonb not null,
   version bigint not null default 1,
   updated_at timestamptz not null default now()
 );
 
-alter table public.giglenode_state enable row level security;
-revoke all on public.giglenode_state from anon, authenticated;
-grant all on public.giglenode_state to service_role;
+alter table public.gigglenode_state enable row level security;
+revoke all on public.gigglenode_state from anon, authenticated;
+grant all on public.gigglenode_state to service_role;
 
 -- ---------- media storage ----------
--- Create a Storage bucket named `giglenode-media` (or set SUPABASE_STORAGE_BUCKET)
+-- Create a Storage bucket named `gigglenode-media` (or set SUPABASE_STORAGE_BUCKET)
 -- for owner avatars and other uploads. Keep it private: reads go through the app's
 -- server routes, which use the service role key.
 insert into storage.buckets (id, name, public)
-values ('giglenode-media', 'giglenode-media', false)
+values ('gigglenode-media', 'gigglenode-media', false)
 on conflict (id) do nothing;

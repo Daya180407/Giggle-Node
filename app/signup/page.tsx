@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Sign up",
-  description: "Create a GigleNode account — rate AI tools, save your shortlist and track your ratings.",
+  description: "Create a GiggleNode account — rate AI tools, save your shortlist and track your ratings.",
 };
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {

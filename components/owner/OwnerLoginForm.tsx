@@ -15,7 +15,7 @@ export default function OwnerLoginForm() {
       <div>
         <h1 className="display text-2xl text-ink">Owner sign in</h1>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          This is the separate login the GigleNode team creates for your AI listing. Your site account does not work
+          This is the separate login the GiggleNode team creates for your AI listing. Your site account does not work
           here.
         </p>
       </div>

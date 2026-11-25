@@ -85,7 +85,7 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
           <label className="label" htmlFor="author">
             Author
           </label>
-          <input id="author" name="author" defaultValue={post?.author ?? "GigleNode Team"} className="field" />
+          <input id="author" name="author" defaultValue={post?.author ?? "GiggleNode Team"} className="field" />
         </div>
       </div>
 

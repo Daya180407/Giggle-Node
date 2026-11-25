@@ -164,7 +164,7 @@ export default function AppForm({
               name="affiliateUrl"
               defaultValue={entry?.affiliateUrl ?? ""}
               className="field"
-              placeholder="https://partner.example.com/ref=giglenode"
+              placeholder="https://partner.example.com/ref=gigglenode"
             />
             <p className="mt-1 text-[11px] text-muted">
               When set, the public card and Visit button open this link with a sponsored rel.

@@ -10,9 +10,9 @@ import { readDb } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Submit an AI tool — GigleNode",
+  title: "Submit an AI tool — GiggleNode",
   description:
-    "Suggest an AI tool for the GigleNode directory. Every submission is reviewed by an editor and ranked by real user ratings, never by payment.",
+    "Suggest an AI tool for the GiggleNode directory. Every submission is reviewed by an editor and ranked by real user ratings, never by payment.",
   alternates: { canonical: "/submit" },
 };
 

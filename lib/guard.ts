@@ -3,7 +3,7 @@ import type { SecuritySettings } from "./types";
 
 /** Search IPs are hashed with a fixed app salt, never stored raw. */
 export async function hashIp(ip: string): Promise<string> {
-  const data = new TextEncoder().encode(`${ip}|giglenode-search-v1`);
+  const data = new TextEncoder().encode(`${ip}|gigglenode-search-v1`);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, "0"))

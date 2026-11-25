@@ -36,7 +36,7 @@ export default async function BlogPage({
         <span className="text-slate-600">Blog</span>
       </nav>
 
-      <span className="eyebrow">GigleNode editorial</span>
+      <span className="eyebrow">GiggleNode editorial</span>
       <h1 className="display mt-1.5 text-3xl text-ink sm:text-4xl">Guides, news &amp; comparisons</h1>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
         Practical tutorials, honest comparisons and top lists. Every post is linked to the live ranking and the AI

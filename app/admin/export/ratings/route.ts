@@ -37,7 +37,7 @@ export async function GET() {
     ]);
   }
 
-  const filename = `giglenode-ratings-${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename = `gigglenode-ratings-${new Date().toISOString().slice(0, 10)}.csv`;
   return new Response(`\uFEFF${toCsv(rows)}`, {
     headers: {
       "content-type": "text/csv; charset=utf-8",

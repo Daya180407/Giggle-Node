@@ -6,8 +6,8 @@
  */
 export const SEED_ACCOUNTS = [
   {
-    email: "admin@giglenode.com",
-    name: "GigleNode Admin",
+    email: "admin@gigglenode.com",
+    name: "GiggleNode Admin",
     password: "admin12345",
     passwordHash: "pbkdf2$100000$Jd5RERy7ZYPNiZKB0ntFzg==$Uq8Sl12AotBVgjtYqqm3uEjsRZjfb62K5hLkvGECn4M=",
     role: "admin" as const,

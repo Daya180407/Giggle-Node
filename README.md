@@ -1,4 +1,4 @@
-# GigleNode — Har AI, Ek Jagah, Sahi Rating Ke Saath
+# GiggleNode — Har AI, Ek Jagah, Sahi Rating Ke Saath
 
 AI tools ka trust-driven directory: real user ratings, model-wise detail, honest comparison aur expert blog posts.
 Built with **Next.js 16 (App Router) + TypeScript + Tailwind CSS v4**, ready for **Supabase + Vercel** aur **Cloudflare Workers** dono par.
@@ -19,7 +19,7 @@ Fresh start ke liye `data/db.json` delete kar dijiye.
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Admin | `admin@giglenode.com` | `admin12345` |
+| Admin | `admin@gigglenode.com` | `admin12345` |
 
 Pehle login ke turant baad `/admin/settings` se password badal dijiye. Signup `/signup` se hota hai,
 reset link `/forgot-password` se. Passwords PBKDF2-SHA256 (100k iterations, per-user salt) se hash hote hain aur
@@ -69,17 +69,17 @@ Weighted Score = (Votes / (Votes + 50)) × avg + (50 / (Votes + 50)) × globalAv
 `lib/store.ts` ek single JSON document store hai jo host ke hisaab se backend chunta hai:
 
 - **Local dev** → `data/db.json`.
-- **Vercel / koi bhi Node host** → Supabase table `giglenode_state` (`doc` jsonb + `version` column, compare-and-swap
+- **Vercel / koi bhi Node host** → Supabase table `gigglenode_state` (`doc` jsonb + `version` column, compare-and-swap
   writes se concurrent updates safe rehte hain).
-- **Cloudflare Workers** → R2 `FILES` bucket (`giglenode/db.json`).
+- **Cloudflare Workers** → R2 `FILES` bucket (`gigglenode/db.json`).
 - Kuch bhi configured na ho → in-memory seed (persist nahi hota).
 
-Owner avatars `lib/assets.ts` se jaate hain: Supabase Storage bucket (default `giglenode-media`), R2, ya local
+Owner avatars `lib/assets.ts` se jaate hain: Supabase Storage bucket (default `gigglenode-media`), R2, ya local
 `data/blobs/`. Uploads server-side rehte hain, public bucket ki zaroorat nahi.
 
 ### Vercel + Supabase deploy
 
-1. Supabase project banaiye aur `supabase/schema.sql` SQL editor me chala dijiye (tables, RLS, `giglenode_state`,
+1. Supabase project banaiye aur `supabase/schema.sql` SQL editor me chala dijiye (tables, RLS, `gigglenode_state`,
    storage bucket).
 2. Vercel → Project → Settings → Environment Variables me daaliye:
    `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET` (long random), aur optionally
@@ -87,7 +87,7 @@ Owner avatars `lib/assets.ts` se jaate hain: Supabase Storage bucket (default `g
    `SUPABASE_SERVICE_ROLE_KEY` sirf server-side hai — kabhi `NEXT_PUBLIC_*` me na daalein aur chat me paste na karein.
 3. Repo ko Vercel par import karke deploy kijiye. Build `npm ci && npm run build` hai; Node 22+ chahiye
    (`package.json` me `engines` set hai).
-4. Deploy ke baad pehli request document seed karti hai. `admin@giglenode.com` / `admin12345` se login karke
+4. Deploy ke baad pehli request document seed karti hai. `admin@gigglenode.com` / `admin12345` se login karke
    password badal dijiye.
 
 Cloudflare Workers par Supabase env vars na daalein; wahan R2 binding pehle se configured hai.

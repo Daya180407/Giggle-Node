@@ -343,7 +343,7 @@ export type Rating = {
   status?: RatingStatus;
   /** how many visitors reported this review */
   reports?: number;
-  /** the reviewer opened this tool from GigleNode before rating it */
+  /** the reviewer opened this tool from GiggleNode before rating it */
   verified?: boolean;
 };
 
@@ -672,7 +672,7 @@ export type CommunityMessage = {
   createdAt: string;
   /** legacy marker from the removed demo seed; purged on boot */
   demo?: boolean;
-  /** the site's own profile (GigleNode team): shows the golden verified tick */
+  /** the site's own profile (GiggleNode team): shows the golden verified tick */
   official?: boolean;
 };
 

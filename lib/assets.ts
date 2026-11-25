@@ -12,7 +12,7 @@ import path from "node:path";
  */
 
 const BLOB_DIR = path.join(process.cwd(), "data", "blobs");
-const SUPABASE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "giglenode-media";
+const SUPABASE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "gigglenode-media";
 
 type R2ObjectLike = { arrayBuffer(): Promise<ArrayBuffer>; httpMetadata?: { contentType?: string } };
 type R2BucketLike = {

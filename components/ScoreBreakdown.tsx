@@ -20,7 +20,7 @@ export default function ScoreBreakdown({ stat, view }: { stat: AiStat; view: Vie
         </h2>
         <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
           Nobody has rated this tool yet, so there is no score to explain. The first real rating starts it. No demo
-          votes, imported averages or purchased scores sit behind any number on GigleNode.
+          votes, imported averages or purchased scores sit behind any number on GiggleNode.
         </p>
       </section>
     );

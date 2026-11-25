@@ -3,7 +3,7 @@ import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-const SITE = "https://giglenode.com";
+const SITE = "https://gigglenode.com";
 
 function escapeXml(value: string) {
   return value
@@ -19,7 +19,7 @@ export async function GET() {
   const db = readDb();
   const view = buildView(db);
   const posts = publishedPosts(db).slice(0, 30);
-  const siteName = view.db.settings?.siteName ?? "GigleNode";
+  const siteName = view.db.settings?.siteName ?? "GiggleNode";
 
   const items = posts
     .map((post) => {

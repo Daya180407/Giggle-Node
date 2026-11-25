@@ -10,13 +10,13 @@ import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 import type { CSSProperties } from "react";
 
-const SITE_URL = "https://giglenode.com";
+const SITE_URL = "https://gigglenode.com";
 const DESCRIPTION =
   "Discover the best AI tools for every job. Real user ratings, model-level detail, honest comparisons, paid-plan picks and expert guides — plus AI mobile apps and desktop software.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = getSiteSettings(readDb());
-  const siteName = settings.siteName || "GigleNode";
+  const siteName = settings.siteName || "GiggleNode";
   const TITLE = `${siteName} — Find the Best AI Tools, Rated by Real Users`;
   return {
   metadataBase: new URL(SITE_URL),
@@ -36,19 +36,19 @@ export async function generateMetadata(): Promise<Metadata> {
     "free AI tools",
     "AI apps",
     "AI desktop software",
-    "GigleNode",
+    "GiggleNode",
   ],
-  applicationName: "GigleNode",
-  authors: [{ name: "GigleNode Editorial", url: `${SITE_URL}/about` }],
-  creator: "GigleNode",
-  publisher: "GigleNode",
+  applicationName: "GiggleNode",
+  authors: [{ name: "GiggleNode Editorial", url: `${SITE_URL}/about` }],
+  creator: "GiggleNode",
+  publisher: "GiggleNode",
   category: "technology",
   alternates: { canonical: "/", languages: { "en-US": "/" } },
   openGraph: {
     title: TITLE,
     description: "Real user ratings and model-level detail, so you pick the right AI the first time.",
     url: SITE_URL,
-    siteName: "GigleNode",
+    siteName: "GiggleNode",
     type: "website",
     locale: "en_US",
     images: [
@@ -56,7 +56,7 @@ export async function generateMetadata(): Promise<Metadata> {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "GigleNode — find the AI that actually fits your work",
+        alt: "GiggleNode — find the AI that actually fits your work",
       },
     ],
   },
@@ -65,7 +65,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: TITLE,
     description: "Real user ratings, model-level comparisons and expert guides for the best AI tools.",
     images: ["/og.png"],
-    creator: "@giglenode",
+    creator: "@gigglenode",
   },
   icons: {
     icon: [
@@ -90,7 +90,7 @@ const structuredData = {
     {
       "@type": "Organization",
       "@id": `${SITE_URL}/#organization`,
-      name: "GigleNode",
+      name: "GiggleNode",
       url: SITE_URL,
       logo: { "@type": "ImageObject", url: `${SITE_URL}/brand/logo.png`, width: 1024, height: 1024 },
       description: "Independent AI tools directory with weighted rankings built from real user ratings.",
@@ -100,7 +100,7 @@ const structuredData = {
       "@type": "WebSite",
       "@id": `${SITE_URL}/#website`,
       url: SITE_URL,
-      name: "GigleNode",
+      name: "GiggleNode",
       publisher: { "@id": `${SITE_URL}/#organization` },
       inLanguage: "en-US",
       potentialAction: {

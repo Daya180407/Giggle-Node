@@ -142,7 +142,7 @@ export default async function AdminPromptsPage({
                       "unknown AI"
                     )}
                     {" · "}
-                    {p.submittedBy ? `Community · ${p.submittedByName || "a member"}` : "GigleNode team"}
+                    {p.submittedBy ? `Community · ${p.submittedByName || "a member"}` : "GiggleNode team"}
                     {p.createdAt ? ` · ${timeAgo(p.createdAt)}` : ""}
                   </p>
                 </div>

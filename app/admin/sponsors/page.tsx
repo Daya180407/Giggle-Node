@@ -594,7 +594,7 @@ function SponsorRow({
               name="affiliateUrl"
               defaultValue={ai.affiliateUrl ?? ""}
               className="field !py-1 text-xs"
-              placeholder="https://partner.example.com/ref=giglenode"
+              placeholder="https://partner.example.com/ref=gigglenode"
             />
           </div>
           <label className="flex items-center gap-1.5 pb-1 text-[11px] text-slate-600">

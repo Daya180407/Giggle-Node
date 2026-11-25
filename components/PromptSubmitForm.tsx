@@ -31,7 +31,7 @@ export default function PromptSubmitForm({
         + Add your own prompt{options ? "" : ` for ${aiName ?? "this AI"}`}
       </summary>
       <p className="mt-1 text-[11px] leading-relaxed text-muted">
-        Free to add and free to use. Prompts from the GigleNode team get a verified tick.
+        Free to add and free to use. Prompts from the GiggleNode team get a verified tick.
       </p>
       <form action={formAction} className="mt-2 space-y-2">
         {options ? (

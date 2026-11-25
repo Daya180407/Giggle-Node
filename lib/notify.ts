@@ -54,7 +54,7 @@ export function renderTemplate(
 ): string {
   return template
     .replaceAll("{{name}}", vars.name ?? "there")
-    .replaceAll("{{site}}", vars.site ?? "GigleNode")
+    .replaceAll("{{site}}", vars.site ?? "GiggleNode")
     .replaceAll("{{ai}}", vars.ai ?? "this AI")
     .replaceAll("{{top5}}", vars.top5 ?? "");
 }
@@ -75,7 +75,7 @@ export function queueEmail(
   const row: EmailMessage = {
     id: id("mail"),
     to: input.to,
-    subject: renderTemplate(input.subject, { site: db.settings?.siteName ?? "GigleNode" }).slice(0, 160),
+    subject: renderTemplate(input.subject, { site: db.settings?.siteName ?? "GiggleNode" }).slice(0, 160),
     body: input.body.slice(0, 8000),
     kind: input.kind,
     createdAt: new Date().toISOString(),

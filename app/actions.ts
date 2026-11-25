@@ -1439,7 +1439,7 @@ export async function savePostAction(formData: FormData) {
       if (payload.status === "published" && getSiteSettings(db).notificationsAuto) {
         pushNotification(db, {
           title: `New guide: ${title}`,
-          body: payload.excerpt || "A new guide is live on GigleNode.",
+          body: payload.excerpt || "A new guide is live on GiggleNode.",
           href: `/blog/${payload.slug}`,
           kind: "post",
           auto: true,
@@ -1533,7 +1533,7 @@ export async function saveSettingsAction(formData: FormData) {
     redirect("/admin/settings?error=email");
   }
 
-  const siteName = String(formData.get("siteName") ?? "").trim().slice(0, 40) || "GigleNode";
+  const siteName = String(formData.get("siteName") ?? "").trim().slice(0, 40) || "GiggleNode";
   const logoEmoji = String(formData.get("logoEmoji") ?? "🤖").slice(0, 4).trim() || "🤖";
   const language: "en" | "hi" = String(formData.get("language") ?? "en") === "hi" ? "hi" : "en";
 
@@ -1818,7 +1818,7 @@ export async function setPostStatusAction(formData: FormData) {
     if (post.status === "published" && getSiteSettings(db).notificationsAuto) {
       pushNotification(db, {
         title: `New guide: ${post.title}`,
-        body: post.excerpt || "A new guide is live on GigleNode.",
+        body: post.excerpt || "A new guide is live on GiggleNode.",
         href: `/blog/${post.slug}`,
         kind: "post",
         auto: true,
@@ -3801,7 +3801,7 @@ function notifyPriceWatchers(db: DB, ai: { id: string; name: string; slug: strin
       to: user.email,
       kind: "newsletter",
       subject: `Price ${direction} on {{site}}: ${ai.name}`,
-      body: `Hi ${user.name},\n\nThe starting plan for ${ai.name} went from $${previousPrice} to $${ai.planPrice} per month.\n\nSee the full pricing history: https://giglenode.com/ai/${ai.slug}#pricing\n\n— The ${settings.siteName} team`,
+      body: `Hi ${user.name},\n\nThe starting plan for ${ai.name} went from $${previousPrice} to $${ai.planPrice} per month.\n\nSee the full pricing history: https://gigglenode.com/ai/${ai.slug}#pricing\n\n— The ${settings.siteName} team`,
           });
   }
 }
@@ -4250,7 +4250,7 @@ export async function replyToReviewAction(_prev: ActionState, formData: FormData
   const isVendor = Boolean(ai.claim && ai.claim.email.toLowerCase() === user.email.toLowerCase());
   const isModerator = canAccess(user.role, "ratings", resolveRoles(db.roles));
   if (!isVendor && !isModerator) {
-    return { ok: false, error: "Only the verified vendor or a GigleNode moderator can reply here." };
+    return { ok: false, error: "Only the verified vendor or a GiggleNode moderator can reply here." };
   }
 
   mutateDb((draft) => {
@@ -4259,7 +4259,7 @@ export async function replyToReviewAction(_prev: ActionState, formData: FormData
       id: uid("rep"),
       ratingId,
       aiId: ai.id,
-      vendorName: isVendor ? ai.claim!.vendorName : `${user.name} · GigleNode`,
+      vendorName: isVendor ? ai.claim!.vendorName : `${user.name} · GiggleNode`,
       email: user.email,
       body,
       createdAt: new Date().toISOString(),

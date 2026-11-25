@@ -6,7 +6,7 @@ import { readDb } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Disclaimer",
-  description: "Editorial independence, affiliate disclosure and limitations of the information on GigleNode.",
+  description: "Editorial independence, affiliate disclosure and limitations of the information on GiggleNode.",
   alternates: { canonical: "/disclaimer" },
 };
 
@@ -34,7 +34,7 @@ export default function DisclaimerPage() {
         <section>
           <h2 className="display text-lg text-ink">Affiliate links</h2>
           <p className="mt-2">
-            Some outbound links may be affiliate links. If you subscribe through one, GigleNode may earn a commission at
+            Some outbound links may be affiliate links. If you subscribe through one, GiggleNode may earn a commission at
             no extra cost to you. This never affects ratings, reviews or the ranking order.
           </p>
         </section>
@@ -50,7 +50,7 @@ export default function DisclaimerPage() {
         <section>
           <h2 className="display text-lg text-ink">No professional advice</h2>
           <p className="mt-2">
-            Content on GigleNode is for general information. It is not legal, financial or professional advice, and you
+            Content on GiggleNode is for general information. It is not legal, financial or professional advice, and you
             should evaluate any tool against your own requirements.
           </p>
         </section>
@@ -67,14 +67,14 @@ export default function DisclaimerPage() {
           <h2 className="display text-lg text-ink">External links</h2>
           <p className="mt-2">
             We are not responsible for the content, policies or practices of third-party websites linked from
-            GigleNode.
+            GiggleNode.
           </p>
         </section>
 
         <p className="text-xs">
           Questions? Email{" "}
-          <a href="mailto:hello@giglenode.com" className="font-semibold text-brand hover:underline">
-            hello@giglenode.com
+          <a href="mailto:hello@gigglenode.com" className="font-semibold text-brand hover:underline">
+            hello@gigglenode.com
           </a>{" "}
           or see our{" "}
           <Link href="/terms" className="font-semibold text-brand hover:underline">

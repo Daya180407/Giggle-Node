@@ -233,7 +233,7 @@ export default async function HomePage({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: "GigleNode top-rated AI tools",
+    name: "GiggleNode top-rated AI tools",
     itemListElement: rankedAis(view)
       .slice(0, 10)
       .map((s, i) => ({
@@ -243,8 +243,8 @@ export default async function HomePage({
           "@type": "SoftwareApplication",
           name: s.ai.name,
           applicationCategory: `${s.ai.category}Application`,
-          url: `https://giglenode.com/ai/${s.ai.slug}`,
-          image: `https://giglenode.com/logos/${s.ai.slug}.png`,
+          url: `https://gigglenode.com/ai/${s.ai.slug}`,
+          image: `https://gigglenode.com/logos/${s.ai.slug}.png`,
           // Only tools with real votes carry a rating in structured data.
           ...(s.votes > 0
             ? {
@@ -301,7 +301,7 @@ export default async function HomePage({
               </div>
 
               <h1 className="anim-rise delay-1 mt-7">
-                <span className="sr-only">GigleNode — </span>
+                <span className="sr-only">GiggleNode — </span>
                 <span className="display block text-[clamp(2.45rem,6.4vw,4.65rem)] leading-[1.02] tracking-[-0.045em] text-white">
                   {settings.heroTitle} <span className="hero-gradient">{settings.heroHighlight}</span> {settings.heroSuffix}
                 </span>

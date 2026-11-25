@@ -163,7 +163,7 @@ const POST_EN: Record<string, { title: string; excerpt: string; content: string 
     content: `New AI tools appear every month, but most free plans are not enough to do real work. This list covers the tools whose free tier genuinely earns its place.
 
 ## How we chose
-We looked at three things: the real limits of the free plan, output quality, and how GigleNode users rate the tool. Anything that only offers a demo did not make the cut.
+We looked at three things: the real limits of the free plan, output quality, and how GiggleNode users rate the tool. Anything that only offers a demo did not make the cut.
 
 ## The truth about free tiers
 A free plan rarely means "free forever". Most tools run on credits. Write down your monthly volume first, then choose the tool that fits it.
@@ -248,7 +248,7 @@ The low end sounds slightly muddy, but mastering fixes most of it.
 9/10 for background music and jingles. A full album still needs a human producer.`,
   },
   "fake-ai-ratings": {
-    title: "How Fake AI Ratings Happen — and What GigleNode Does About It",
+    title: "How Fake AI Ratings Happen — and What GiggleNode Does About It",
     excerpt: "Our four-layer system against paid reviews and bot votes.",
     content: `Fake ratings are the biggest problem in AI directories. We built four rules to fight them.
 

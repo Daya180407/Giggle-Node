@@ -26,7 +26,7 @@ export default async function OwnerDashboardPage() {
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
           You can edit the plans, starting price, models and draft posts of the listings below. Site-level fields
           (featured, sponsored, hidden, affiliate links), deleting models or plans, reviews and ratings stay with the
-          GigleNode team. Every edit you save is recorded with a before/after snapshot.
+          GiggleNode team. Every edit you save is recorded with a before/after snapshot.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
           <span className={`chip ${pending.length ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500"}`}>

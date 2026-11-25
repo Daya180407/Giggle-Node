@@ -48,7 +48,7 @@ function safeNext(value: string): string {
 async function siteOrigin(): Promise<string> {
   const headerList = await headers();
   const proto = headerList.get("x-forwarded-proto") ?? "https";
-  const host = headerList.get("host") ?? "giglenode.com";
+  const host = headerList.get("host") ?? "gigglenode.com";
   return `${proto}://${host}`;
 }
 

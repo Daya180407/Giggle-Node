@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Search AI Tools, Models & Guides",
-  description: "Search by tool name, category or task — GigleNode takes you straight to the right AI.",
+  description: "Search by tool name, category or task — GiggleNode takes you straight to the right AI.",
   alternates: { canonical: "/search" },
   robots: { index: false, follow: true },
 };

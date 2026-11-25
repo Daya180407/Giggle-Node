@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "GigleNode — AI Tools, Ratings & Comparisons",
-    short_name: "GigleNode",
+    name: "GiggleNode — AI Tools, Ratings & Comparisons",
+    short_name: "GiggleNode",
     description: "Independent AI directory with real user ratings, model-level comparisons and expert guides.",
     start_url: "/",
     display: "standalone",

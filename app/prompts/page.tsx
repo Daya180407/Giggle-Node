@@ -72,7 +72,7 @@ export default async function PromptsLibraryPage({ searchParams }: Props) {
           Free AI prompts, ready to copy
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-          Practical prompts for every tool in the directory. Prompts written and checked by the GigleNode team carry a
+          Practical prompts for every tool in the directory. Prompts written and checked by the GiggleNode team carry a
           verified tick; community prompts are shared by signed-in members. Everything here is free to copy and use.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
@@ -152,7 +152,7 @@ export default async function PromptsLibraryPage({ searchParams }: Props) {
                 {verifiedPrompt ? (
                   <span
                     className="chip ml-auto bg-emerald-50 text-emerald-700"
-                    title="Written or checked by the GigleNode team"
+                    title="Written or checked by the GiggleNode team"
                   >
                     ✓ Verified
                   </span>
@@ -162,7 +162,7 @@ export default async function PromptsLibraryPage({ searchParams }: Props) {
               <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-slate-600">{p.promptText}</p>
               <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
                 <span className="text-[10.5px] text-muted">
-                  {verifiedPrompt && !p.submittedBy ? "GigleNode team" : `Community · ${p.submittedByName || "a member"}`}
+                  {verifiedPrompt && !p.submittedBy ? "GiggleNode team" : `Community · ${p.submittedByName || "a member"}`}
                   {p.createdAt ? ` · ${timeAgo(p.createdAt)}` : ""}
                 </span>
                 <span className="ml-auto">

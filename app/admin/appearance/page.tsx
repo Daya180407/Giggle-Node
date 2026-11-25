@@ -168,7 +168,7 @@ export default async function AdminAppearancePage({
                 className="field !py-2 text-xs"
                 spellCheck={false}
               />
-              <p className="mt-1 text-[11px] text-muted">Leave empty to use the default GigleNode mark.</p>
+              <p className="mt-1 text-[11px] text-muted">Leave empty to use the default GiggleNode mark.</p>
             </div>
             <div className="flex items-center gap-2">
               {appearance.logoImage ? (

@@ -1,11 +1,11 @@
 /**
- * Golden verified tick for the site's own profile (GigleNode team) and for
+ * Golden verified tick for the site's own profile (GiggleNode team) and for
  * admin accounts posting in the community. The shine animation lives in
  * globals.css (.tick-gold) and stops for visitors who prefer reduced motion.
  */
 export default function OfficialTick({
   size = 15,
-  label = "Official GigleNode account",
+  label = "Official GiggleNode account",
 }: {
   size?: number;
   label?: string;

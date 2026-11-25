@@ -66,7 +66,7 @@ export async function GET() {
     ownerChanges: db.ownerChanges ?? [],
   };
 
-  const filename = `giglenode-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = `gigglenode-backup-${new Date().toISOString().slice(0, 10)}.json`;
   return new Response(JSON.stringify(payload), {
     headers: {
       "content-type": "application/json; charset=utf-8",

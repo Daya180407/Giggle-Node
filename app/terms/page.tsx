@@ -6,7 +6,7 @@ import { readDb } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Terms of Use",
-  description: "The rules for using GigleNode, posting ratings and interacting with listings.",
+  description: "The rules for using GiggleNode, posting ratings and interacting with listings.",
   alternates: { canonical: "/terms" },
 };
 
@@ -26,7 +26,7 @@ export default function TermsPage() {
         <section>
           <h2 className="display text-lg text-ink">1. Acceptance</h2>
           <p className="mt-2">
-            By accessing GigleNode you agree to these terms. If you do not agree, please do not use the site.
+            By accessing GiggleNode you agree to these terms. If you do not agree, please do not use the site.
           </p>
         </section>
 
@@ -57,7 +57,7 @@ export default function TermsPage() {
         <section>
           <h2 className="display text-lg text-ink">5. Intellectual property</h2>
           <p className="mt-2">
-            Site design, original copy and the ranking system belong to GigleNode. Tool names, logos and trademarks
+            Site design, original copy and the ranking system belong to GiggleNode. Tool names, logos and trademarks
             belong to their respective owners.
           </p>
         </section>
@@ -65,7 +65,7 @@ export default function TermsPage() {
         <section>
           <h2 className="display text-lg text-ink">6. Limitation of liability</h2>
           <p className="mt-2">
-            GigleNode is provided “as is”. We do not guarantee uninterrupted availability or that any tool will meet
+            GiggleNode is provided “as is”. We do not guarantee uninterrupted availability or that any tool will meet
             your requirements. To the extent permitted by law, we are not liable for indirect or consequential loss
             arising from use of the site.
           </p>
@@ -83,8 +83,8 @@ export default function TermsPage() {
           <h2 className="display text-lg text-ink">8. Contact</h2>
           <p className="mt-2">
             For legal or terms questions, email{" "}
-            <a href="mailto:hello@giglenode.com" className="font-semibold text-brand hover:underline">
-              hello@giglenode.com
+            <a href="mailto:hello@gigglenode.com" className="font-semibold text-brand hover:underline">
+              hello@gigglenode.com
             </a>{" "}
             or visit the <Link href="/contact" className="font-semibold text-brand hover:underline">contact page</Link>.
           </p>

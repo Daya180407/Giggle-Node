@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Changelog",
-  description: "What's new on GigleNode — new features, catalogue updates and ranking changes.",
+  description: "What's new on GiggleNode — new features, catalogue updates and ranking changes.",
   alternates: { canonical: "/changelog" },
 };
 

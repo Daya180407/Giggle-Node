@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const db = readDb();
-  const base = "https://giglenode.com";
+  const base = "https://gigglenode.com";
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [

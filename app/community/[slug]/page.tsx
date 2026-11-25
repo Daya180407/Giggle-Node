@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${room.title} — Ask, Share & Help`,
     description:
       room.description ||
-      `The GigleNode community room for ${ai?.name ?? "any AI tool"}. Share problems, ideas, tips, screenshots, voice notes and files with other users. Free to join.`,
+      `The GiggleNode community room for ${ai?.name ?? "any AI tool"}. Share problems, ideas, tips, screenshots, voice notes and files with other users. Free to join.`,
     alternates: { canonical: `/community/${room.slug}` },
   };
 }
@@ -88,10 +88,10 @@ export default async function CommunityRoomPage({ params, searchParams }: Props)
   const found = findCommunityRoom(db, slug);
   if (!found) notFound();
   const { ai, room } = found;
-  // Official profiles: the site team (admin role or a giglenode.com mailbox).
+  // Official profiles: the site team (admin role or a gigglenode.com mailbox).
   const officialUserIds = new Set(
     db.users
-      .filter((row) => row.role === "admin" || row.email.toLowerCase().endsWith("@giglenode.com"))
+      .filter((row) => row.role === "admin" || row.email.toLowerCase().endsWith("@gigglenode.com"))
       .map((row) => row.id),
   );
 

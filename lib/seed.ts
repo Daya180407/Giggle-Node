@@ -1131,7 +1131,7 @@ const POST_SEED: {
     content: `Har mahine naye AI tools aa rahe hain, par free plan kaafi nahi hota. Is list me humne wahi tools chune hain jinka free tier sach me kaam ka hai.
 
 ## Kaise chune gaye
-Humne teen cheezein dekhi: free plan ki real limit, output quality, aur GigleNode users ki rating. Jo tool sirf demo deta hai wo list me nahi hai.
+Humne teen cheezein dekhi: free plan ki real limit, output quality, aur GiggleNode users ki rating. Jo tool sirf demo deta hai wo list me nahi hai.
 
 ## Free tier ka sach
 Free plan ka matlab "hamesha free" nahi hota. Zyada tar tools credit system chalate hain. Isliye pehle apna monthly volume likhiye, phir tool chuniye.
@@ -1241,7 +1241,7 @@ Low end thoda muddy lagta hai, par mastering se theek ho jata hai.
 Background music aur jingles ke liye 9/10. Full album ke liye abhi human producer chahiye.`,
   },
   {
-    title: "AI Rating Fake Kaise Hote Hain Aur GigleNode Kya Karta Hai",
+    title: "AI Rating Fake Kaise Hote Hain Aur GiggleNode Kya Karta Hai",
     slug: "fake-ai-ratings",
     type: "news",
     excerpt: "Paid reviews aur bot votes se bachaav ke liye hamara 4-layer system.",
@@ -1385,8 +1385,8 @@ export function buildSeed(): DB {
   // review and vote has to come from a visitor, so no reviewers are pre-seeded.
   users.push({
     id: "u_admin",
-    name: "GigleNode Admin",
-    email: "admin@giglenode.com",
+    name: "GiggleNode Admin",
+    email: "admin@gigglenode.com",
     avatar: "G",
     role: "admin",
     createdAt: isoDaysAgo(400),
@@ -1470,7 +1470,7 @@ export function buildSeed(): DB {
       type: p.type,
       relatedAiIds: p.ai.map((s) => `ai_${s}`),
       status: "published",
-      author: p.sponsored ? "GigleNode Team" : i % 3 === 0 ? "GigleNode Team" : "Aarav Sharma",
+      author: p.sponsored ? "GiggleNode Team" : i % 3 === 0 ? "GiggleNode Team" : "Aarav Sharma",
       sponsored: Boolean(p.sponsored),
       createdAt: created,
       updatedAt: created,
@@ -1489,7 +1489,7 @@ export function buildSeed(): DB {
     type: "top10",
     relatedAiIds: ["ai_zapier-ai", "ai_copy-ai"],
     status: "draft",
-    author: "GigleNode Team",
+    author: "GiggleNode Team",
     sponsored: false,
     createdAt: isoDaysAgo(1),
     updatedAt: isoDaysAgo(1),

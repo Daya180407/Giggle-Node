@@ -10,7 +10,7 @@ import { readDb } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Sponsor GigleNode — sponsored AI & app placements",
+  title: "Sponsor GiggleNode — sponsored AI & app placements",
   description:
     "Put your AI tool, app or software in front of people actively comparing tools. Sponsored rows are always labelled and never change the ratings or the real ranking.",
   alternates: { canonical: "/sponsor" },
@@ -39,7 +39,7 @@ export default async function SponsorPage() {
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <header className="text-center">
         <span className="chip chip-brand mx-auto">💼 Advertise</span>
-        <h1 className="display mt-3 text-3xl text-ink sm:text-4xl">Sponsor GigleNode</h1>
+        <h1 className="display mt-3 text-3xl text-ink sm:text-4xl">Sponsor GiggleNode</h1>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
           Get your AI tool, app or software in front of people who are actively comparing tools. Choose the exact list
           and position — your row is always labelled <strong>Sponsored</strong> and keeps its real rank, so the
@@ -58,7 +58,7 @@ export default async function SponsorPage() {
             <p className="eyebrow">Price list</p>
             <h2 className="display mt-1 text-xl text-ink sm:text-2xl">Where you can appear</h2>
           </div>
-          <span className="text-[11px] text-muted">Prices are for 30 days · set by the GigleNode team</span>
+          <span className="text-[11px] text-muted">Prices are for 30 days · set by the GiggleNode team</span>
         </div>
         <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
           {SPONSOR_SLOTS.map((slot) => (
@@ -131,7 +131,7 @@ export default async function SponsorPage() {
           <section className="card p-4">
             <h2 className="display text-base text-ink">Not listed yet?</h2>
             <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
-              A sponsored row links to an existing listing. If your product is not on GigleNode yet, suggest it first —
+              A sponsored row links to an existing listing. If your product is not on GiggleNode yet, suggest it first —
               an editor verifies the site and pricing before it goes live.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">

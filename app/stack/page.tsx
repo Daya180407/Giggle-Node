@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "AI stack planner — build the best tool set for your budget",
   description:
-    "Pick your monthly budget and what you need. GigleNode builds the highest-rated AI stack that fits, using real user ratings and current starting prices.",
+    "Pick your monthly budget and what you need. GiggleNode builds the highest-rated AI stack that fits, using real user ratings and current starting prices.",
   alternates: { canonical: "/stack" },
 };
 

@@ -34,7 +34,7 @@ export default async function SiteHeader() {
           )}
           <span className="leading-tight">
             <span className="display block text-[17px] text-ink sm:text-[19px]">
-              Gigle<span className="gradient-text">Node</span>
+              Giggle<span className="gradient-text">Node</span>
             </span>
             <span className="hidden text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:block">
               AI Discovery Platform

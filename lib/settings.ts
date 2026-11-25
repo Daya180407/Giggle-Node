@@ -1,13 +1,13 @@
 import type { DB, SiteSettings } from "./types";
 
 export const AI_SEARCH_PROMPT =
-  'You are GigleNode search assistant. User query: {{query}}. Return ONLY JSON: {"category": "Writing|Coding|Image|Video|Voice|Music|Design|Productivity|Business|Education|Other", "budget": "free|freemium|paid|any", "use_case": "short text"}. Do NOT invent any AI name. Only return category.';
+  'You are GiggleNode search assistant. User query: {{query}}. Return ONLY JSON: {"category": "Writing|Coding|Image|Video|Voice|Music|Design|Productivity|Business|Education|Other", "budget": "free|freemium|paid|any", "use_case": "short text"}. Do NOT invent any AI name. Only return category.';
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   announcementEnabled: false,
-  announcementText: "New: 91 mobile apps and 95 desktop tools are now rated on GigleNode.",
+  announcementText: "New: 91 mobile apps and 95 desktop tools are now rated on GiggleNode.",
   announcementHref: "/#apps",
-  siteName: "GigleNode",
+  siteName: "GiggleNode",
   logoEmoji: "🤖",
   language: "en",
   heroTitle: "Find the AI that",
@@ -33,7 +33,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   adsTopSlot: "",
   adsSidebarSlot: "",
   adsArticleSlot: "",
-  supportEmail: "hello@giglenode.com",
+  supportEmail: "hello@gigglenode.com",
   notificationsAuto: true,
   community: {
     enabled: true,

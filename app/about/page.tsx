@@ -5,8 +5,8 @@ import { customPageIsLive } from "@/lib/pages";
 import { readDb } from "@/lib/store";
 
 export const metadata: Metadata = {
-  title: "About GigleNode",
-  description: "What GigleNode is, how ratings work and how the ranking formula stays honest.",
+  title: "About GiggleNode",
+  description: "What GiggleNode is, how ratings work and how the ranking formula stays honest.",
   alternates: { canonical: "/about" },
 };
 
@@ -22,7 +22,7 @@ export default function AboutPage() {
           An AI directory built on <span className="gradient-text">real user signal</span>
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
-          GigleNode is an independent AI trust system. Finding the right AI has become confusing — a new tool, a new
+          GiggleNode is an independent AI trust system. Finding the right AI has become confusing — a new tool, a new
           model and a new claim every week. We replace the noise with verified ratings, model-level detail and honest
           editorial, all in one place.
         </p>

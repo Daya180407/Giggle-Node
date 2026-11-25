@@ -9,7 +9,7 @@ import type { DB } from "./types";
  * Data layer.
  * - Local Node dev: `data/db.json` (read + write).
  * - Cloudflare Workers: one JSON document in the `FILES` R2 bucket.
- * - Vercel / any Node host: one JSON document in Supabase (`giglenode_state`).
+ * - Vercel / any Node host: one JSON document in Supabase (`gigglenode_state`).
  * - Last resort: an in-memory seed (no persistence).
  *
  * Concurrent safety: every remote write uses compare-and-swap (R2 object ETag,
@@ -20,10 +20,13 @@ import type { DB } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
-const R2_KEY = "giglenode/db.json";
+const R2_KEY = "gigglenode/db.json";
+// Documents written before the brand spelling fix live under the old key; read them once
+// so the rename never resets live data.
+const LEGACY_R2_KEY = "giglenode/db.json";
 const MAX_CAS_ATTEMPTS = 5;
 
-const SUPABASE_TABLE = "giglenode_state";
+const SUPABASE_TABLE = "gigglenode_state";
 const SUPABASE_ROW = "main";
 
 type Runtime = "fs" | "r2" | "supabase" | "memory";
@@ -40,17 +43,17 @@ type R2Like = {
 };
 
 const g = globalThis as typeof globalThis & {
-  __giglenodeDb?: DB;
-  __giglenodeRuntime?: Runtime;
-  __giglenodeEtag?: string | null;
-  __giglenodeVersion?: string | null;
-  __giglenodePending?: Mutator[];
-  __giglenodeFlushing?: boolean;
-  __giglenodeFlush?: Promise<void> | null;
-  __giglenodeBootError?: string | null;
-  __giglenodeSyncedAt?: number;
-  __giglenodeMtime?: number;
-  __giglenodeSupabaseFailed?: boolean;
+  __gigglenodeDb?: DB;
+  __gigglenodeRuntime?: Runtime;
+  __gigglenodeEtag?: string | null;
+  __gigglenodeVersion?: string | null;
+  __gigglenodePending?: Mutator[];
+  __gigglenodeFlushing?: boolean;
+  __gigglenodeFlush?: Promise<void> | null;
+  __gigglenodeBootError?: string | null;
+  __gigglenodeSyncedAt?: number;
+  __gigglenodeMtime?: number;
+  __gigglenodeSupabaseFailed?: boolean;
 };
 
 /* ------------------------------ node fs ------------------------------ */
@@ -78,7 +81,7 @@ function writeNodeDb(db: DB): boolean {
     const tmp = `${DB_FILE}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(db));
     fs.renameSync(tmp, DB_FILE);
-    g.__giglenodeMtime = nodeDbMtime();
+    g.__gigglenodeMtime = nodeDbMtime();
     return true;
   } catch {
     return false;
@@ -193,11 +196,14 @@ async function r2Bucket(): Promise<R2Like | null> {
 
 async function r2Read(bucket: R2Like): Promise<RemoteRead> {
   try {
-    const object = await bucket.get(R2_KEY);
+    const current = await bucket.get(R2_KEY);
+    const object = current ?? (await bucket.get(LEGACY_R2_KEY));
     if (!object) return { ok: true, found: false, db: null, token: null };
+    // A legacy object's ETag belongs to another key, so the first write must create R2_KEY.
+    const token = current ? object.etag ?? null : null;
     const parsed = JSON.parse(await object.text()) as DB;
-    if (!parsed?.ai || !parsed?.ratings) return { ok: true, found: false, db: null, token: object.etag ?? null };
-    return { ok: true, found: true, db: parsed, token: object.etag ?? null };
+    if (!parsed?.ai || !parsed?.ratings) return { ok: true, found: false, db: null, token };
+    return { ok: true, found: true, db: parsed, token };
   } catch {
     return { ok: false, found: false, db: null, token: null };
   }
@@ -218,13 +224,13 @@ async function r2Write(bucket: R2Like, db: DB, token: string | null): Promise<Wr
 /* ----------------------------- bootstrap ----------------------------- */
 
 async function bootstrap(): Promise<void> {
-  if (g.__giglenodeDb) return;
+  if (g.__gigglenodeDb) return;
 
   const nodeDb = readNodeDb();
   if (nodeDb) {
-    g.__giglenodeDb = nodeDb;
-    g.__giglenodeRuntime = "fs";
-    g.__giglenodeMtime = nodeDbMtime();
+    g.__gigglenodeDb = nodeDb;
+    g.__gigglenodeRuntime = "fs";
+    g.__gigglenodeMtime = nodeDbMtime();
     if (await migrateDb(nodeDb)) writeNodeDb(nodeDb);
     return;
   }
@@ -234,48 +240,48 @@ async function bootstrap(): Promise<void> {
     const remote = await supabaseRead();
     if (remote.ok) {
       if (remote.found && remote.db) {
-        g.__giglenodeDb = remote.db;
-        g.__giglenodeRuntime = "supabase";
-        g.__giglenodeVersion = remote.token;
-        g.__giglenodeSyncedAt = Date.now();
+        g.__gigglenodeDb = remote.db;
+        g.__gigglenodeRuntime = "supabase";
+        g.__gigglenodeVersion = remote.token;
+        g.__gigglenodeSyncedAt = Date.now();
         if ((await migrateDb(remote.db)) && (await supabaseWrite(remote.db, remote.token)) !== "error") {
           const again = await supabaseRead();
-          g.__giglenodeVersion = again.token;
+          g.__gigglenodeVersion = again.token;
         }
         return;
       }
 
       const seed = buildSeed();
       await migrateDb(seed);
-      g.__giglenodeDb = seed;
-      g.__giglenodeRuntime = "supabase";
+      g.__gigglenodeDb = seed;
+      g.__gigglenodeRuntime = "supabase";
       const created = await supabaseWrite(seed, null);
       if (created === "conflict") {
         const retry = await supabaseRead();
         if (retry.found && retry.db) {
-          g.__giglenodeDb = retry.db;
-          g.__giglenodeVersion = retry.token;
+          g.__gigglenodeDb = retry.db;
+          g.__gigglenodeVersion = retry.token;
           return;
         }
       } else if (created !== "error") {
-        g.__giglenodeVersion = created.token;
+        g.__gigglenodeVersion = created.token;
       }
       return;
     }
-    g.__giglenodeSupabaseFailed = true;
+    g.__gigglenodeSupabaseFailed = true;
   }
 
   const bucket = await r2Bucket();
   if (bucket) {
     const cloud = await r2Read(bucket);
     if (cloud.found && cloud.db) {
-      g.__giglenodeDb = cloud.db;
-      g.__giglenodeRuntime = "r2";
-      g.__giglenodeEtag = cloud.token;
-      g.__giglenodeSyncedAt = Date.now();
+      g.__gigglenodeDb = cloud.db;
+      g.__gigglenodeRuntime = "r2";
+      g.__gigglenodeEtag = cloud.token;
+      g.__gigglenodeSyncedAt = Date.now();
       if (await migrateDb(cloud.db)) {
         const result = await r2Write(bucket, cloud.db, cloud.token);
-        if (result !== "error" && result !== "conflict") g.__giglenodeEtag = result.token;
+        if (result !== "error" && result !== "conflict") g.__gigglenodeEtag = result.token;
       }
       return;
     }
@@ -283,18 +289,18 @@ async function bootstrap(): Promise<void> {
     if (cloud.ok) {
       const seed = buildSeed();
       await migrateDb(seed);
-      g.__giglenodeDb = seed;
-      g.__giglenodeRuntime = "r2";
+      g.__gigglenodeDb = seed;
+      g.__gigglenodeRuntime = "r2";
       const result = await r2Write(bucket, seed, null);
       if (result === "error" || result === "conflict") {
         const retry = await r2Read(bucket);
         if (retry.found && retry.db) {
-          g.__giglenodeDb = retry.db;
-          g.__giglenodeEtag = retry.token;
+          g.__gigglenodeDb = retry.db;
+          g.__gigglenodeEtag = retry.token;
           return;
         }
       } else {
-        g.__giglenodeEtag = result.token;
+        g.__gigglenodeEtag = result.token;
       }
       return;
     }
@@ -302,12 +308,12 @@ async function bootstrap(): Promise<void> {
 
   const seed = buildSeed();
   await migrateDb(seed);
-  g.__giglenodeDb = seed;
+  g.__gigglenodeDb = seed;
 
   if (writeNodeDb(seed)) {
-    g.__giglenodeRuntime = "fs";
+    g.__gigglenodeRuntime = "fs";
   } else {
-    g.__giglenodeRuntime = "memory";
+    g.__gigglenodeRuntime = "memory";
   }
 }
 
@@ -315,27 +321,27 @@ async function bootstrap(): Promise<void> {
 // A startup failure must never take the whole site down: fall back to an in-memory seed.
 try {
   await bootstrap();
-  g.__giglenodeBootError = g.__giglenodeSupabaseFailed
-    ? "Supabase is configured but the giglenode_state table could not be read."
+  g.__gigglenodeBootError = g.__gigglenodeSupabaseFailed
+    ? "Supabase is configured but the gigglenode_state table could not be read."
     : null;
 } catch (error) {
-  g.__giglenodeBootError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-  if (!g.__giglenodeDb) {
-    g.__giglenodeDb = buildSeed();
-    g.__giglenodeRuntime = "memory";
+  g.__gigglenodeBootError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  if (!g.__gigglenodeDb) {
+    g.__gigglenodeDb = buildSeed();
+    g.__gigglenodeRuntime = "memory";
   }
 }
 
 /* ------------------------------- writes ------------------------------ */
 
 function pendingMutators(): Mutator[] {
-  if (!g.__giglenodePending) g.__giglenodePending = [];
-  return g.__giglenodePending;
+  if (!g.__gigglenodePending) g.__gigglenodePending = [];
+  return g.__gigglenodePending;
 }
 
 async function readRemote(): Promise<RemoteRead> {
-  if (g.__giglenodeRuntime === "supabase") return supabaseRead();
-  if (g.__giglenodeRuntime === "r2") {
+  if (g.__gigglenodeRuntime === "supabase") return supabaseRead();
+  if (g.__gigglenodeRuntime === "r2") {
     const bucket = await r2Bucket();
     return bucket ? r2Read(bucket) : { ok: false, found: false, db: null, token: null };
   }
@@ -343,8 +349,8 @@ async function readRemote(): Promise<RemoteRead> {
 }
 
 async function writeRemote(db: DB, token: string | null): Promise<WriteResult> {
-  if (g.__giglenodeRuntime === "supabase") return supabaseWrite(db, token);
-  if (g.__giglenodeRuntime === "r2") {
+  if (g.__gigglenodeRuntime === "supabase") return supabaseWrite(db, token);
+  if (g.__gigglenodeRuntime === "r2") {
     const bucket = await r2Bucket();
     return bucket ? r2Write(bucket, db, token) : "error";
   }
@@ -352,7 +358,7 @@ async function writeRemote(db: DB, token: string | null): Promise<WriteResult> {
 }
 
 async function writePending(): Promise<void> {
-  if (g.__giglenodeRuntime !== "supabase" && g.__giglenodeRuntime !== "r2") return;
+  if (g.__gigglenodeRuntime !== "supabase" && g.__gigglenodeRuntime !== "r2") return;
 
   const pending = pendingMutators();
   while (pending.length > 0) {
@@ -360,12 +366,12 @@ async function writePending(): Promise<void> {
     let written = false;
 
     for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS && !written; attempt++) {
-      const token = g.__giglenodeRuntime === "supabase" ? g.__giglenodeVersion ?? null : g.__giglenodeEtag ?? null;
+      const token = g.__gigglenodeRuntime === "supabase" ? g.__gigglenodeVersion ?? null : g.__gigglenodeEtag ?? null;
       const result = await writeRemote(readDb(), token);
 
       if (result !== "conflict" && result !== "error") {
-        if (g.__giglenodeRuntime === "supabase") g.__giglenodeVersion = result.token;
-        else g.__giglenodeEtag = result.token;
+        if (g.__gigglenodeRuntime === "supabase") g.__gigglenodeVersion = result.token;
+        else g.__gigglenodeEtag = result.token;
         pending.splice(0, batch.length);
         written = true;
         break;
@@ -385,8 +391,8 @@ async function writePending(): Promise<void> {
         }
       }
       Object.assign(readDb(), fresh);
-      if (g.__giglenodeRuntime === "supabase") g.__giglenodeVersion = remote.token;
-      else g.__giglenodeEtag = remote.token;
+      if (g.__gigglenodeRuntime === "supabase") g.__gigglenodeVersion = remote.token;
+      else g.__gigglenodeEtag = remote.token;
       await new Promise((resolve) => setTimeout(resolve, 25 + attempt * 40));
     }
 
@@ -402,23 +408,23 @@ async function writePending(): Promise<void> {
  */
 async function flushCloud(): Promise<void> {
   for (let round = 0; round < 3; round++) {
-    if (!g.__giglenodeFlushing) {
-      if (g.__giglenodeRuntime !== "supabase" && g.__giglenodeRuntime !== "r2") return;
-      g.__giglenodeFlushing = true;
+    if (!g.__gigglenodeFlushing) {
+      if (g.__gigglenodeRuntime !== "supabase" && g.__gigglenodeRuntime !== "r2") return;
+      g.__gigglenodeFlushing = true;
       const run = writePending();
-      g.__giglenodeFlush = run;
+      g.__gigglenodeFlush = run;
       try {
         await run;
       } catch {
         // Keep the mutations queued; the next mutation or request retries them.
       } finally {
-        g.__giglenodeFlushing = false;
-        g.__giglenodeFlush = null;
+        g.__gigglenodeFlushing = false;
+        g.__gigglenodeFlush = null;
       }
       return;
     }
 
-    const running = g.__giglenodeFlush;
+    const running = g.__gigglenodeFlush;
     if (running) {
       try {
         await running;
@@ -450,17 +456,17 @@ export function readDb(): DB {
   // Production can serve requests from more than one instance. Pick up a document
   // written by another instance so admin saves and public submissions are visible
   // on the very next request instead of only after a restart.
-  if (g.__giglenodeRuntime === "fs" && g.__giglenodeMtime) {
+  if (g.__gigglenodeRuntime === "fs" && g.__gigglenodeMtime) {
     const mtime = nodeDbMtime();
-    if (mtime && mtime !== g.__giglenodeMtime) {
+    if (mtime && mtime !== g.__gigglenodeMtime) {
       const fresh = readNodeDb();
       if (fresh) {
-        Object.assign(g.__giglenodeDb!, fresh);
-        g.__giglenodeMtime = mtime;
+        Object.assign(g.__gigglenodeDb!, fresh);
+        g.__gigglenodeMtime = mtime;
       }
     }
   }
-  return g.__giglenodeDb!;
+  return g.__gigglenodeDb!;
 }
 
 /**
@@ -468,7 +474,7 @@ export function readDb(): DB {
  * redirecting so an immediate login on another instance always sees the account change.
  */
 export async function flushPendingWrites(): Promise<void> {
-  if (g.__giglenodeRuntime !== "supabase" && g.__giglenodeRuntime !== "r2") return;
+  if (g.__gigglenodeRuntime !== "supabase" && g.__gigglenodeRuntime !== "r2") return;
   if (pendingMutators().length === 0) return;
   await flushCloud();
 }
@@ -480,39 +486,39 @@ export async function flushPendingWrites(): Promise<void> {
  * logged-in header can look right after signup.
  */
 export async function refreshDb(maxAgeMs?: number): Promise<DB> {
-  if (g.__giglenodeRuntime === "supabase" || g.__giglenodeRuntime === "r2") {
-    if (!g.__giglenodeDb) return buildSeed();
-    if (maxAgeMs !== undefined && g.__giglenodeSyncedAt && Date.now() - g.__giglenodeSyncedAt < maxAgeMs) {
-      return g.__giglenodeDb;
+  if (g.__gigglenodeRuntime === "supabase" || g.__gigglenodeRuntime === "r2") {
+    if (!g.__gigglenodeDb) return buildSeed();
+    if (maxAgeMs !== undefined && g.__gigglenodeSyncedAt && Date.now() - g.__gigglenodeSyncedAt < maxAgeMs) {
+      return g.__gigglenodeDb;
     }
     // Never refresh away writes that have not reached the remote document yet.
     if (pendingMutators().length > 0) await flushCloud();
     if (pendingMutators().length > 0) {
-      g.__giglenodeSyncedAt = Date.now();
-      return g.__giglenodeDb;
+      g.__gigglenodeSyncedAt = Date.now();
+      return g.__gigglenodeDb;
     }
 
     const remote = await readRemote();
     if (remote.found && remote.db) {
-      Object.assign(g.__giglenodeDb, remote.db);
-      if (g.__giglenodeRuntime === "supabase") g.__giglenodeVersion = remote.token;
-      else g.__giglenodeEtag = remote.token;
+      Object.assign(g.__gigglenodeDb, remote.db);
+      if (g.__gigglenodeRuntime === "supabase") g.__gigglenodeVersion = remote.token;
+      else g.__gigglenodeEtag = remote.token;
     }
-    g.__giglenodeSyncedAt = Date.now();
-    return g.__giglenodeDb;
+    g.__gigglenodeSyncedAt = Date.now();
+    return g.__gigglenodeDb;
   }
-  return g.__giglenodeDb ?? buildSeed();
+  return g.__gigglenodeDb ?? buildSeed();
 }
 
 export function mutateDb<T>(fn: (db: DB) => T): T {
   const db = readDb();
   const result = fn(db);
 
-  if (g.__giglenodeRuntime === "fs") {
+  if (g.__gigglenodeRuntime === "fs") {
     writeNodeDb(db);
     return result;
   }
-  if (g.__giglenodeRuntime === "supabase" || g.__giglenodeRuntime === "r2") {
+  if (g.__gigglenodeRuntime === "supabase" || g.__gigglenodeRuntime === "r2") {
     pendingMutators().push((draft) => {
       fn(draft);
     });
@@ -522,21 +528,21 @@ export function mutateDb<T>(fn: (db: DB) => T): T {
 }
 
 export function resetDb() {
-  g.__giglenodeDb = buildSeed();
-  if (g.__giglenodeRuntime === "fs") writeNodeDb(g.__giglenodeDb);
-  else if (g.__giglenodeRuntime === "supabase" || g.__giglenodeRuntime === "r2") scheduleFlush();
+  g.__gigglenodeDb = buildSeed();
+  if (g.__gigglenodeRuntime === "fs") writeNodeDb(g.__gigglenodeDb);
+  else if (g.__gigglenodeRuntime === "supabase" || g.__gigglenodeRuntime === "r2") scheduleFlush();
 }
 
 export function storageRuntime(): Runtime {
-  return g.__giglenodeRuntime ?? "memory";
+  return g.__gigglenodeRuntime ?? "memory";
 }
 
 export function bootstrapDiagnostics() {
   return {
     runtime: storageRuntime(),
-    bootError: g.__giglenodeBootError ?? null,
-    etag: g.__giglenodeEtag ?? null,
-    version: g.__giglenodeVersion ?? null,
+    bootError: g.__gigglenodeBootError ?? null,
+    etag: g.__gigglenodeEtag ?? null,
+    version: g.__gigglenodeVersion ?? null,
     pendingWrites: pendingMutators().length,
   };
 }

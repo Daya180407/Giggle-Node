@@ -219,7 +219,7 @@ export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
             id="affiliateUrl"
             name="affiliateUrl"
             defaultValue={ai?.affiliateUrl ?? ""}
-            placeholder="https://partner.example.com/ref=giglenode"
+            placeholder="https://partner.example.com/ref=gigglenode"
             className="field"
           />
           <p className="mt-1 text-[11px] text-muted">

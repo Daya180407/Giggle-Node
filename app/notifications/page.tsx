@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Notifications",
-  description: "New AI tools and fresh guides from GigleNode.",
+  description: "New AI tools and fresh guides from GiggleNode.",
   robots: { index: false, follow: false },
 };
 

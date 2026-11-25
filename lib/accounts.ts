@@ -9,7 +9,7 @@ import { DEFAULT_SITE_SETTINGS } from "./settings";
 import type { DB } from "./types";
 
 const LEGACY_DEMO_USER_IDS = new Set(["u_demo", "demo_member"]);
-const LEGACY_DEMO_EMAILS = new Set(["demo@giglenode.com"]);
+const LEGACY_DEMO_EMAILS = new Set(["demo@gigglenode.com"]);
 
 /**
  * Sweeps out everything the removed demo seed left in older data documents:
@@ -26,7 +26,7 @@ function purgeDemoData(db: DB): boolean {
         (user) =>
           LEGACY_DEMO_USER_IDS.has(user.id) ||
           LEGACY_DEMO_EMAILS.has(user.email.toLowerCase()) ||
-          user.email.toLowerCase().endsWith("@giglenode.test"),
+          user.email.toLowerCase().endsWith("@gigglenode.test"),
       )
       .map((user) => user.id),
   );
@@ -192,6 +192,18 @@ export async function migrateDb(db: DB): Promise<boolean> {
   }
   if (JSON.stringify(db.settings) !== settingsBefore) changed = true;
 
+  // Earlier documents carry the old brand spelling in the seeded admin mailbox and site name.
+  for (const user of db.users) {
+    if (user.email.toLowerCase() === "admin@giglenode.com") {
+      user.email = "admin@gigglenode.com";
+      changed = true;
+    }
+  }
+  if (db.settings.siteName === "GigleNode") {
+    db.settings = { ...db.settings, siteName: "GiggleNode" };
+    changed = true;
+  }
+
   for (const account of SEED_ACCOUNTS) {
     const user = db.users.find((u) => u.email.toLowerCase() === account.email);
     if (!user) continue;
@@ -206,7 +218,7 @@ export async function migrateDb(db: DB): Promise<boolean> {
   // A fresh site keeps no shared demo login and no QA test accounts. This is
   // idempotent: once removed, nothing matches on later boots.
   const testAccount = (email: string) =>
-    email.toLowerCase() === "demo@giglenode.com" || email.toLowerCase().endsWith("@giglenode.test");
+    email.toLowerCase() === "demo@gigglenode.com" || email.toLowerCase().endsWith("@gigglenode.test");
   const removable = db.users.filter((user) => testAccount(user.email));
   if (removable.length) {
     const ids = new Set(removable.map((user) => user.id));

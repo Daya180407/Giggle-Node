@@ -90,7 +90,7 @@ export default async function AdminSettingsPage({
       ) : null}
       {error === "email" ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
-          Support email is not valid. Use an address like hello@giglenode.com.
+          Support email is not valid. Use an address like hello@gigglenode.com.
         </div>
       ) : null}
       {error === "ads" ? (
@@ -408,7 +408,7 @@ export default async function AdminSettingsPage({
               type="email"
               defaultValue={settings.supportEmail}
               className="field"
-              placeholder="hello@giglenode.com"
+              placeholder="hello@gigglenode.com"
             />
           </div>
         </section>

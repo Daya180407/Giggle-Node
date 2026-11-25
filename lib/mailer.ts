@@ -8,7 +8,7 @@ export function mailerConfigured(): boolean {
 }
 
 export function mailerFrom(): string {
-  return process.env.EMAIL_FROM || "GigleNode <onboarding@resend.dev>";
+  return process.env.EMAIL_FROM || "GiggleNode <onboarding@resend.dev>";
 }
 
 /**

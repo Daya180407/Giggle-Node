@@ -59,7 +59,7 @@ export default async function AdminExportPage({
                 : error === "parse"
                   ? "That file is not valid JSON."
                   : error === "shape"
-                    ? "This does not look like a GigleNode backup (ai, ratings and users are required)."
+                    ? "This does not look like a GiggleNode backup (ai, ratings and users are required)."
                     : error === "changelog"
                       ? "Add a changelog title."
                       : "Check the file and try again."}
