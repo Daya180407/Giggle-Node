@@ -9,6 +9,7 @@ import { accentVars } from "@/lib/analytics";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 import type { CSSProperties } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const SITE_URL = "https://giglenode.com";
 const DESCRIPTION =
@@ -151,6 +152,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <SiteHeader />
         <main className="min-h-[60vh]">{children}</main>
         <SiteFooter />
+        <SpeedInsights />
       </body>
     </html>
   );
