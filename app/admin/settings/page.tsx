@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { changePasswordAction, saveSettingsAction } from "@/app/actions";
+import BrandImageField from "@/components/admin/BrandImageField";
+import { catalogueLogos } from "@/lib/media";
 import { requireAreaPage } from "@/lib/permissions";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
@@ -13,7 +15,9 @@ export default async function AdminSettingsPage({
 }) {
   await requireAreaPage("settings");
   const { saved, error } = await searchParams;
-  const settings = getSiteSettings(readDb());
+  const db = readDb();
+  const settings = getSiteSettings(db);
+  const brandImages = catalogueLogos(db);
 
   return (
     <div className="space-y-4">
@@ -105,7 +109,7 @@ export default async function AdminSettingsPage({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-bold">Site identity</h3>
-              <p className="text-xs text-muted">Browser title, brand emoji and the site language.</p>
+              <p className="text-xs text-muted">Browser title, brand image or emoji, and the site language.</p>
             </div>
             <span className="chip bg-slate-100 text-slate-500">{settings.siteName}</span>
           </div>
@@ -118,9 +122,13 @@ export default async function AdminSettingsPage({
             </div>
             <div>
               <label className="label" htmlFor="logoEmoji">
-                Brand emoji
+                Brand emoji (fallback)
               </label>
               <input id="logoEmoji" name="logoEmoji" defaultValue={settings.logoEmoji} maxLength={4} className="field" />
+              <p className="mt-1 text-[11px] text-muted">Used wherever a small emoji mark is needed.</p>
+            </div>
+            <div className="sm:col-span-3">
+              <BrandImageField defaultValue={settings.appearance.logoImage} media={brandImages} />
             </div>
             <div>
               <label className="label" htmlFor="language">

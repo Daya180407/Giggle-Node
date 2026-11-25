@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { reportPromptAction } from "@/app/actions";
 import CopyButton from "@/components/CopyButton";
 import PromptSubmitForm from "@/components/PromptSubmitForm";
 import { AiLogo } from "@/components/ui";
@@ -19,11 +20,20 @@ export const metadata: Metadata = {
 const PER_PAGE = 48;
 
 type Props = {
-  searchParams: Promise<{ q?: string; ai?: string; verified?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; ai?: string; verified?: string; tab?: string; page?: string; reported?: string }>;
 };
 
+const REPORT_REASONS = [
+  "Harmful or unsafe instructions",
+  "Spam or advertising",
+  "Hateful or abusive content",
+  "Broken or useless prompt",
+  "Copied from somewhere else",
+];
+
 export default async function PromptsLibraryPage({ searchParams }: Props) {
-  const { q = "", ai: aiSlug = "all", verified = "", page = "1" } = await searchParams;
+  const { q = "", ai: aiSlug = "all", verified = "", tab: tabRaw = "all", page = "1", reported } = await searchParams;
+  const tab = tabRaw === "team" || tabRaw === "user" ? tabRaw : "all";
   const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
 
   const publicAis = db.ai.filter((a) => !a.hidden);
@@ -34,6 +44,7 @@ export default async function PromptsLibraryPage({ searchParams }: Props) {
   const all = (db.prompts ?? []).filter((p) => aiById.has(p.aiId));
   const filtered = all
     .filter((p) => (selectedAi ? p.aiId === selectedAi.id : true))
+    .filter((p) => (tab === "team" ? !p.submittedBy : tab === "user" ? Boolean(p.submittedBy) : true))
     .filter((p) => (verified === "1" ? isVerifiedPrompt(p) : true))
     .filter((p) => {
       if (!query) return true;
@@ -51,7 +62,15 @@ export default async function PromptsLibraryPage({ searchParams }: Props) {
   const rows = filtered.slice((pageNo - 1) * PER_PAGE, pageNo * PER_PAGE);
 
   const verifiedCount = all.filter((p) => isVerifiedPrompt(p)).length;
-  const communityCount = all.length - verifiedCount;
+  const communityCount = all.filter((p) => p.submittedBy).length;
+  const teamCount = all.length - communityCount;
+  const tabHref = (next: string) =>
+    `/prompts?${new URLSearchParams({
+      ...(q ? { q } : {}),
+      ...(selectedAi ? { ai: selectedAi.slug } : {}),
+      ...(verified === "1" ? { verified: "1" } : {}),
+      ...(next !== "all" ? { tab: next } : {}),
+    }).toString()}`;
   const aiOptions = publicAis
     .filter((a) => all.some((p) => p.aiId === a.id))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -61,6 +80,7 @@ export default async function PromptsLibraryPage({ searchParams }: Props) {
       ...(q ? { q } : {}),
       ...(selectedAi ? { ai: selectedAi.slug } : {}),
       ...(verified === "1" ? { verified: "1" } : {}),
+      ...(tab !== "all" ? { tab } : {}),
       page: String(nextPage),
     }).toString()}`;
 
@@ -78,11 +98,46 @@ export default async function PromptsLibraryPage({ searchParams }: Props) {
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
           <span className="chip bg-slate-100 text-slate-600">{all.length} prompts</span>
           <span className="chip bg-emerald-50 text-emerald-700">✓ {verifiedCount} verified</span>
-          <span className="chip bg-indigo-50 text-indigo-700">{communityCount} from the community</span>
+          <span className="chip bg-indigo-50 text-indigo-700">{teamCount} from the team</span>
+          <span className="chip bg-slate-100 text-slate-600">{communityCount} from users</span>
         </div>
       </header>
 
+      {reported === "1" ? (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          Thanks — your report is with the moderators. They will review the prompt and remove or edit it if needed.
+        </div>
+      ) : null}
+      {reported === "reason" || reported === "missing" ? (
+        <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
+          That report could not be sent. Pick a reason and try again.
+        </div>
+      ) : null}
+
+      <nav className="no-scrollbar mt-4 -mx-1 flex gap-1 overflow-x-auto px-1" aria-label="Prompt library tabs">
+        {[
+          { key: "all", label: "All prompts", count: all.length },
+          { key: "team", label: "Team added", count: teamCount },
+          { key: "user", label: "User added", count: communityCount },
+        ].map((item) => (
+          <Link
+            key={item.key}
+            href={tabHref(item.key)}
+            aria-current={tab === item.key ? "page" : undefined}
+            className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+              tab === item.key
+                ? "border-transparent bg-ink text-white"
+                : "border-line bg-white text-slate-600 hover:border-indigo-200 hover:text-brand"
+            }`}
+          >
+            {item.label}
+            <span className={`text-[10px] ${tab === item.key ? "text-white/70" : "text-slate-400"}`}>{item.count}</span>
+          </Link>
+        ))}
+      </nav>
+
       <form className="card mt-4 flex flex-wrap items-center gap-2 p-3" action="/prompts">
+        {tab !== "all" ? <input type="hidden" name="tab" value={tab} /> : null}
         <input
           name="q"
           defaultValue={q}
@@ -169,6 +224,34 @@ export default async function PromptsLibraryPage({ searchParams }: Props) {
                   <CopyButton text={p.promptText} />
                 </span>
               </div>
+              {user ? (
+                <details className="mt-2 border-t border-line pt-2">
+                  <summary className="cursor-pointer text-[10.5px] font-semibold text-slate-400 hover:text-rose-600">
+                    ⚑ Report this prompt
+                  </summary>
+                  <form action={reportPromptAction} className="mt-2 space-y-1.5">
+                    <input type="hidden" name="promptId" value={p.id} />
+                    <input type="hidden" name="back" value={`/prompts?tab=${tab}`} />
+                    <select name="reason" required defaultValue="" className="field !py-1.5 text-[11px]" aria-label="Report reason">
+                      <option value="" disabled>
+                        Why are you reporting it?
+                      </option>
+                      {REPORT_REASONS.map((reason) => (
+                        <option key={reason} value={reason}>
+                          {reason}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      name="note"
+                      maxLength={500}
+                      placeholder="Anything else the moderators should know? (optional)"
+                      className="field !py-1.5 text-[11px]"
+                    />
+                    <button className="btn btn-ghost !px-2 !py-1 text-[11px] text-rose-600">Send report</button>
+                  </form>
+                </details>
+              ) : null}
             </article>
           );
         })}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AppForm from "@/components/admin/AppForm";
+import { catalogueLogos } from "@/lib/media";
 import { requireAreaPage } from "@/lib/permissions";
 import { allApps } from "@/lib/software";
 import { readDb } from "@/lib/store";
@@ -56,7 +57,7 @@ export default async function AdminAppFormPage({
         </div>
       ) : null}
 
-      <AppForm entry={custom ?? null} ais={ais} />
+      <AppForm entry={custom ?? null} ais={ais} media={catalogueLogos(db)} />
     </div>
   );
 }

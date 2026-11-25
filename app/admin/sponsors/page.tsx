@@ -22,6 +22,7 @@ import {
   placementListLabel,
   slotMeta,
   SPONSOR_SLOTS,
+  sponsorCategoryPrice,
   sponsorPrices,
   sponsorRevenue,
   sponsorEnded,
@@ -426,6 +427,32 @@ export default async function AdminSponsorsPage({
                 </div>
               </div>
             ))}
+            <div className="mt-3 border-t border-line pt-3">
+              <p className="text-[11.5px] font-semibold text-ink">Category top-3 price</p>
+              <p className="text-[10px] text-muted">
+                Every category has its own podium price. Empty or 0 falls back to the shared top-3 price.
+              </p>
+              <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                {categories.map((category) => (
+                  <div key={category.slug} className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-[11px] text-slate-600">
+                      {category.emoji} {category.name}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-[10px] text-muted">{currency === "USD" ? "$" : "₹"}</span>
+                      <input
+                        name={`cat_${category.slug}`}
+                        type="number"
+                        min={0}
+                        defaultValue={sponsorCategoryPrice(db, category.slug)}
+                        className="field !w-24 !py-1 text-[11px]"
+                        aria-label={`${category.name} top-3 price`}
+                      />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
             <button className="btn btn-primary !py-2 text-xs">Save slot prices</button>
           </form>
           <p className="mt-2 text-[10.5px] leading-relaxed text-muted">

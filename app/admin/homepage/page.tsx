@@ -101,10 +101,11 @@ export default async function AdminHomepagePage({
         </section>
 
         <section className="card p-4">
-          <h3 className="text-sm font-bold">Category champions</h3>
-          <p className="text-xs text-muted">
-            Defaults to #1 from the formula. Choose one manually here — it will be the top pick on the public homepage.
-          </p>
+                      <h3 className="text-sm font-bold">Category champions</h3>
+            <p className="text-xs text-muted">
+              Champions are automatic: the homepage podium always shows the live #1, #2 and #3 by weighted score, so it
+              updates as new ratings arrive. Leave every box on “Automatic” unless you need a deliberate editorial pick.
+            </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {categories.map((c) => {
               const current = settings.championOverrides[c.slug] ?? "";

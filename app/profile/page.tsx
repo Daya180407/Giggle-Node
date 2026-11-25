@@ -83,6 +83,51 @@ export default async function ProfilePage() {
         ))}
       </div>
 
+      {/* Member menu: normal accounts get their own links; staff also get the admin shortcut. */}
+      <section className="card mt-4 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-bold">Your menu</h2>
+            <p className="text-xs text-muted">
+              {isStaff ? "Member pages plus your admin workspace." : "Everything tied to your account, in one place."}
+            </p>
+          </div>
+          <span className="chip bg-slate-100 text-slate-600">{isStaff ? roleLabel(user.role, roles) : "Member"}</span>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {(isStaff
+            ? [
+                { href: "/admin", label: "Admin dashboard", hint: "Manage the site" },
+                { href: "/my-list", label: "My list", hint: `${bookmarks.length} saved tools` },
+                { href: "/notifications", label: "Notifications", hint: "Replies and site updates" },
+                { href: "/prompts", label: "Prompt library", hint: "Add and copy prompts" },
+                { href: "/community", label: "Community", hint: "Talk to members" },
+                { href: "/contributors", label: "Leaderboard", hint: "Points and badges" },
+              ]
+            : [
+                { href: "/my-list", label: "My list", hint: `${bookmarks.length} saved tools` },
+                { href: "/notifications", label: "Notifications", hint: "Replies and site updates" },
+                { href: "/prompts", label: "Prompt library", hint: "Add and copy prompts" },
+                { href: "/community", label: "Community", hint: "Talk to members" },
+                { href: "/contributors", label: "Leaderboard", hint: "Points and badges" },
+                { href: "/polls", label: "Polls", hint: "Vote on AI comparisons" },
+              ]
+          ).map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="group flex items-center gap-2.5 rounded-xl border border-line bg-slate-50/70 px-3 py-2.5 transition hover:border-brand/30 hover:bg-white"
+            >
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-ink group-hover:text-brand">{item.label}</span>
+                <span className="block truncate text-[10.5px] text-muted">{item.hint}</span>
+              </span>
+              <span aria-hidden className="ml-auto text-slate-300">→</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <section className="mt-10">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>

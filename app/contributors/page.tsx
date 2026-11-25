@@ -32,6 +32,16 @@ export default async function ContributorsPage() {
         </p>
       </header>
 
+      <section className="card mt-4 border-indigo-100 bg-indigo-50/40 p-4">
+        <h2 className="text-sm font-bold text-ink">What are points for?</h2>
+        <ul className="mt-2 space-y-1.5 text-[12px] leading-relaxed text-slate-700">
+          <li>• Points are a simple thank-you for helpful ratings and reviews.</li>
+          <li>• They unlock badges (Top Reviewer, Expert) shown on your profile.</li>
+          <li>• They decide your place on this leaderboard.</li>
+          <li>• They are not money — you cannot cash, trade or spend them.</li>
+        </ul>
+      </section>
+
       {!settings.topContributorsEnabled ? (
         <div className="card mt-5 p-6 text-sm text-slate-600">
           The public leaderboard is currently turned off by the administrator. Ratings still count normally.

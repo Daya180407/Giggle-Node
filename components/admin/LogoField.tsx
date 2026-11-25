@@ -72,9 +72,14 @@ async function prepareLogo(file: File): Promise<PreparedLogo> {
 export default function LogoField({
   defaultValue,
   media,
+  name = "logo",
+  label = "Logo",
 }: {
   defaultValue: string;
   media: LogoMedia[];
+  /** form field name; apps store their icon in `emoji` */
+  name?: string;
+  label?: string;
 }) {
   const initialKind = logoKind(defaultValue);
   const [mode, setMode] = useState<LogoKind>(initialKind);
@@ -115,7 +120,7 @@ export default function LogoField({
   return (
     <div className="rounded-xl border border-line p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Logo</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
         <div className="ml-auto flex flex-wrap gap-1">
           {TABS.map((tab) => (
             <button
@@ -263,7 +268,7 @@ export default function LogoField({
         </button>
       </div>
 
-      <input type="hidden" name="logo" value={value.trim() || "🤖"} />
+      <input type="hidden" name={name} value={value.trim() || "🤖"} />
     </div>
   );
 }

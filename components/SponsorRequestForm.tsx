@@ -15,12 +15,15 @@ export default function SponsorRequestForm({
   apps,
   categories,
   prices,
+  categoryPrices,
   currency,
 }: {
   ais: { id: string; name: string; categoryName: string }[];
   apps: { slug: string; name: string; kind: "mobile" | "desktop" }[];
   categories: { slug: string; name: string }[];
   prices: Record<SponsorSlotKey, number>;
+  /** per-category top-3 price; fallback is the shared top3 price */
+  categoryPrices: Record<string, number>;
   currency: string;
 }) {
   const [state, formAction, pending] = useActionState(submitSponsorRequestAction, { ok: false });
@@ -37,6 +40,11 @@ export default function SponsorRequestForm({
   // The trending card only exists in the trending grid; app requests start at list5.
   const slotChoices = sponsorSlotsFor(targetType, listKey);
   const selectedSlot = slotChoices.find((row) => row.key === slot) ?? slotChoices[0];
+  // The category podium can carry its own price; everything else uses the slot price.
+  const quoteFor = (key: SponsorSlotKey) =>
+    key === "top3" && targetType === "ai" && listKey !== "all" && listKey !== "trending"
+      ? (categoryPrices[listKey] ?? prices.top3 ?? 0)
+      : (prices[key] ?? 0);
   const listLabel =
     targetType === "ai"
       ? listKey === "trending"
@@ -208,7 +216,7 @@ export default function SponsorRequestForm({
                   <span className="mt-0.5 block text-[10.5px] leading-snug text-muted">{row.label}</span>
                 </span>
                 <span className="shrink-0 text-right">
-                  <span className="block text-[12px] font-bold text-ink">{money(prices[row.key] ?? 0, currency)}</span>
+                  <span className="block text-[12px] font-bold text-ink">{money(quoteFor(row.key), currency)}</span>
                   <span className="text-[9.5px] text-muted">/ 30 days</span>
                 </span>
                 <input
@@ -241,7 +249,7 @@ export default function SponsorRequestForm({
       </div>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5 text-[11.5px] leading-relaxed text-amber-900">
-        <strong>Your quote:</strong> {money(prices[slot] ?? 0, currency)} for 30 days — after #
+        <strong>Your quote:</strong> {money(quoteFor(slot), currency)} for 30 days — after #
         {selectedSlot.position === 1 ? "1 (top-3 card)" : selectedSlot.position} in{" "}
         <strong>{listLabel}</strong>. The listing keeps its real rank and is labelled Sponsored.
       </div>

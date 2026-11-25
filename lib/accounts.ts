@@ -167,6 +167,8 @@ export async function migrateDb(db: DB): Promise<boolean> {
     "chatAds",
     "communityReports",
     "communityBans",
+    "promptReports",
+    "pollVotes",
   ] as const;
   for (const key of collections) {
     if (!Array.isArray(db[key])) {
@@ -177,6 +179,64 @@ export async function migrateDb(db: DB): Promise<boolean> {
 
   if (!db.appPricing || typeof db.appPricing !== "object" || Array.isArray(db.appPricing)) {
     db.appPricing = {};
+    changed = true;
+  }
+
+  // First boot with polls: three starter polls so the homepage section is never
+  // empty. Deleting them later does not bring them back.
+  if (!Array.isArray(db.polls)) {
+    const aiId = (name: string) => db.ai.find((row) => row.name.toLowerCase() === name.toLowerCase())?.id ?? null;
+    const now = new Date().toISOString();
+    db.polls = [
+      {
+        id: "poll_starter_tool",
+        question: "Which AI do you open first for real work?",
+        description: "The one you actually use, not the one with the best demo.",
+        kind: "ai",
+        options: ["ChatGPT", "Claude", "Gemini", "Perplexity"].map((name, index) => ({
+          id: `po_starter_tool_${index}`,
+          label: name,
+          aiId: aiId(name),
+        })),
+        status: "open",
+        featured: true,
+        closesAt: null,
+        createdAt: now,
+        createdBy: "GiggleNode Team",
+      },
+      {
+        id: "poll_starter_use",
+        question: "What do you mostly use AI for?",
+        description: "Pick the one that takes most of your AI time.",
+        kind: "custom",
+        options: ["Writing", "Coding", "Images", "Research", "Video"].map((label, index) => ({
+          id: `po_starter_use_${index}`,
+          label,
+          aiId: null,
+        })),
+        status: "open",
+        featured: false,
+        closesAt: null,
+        createdAt: now,
+        createdBy: "GiggleNode Team",
+      },
+      {
+        id: "poll_starter_free",
+        question: "Is a free AI plan enough for your work?",
+        description: "Honest answers help other readers choose a plan.",
+        kind: "custom",
+        options: ["Yes, fully enough", "Mostly, with limits", "No, I pay for one"].map((label, index) => ({
+          id: `po_starter_free_${index}`,
+          label,
+          aiId: null,
+        })),
+        status: "open",
+        featured: false,
+        closesAt: null,
+        createdAt: now,
+        createdBy: "GiggleNode Team",
+      },
+    ];
     changed = true;
   }
 

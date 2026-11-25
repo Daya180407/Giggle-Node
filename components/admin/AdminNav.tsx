@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AdminArea } from "@/lib/roles";
 
-type NavItem = { href: string; label: string; icon: string; area: AdminArea };
+type NavItem = { href: string; label: string; icon: string; area: AdminArea; adminOnly?: boolean };
 
 const GROUPS: { label: string; items: NavItem[] }[] = [
   {
@@ -26,8 +26,6 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/admin/prompts", label: "Prompt Library", icon: "💬", area: "catalogue" },
       { href: "/admin/submissions", label: "Submissions & Claims", icon: "📨", area: "catalogue" },
       { href: "/admin/owners", label: "AI Owners", icon: "🪪", area: "owners" },
-      { href: "/admin/users", label: "Users & Roles", icon: "👥", area: "users" },
-      { href: "/admin/roles", label: "Roles & Permissions", icon: "🔐", area: "users" },
       { href: "/admin/gamification", label: "Gamification", icon: "🏅", area: "gamification" },
       { href: "/admin/feedback", label: "Feedback Inbox", icon: "📬", area: "feedback" },
     ],
@@ -44,6 +42,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Growth",
     items: [
       { href: "/admin/homepage", label: "Homepage & Quiz", icon: "🏠", area: "homepage" },
+      { href: "/admin/polls", label: "Polls & Insights", icon: "📊", area: "homepage" },
       { href: "/admin/sponsors", label: "Sponsors & Ads", icon: "💼", area: "sponsors" },
       { href: "/admin/ads", label: "Chat Ads & Insights", icon: "📣", area: "sponsors" },
       { href: "/admin/pricing", label: "Pricing Reports", icon: "💰", area: "catalogue" },
@@ -52,19 +51,43 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: "System",
+    label: "Administrator",
+    items: [
+      { href: "/admin/users", label: "Users & Roles", icon: "👥", area: "users", adminOnly: true },
+      { href: "/admin/roles", label: "Roles & Permissions", icon: "🔐", area: "users", adminOnly: true },
+      { href: "/admin/security", label: "Spam & Security", icon: "🛡️", area: "security", adminOnly: true },
+      { href: "/admin/settings", label: "Site Settings", icon: "⚙️", area: "settings", adminOnly: true },
+      { href: "/admin/activity", label: "Audit Log", icon: "🕘", area: "settings", adminOnly: true },
+      { href: "/admin/export", label: "Backup / Export", icon: "⬇", area: "settings", adminOnly: true },
+    ],
+  },
+  {
+    label: "Site style",
     items: [
       { href: "/admin/search-ai", label: "AI Search", icon: "✨", area: "search" },
-      { href: "/admin/security", label: "Spam & Security", icon: "🛡️", area: "security" },
       { href: "/admin/appearance", label: "Theme & Currency", icon: "🎨", area: "settings" },
-      { href: "/admin/settings", label: "Site Settings", icon: "⚙️", area: "settings" },
-      { href: "/admin/activity", label: "Audit Log", icon: "🕘", area: "settings" },
-      { href: "/admin/export", label: "Backup / Export", icon: "⬇", area: "settings" },
     ],
   },
 ];
 
-export default function AdminNav({ areas }: { areas: AdminArea[] }) {
+/** Links to the member-side pages every signed-in account keeps. */
+const MEMBER_LINKS = [
+  { href: "/profile", label: "My profile" },
+  { href: "/my-list", label: "My list" },
+  { href: "/notifications", label: "Notifications" },
+  { href: "/contributors", label: "Leaderboard" },
+];
+
+export default function AdminNav({
+  areas,
+  isAdmin = false,
+  roleName = "Staff",
+}: {
+  areas: AdminArea[];
+  /** super admin sees every section, including the administrator-only group */
+  isAdmin?: boolean;
+  roleName?: string;
+}) {
   const pathname = usePathname();
 
   function isActive(href: string) {
@@ -74,7 +97,7 @@ export default function AdminNav({ areas }: { areas: AdminArea[] }) {
 
   const groups = GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => areas.includes(item.area)),
+    items: group.items.filter((item) => areas.includes(item.area) && (isAdmin || !item.adminOnly)),
   })).filter((group) => group.items.length > 0);
 
   return (
@@ -84,7 +107,7 @@ export default function AdminNav({ areas }: { areas: AdminArea[] }) {
     >
       <div className="contents lg:block">
         <p className="hidden px-2 pb-1.5 pt-2 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-600 lg:block">
-          Workspace
+          {isAdmin ? "Super admin · all sections" : `${roleName} · your sections`}
         </p>
         <div className="flex gap-1 lg:flex-col">
           <Link
@@ -147,9 +170,21 @@ export default function AdminNav({ areas }: { areas: AdminArea[] }) {
       ))}
 
       <div className="hidden border-t border-white/10 pt-3 lg:block">
+        <p className="px-2 pb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-600">My account</p>
+        <div className="flex flex-col">
+          {MEMBER_LINKS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-white/5 hover:text-white"
+            >
+              <span aria-hidden>·</span> {item.label}
+            </Link>
+          ))}
+        </div>
         <Link
           href="/"
-          className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-medium text-slate-500 transition hover:bg-white/5 hover:text-white"
+          className="mt-2 flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-medium text-slate-500 transition hover:bg-white/5 hover:text-white"
         >
           <span aria-hidden>←</span> View public site
         </Link>

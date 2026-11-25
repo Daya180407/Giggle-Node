@@ -31,7 +31,8 @@ import { findBadWord, isBlockedIp, normalizeIpList, normalizeWordList } from "@/
 import { deliverEmails, mailerConfigured } from "@/lib/mailer";
 import { pushNotification, queueEmail, renderTemplate } from "@/lib/notify";
 import { normalizeAiLogo } from "@/lib/logo";
-import { money, SPONSOR_SLOTS, SPONSOR_SLOT_KEYS, sponsorPrices } from "@/lib/sponsors";
+import { money, SPONSOR_SLOTS, SPONSOR_SLOT_KEYS, sponsorPrices, sponsorQuote } from "@/lib/sponsors";
+import { pollIsOpen } from "@/lib/polls";
 import { PAGE_SLUGS } from "@/lib/pages";
 import { ALL_AREAS, canAccess, isStaffRole, resolveRoles, type AdminArea } from "@/lib/roles";
 import { AI_SEARCH_PROMPT, DEFAULT_SITE_SETTINGS, getSiteSettings } from "@/lib/settings";
@@ -47,6 +48,8 @@ import type {
   DB,
   FeedbackKind,
   Platform,
+  Poll,
+  PollOption,
   PostStatus,
   PostType,
   PriceType,
@@ -629,7 +632,9 @@ export async function savePromptAction(formData: FormData) {
       logAdminAction(db, admin, "created", `Prompt: ${title}`, `AI id ${aiId}`);
     }
   });
-  redirect(`/admin/ai/${aiSlug}`);
+  // The library page edits prompts in place; the AI editor keeps its own flow.
+  const back = String(formData.get("back") ?? "").trim();
+  redirect(back.startsWith("/admin") ? back : `/admin/ai/${aiSlug}`);
 }
 
 const MAX_PROMPTS_PER_DAY = 10;
@@ -1535,6 +1540,8 @@ export async function saveSettingsAction(formData: FormData) {
 
   const siteName = String(formData.get("siteName") ?? "").trim().slice(0, 40) || "GiggleNode";
   const logoEmoji = String(formData.get("logoEmoji") ?? "🤖").slice(0, 4).trim() || "🤖";
+  // Brand image from Site identity: an upload, a media URL or a path.
+  const rawLogoImage = String(formData.get("logoImage") ?? "").trim();
   const language: "en" | "hi" = String(formData.get("language") ?? "en") === "hi" ? "hi" : "en";
 
   const adsEnabled = formData.get("adsEnabled") === "on";
@@ -1554,6 +1561,10 @@ export async function saveSettingsAction(formData: FormData) {
     return Math.min(max, Math.max(min, Math.round(value)));
   };
   const previousSettings = getSiteSettings(readDb());
+  const logoImage =
+    !rawLogoImage || rawLogoImage.startsWith("data:image/") || rawLogoImage.startsWith("/") || /^https:\/\//.test(rawLogoImage)
+      ? rawLogoImage
+      : previousSettings.appearance.logoImage;
   const communityHrefRaw = String(formData.get("communityHouseAdHref") ?? "").trim().slice(0, 200);
   const communityHouseAdHref =
     communityHrefRaw.startsWith("/") || communityHrefRaw.startsWith("https://") ? communityHrefRaw : "";
@@ -1603,9 +1614,11 @@ export async function saveSettingsAction(formData: FormData) {
   };
 
   mutateDb((db) => {
+    const current = getSiteSettings(db);
     db.settings = {
-      ...getSiteSettings(db),
+      ...current,
       ...next,
+      appearance: { ...current.appearance, logoImage },
       updatedAt: new Date().toISOString(),
       updatedBy: admin.name,
     };
@@ -1878,7 +1891,8 @@ export async function saveAppAction(formData: FormData) {
     .map((value) => value.trim())
     .filter(Boolean)
     .slice(0, 8);
-  const emoji = String(formData.get("emoji") ?? "").trim().slice(0, 4);
+  // The icon may now be an uploaded image / SVG (LogoField), not only an emoji.
+  const emoji = normalizeAiLogo(String(formData.get("emoji") ?? ""));
   const colorRaw = String(formData.get("color") ?? "").trim();
   const aiSlugRaw = String(formData.get("aiSlug") ?? "").trim();
 
@@ -2124,12 +2138,26 @@ export async function saveSponsorPricesAction(formData: FormData) {
       prices[key] = Number.isFinite(value) && value > 0 ? Math.min(100000000, Math.round(value)) : 0;
     }
     db.sponsorPrices = prices;
+
+    // Per-category top-3 prices: an empty or invalid field falls back to the
+    // shared top-3 price, so every category always shows a real number.
+    const previous = db.sponsorCategoryPrices ?? {};
+    const categoryPrices: Record<string, number> = {};
+    for (const [key, value] of formData.entries()) {
+      if (!key.startsWith("cat_")) continue;
+      const slug = key.slice("cat_".length);
+      const amount = Number(value);
+      categoryPrices[slug] =
+        Number.isFinite(amount) && amount > 0 ? Math.min(100000000, Math.round(amount)) : (previous[slug] ?? prices.top3);
+    }
+    db.sponsorCategoryPrices = categoryPrices;
+
     logAdminAction(
       db,
       admin,
       "sponsor rates",
       "Sponsored slots",
-      SPONSOR_SLOTS.map((slot) => `${slot.short}: ${money(prices[slot.key] ?? 0)}`).join(" · "),
+      `${SPONSOR_SLOTS.map((slot) => `${slot.short}: ${money(prices[slot.key] ?? 0)}`).join(" · ")} · ${Object.keys(categoryPrices).length} category prices`,
     );
   });
   revalidatePath("/admin/sponsors");
@@ -2280,7 +2308,8 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
     }
   }
 
-  const price = sponsorPrices(db)[slot] ?? 0;
+  // Top-3 podium quotes the price of that category when the admin set one.
+  const price = sponsorQuote(db, slot, listKey);
   const duplicate = (db.sponsorRequests ?? []).find(
     (row) =>
       row.status === "pending" &&
@@ -4390,4 +4419,276 @@ export async function deleteSubscriberAction(formData: FormData) {
   });
   revalidatePath("/admin/submissions");
   redirect("/admin/submissions?saved=subscriber-removed");
+}
+
+/* ==================== prompt reports & library edits ==================== */
+
+const PROMPT_REPORT_REASONS = [
+  "Harmful or unsafe instructions",
+  "Spam or advertising",
+  "Hateful or abusive content",
+  "Broken or useless prompt",
+  "Copied from somewhere else",
+];
+
+/** Signed-in members report a library prompt; an admin reviews every report. */
+export async function reportPromptAction(formData: FormData) {
+  const user = await getCurrentUser();
+  const back = String(formData.get("back") ?? "/prompts");
+  const safeBack = back.startsWith("/") ? back : "/prompts";
+  if (!user) redirect(`/login?next=${encodeURIComponent(safeBack)}`);
+
+  const promptId = String(formData.get("promptId") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 120);
+  const note = String(formData.get("note") ?? "").trim().slice(0, 500);
+  const db = readDb();
+  const prompt = (db.prompts ?? []).find((row) => row.id === promptId);
+  if (!prompt) redirect(`${safeBack}?reported=missing`);
+  if (!PROMPT_REPORT_REASONS.includes(reason)) redirect(`${safeBack}?reported=reason`);
+
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.promptReports)) draft.promptReports = [];
+    const duplicate = draft.promptReports.find(
+      (row) => row.promptId === promptId && row.userId === user.id && row.status === "open",
+    );
+    if (duplicate) return;
+    draft.promptReports.unshift({
+      id: uid("prr"),
+      promptId,
+      userId: user.id,
+      userName: user.name,
+      reason,
+      note,
+      status: "open",
+      createdAt: new Date().toISOString(),
+      reviewedAt: null,
+      reviewedBy: null,
+    });
+    pushNotification(draft, {
+      title: "Prompt reported",
+      body: `${user.name} reported “${prompt.title}”: ${reason}.`,
+      href: "/admin/prompts?filter=reports",
+      kind: "system",
+      audience: "staff",
+    });
+  });
+  revalidatePath("/admin/prompts");
+  redirect(`${safeBack}?reported=1`);
+}
+
+/**
+ * Admin decision on a prompt report: keep the prompt (resolved), dismiss the
+ * report, or delete the prompt and close every report on it.
+ */
+export async function reviewPromptReportAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const id = String(formData.get("id") ?? "");
+  const intent = String(formData.get("intent") ?? "");
+  const promptId = String(formData.get("promptId") ?? "");
+  const back = adminBack(formData, "/admin/prompts?filter=reports");
+
+  mutateDb((db) => {
+    const report = (db.promptReports ?? []).find((row) => row.id === id);
+    const prompt = (db.prompts ?? []).find((row) => row.id === (report?.promptId ?? promptId));
+    if (intent === "delete" && prompt) {
+      db.prompts = db.prompts.filter((row) => row.id !== prompt.id);
+      for (const row of db.promptReports ?? []) {
+        if (row.promptId === prompt.id) {
+          row.status = "resolved";
+          row.reviewedAt = new Date().toISOString();
+          row.reviewedBy = admin.name;
+        }
+      }
+      logAdminAction(db, admin, "deleted", `Prompt: ${prompt.title}`, "Removed after a member report");
+      return;
+    }
+    if (!report) return;
+    report.status = intent === "dismiss" ? "dismissed" : "resolved";
+    report.reviewedAt = new Date().toISOString();
+    report.reviewedBy = admin.name;
+    logAdminAction(
+      db,
+      admin,
+      intent === "dismiss" ? "dismissed prompt report" : "kept prompt",
+      `Prompt: ${prompt?.title ?? report.promptId}`,
+      report.reason,
+    );
+  });
+  revalidatePath("/prompts");
+  revalidatePath("/admin/prompts");
+  redirect(back);
+}
+
+/* ================== default community rooms (admin) ================== */
+
+/** Rename, describe or hide the implicit default room of any AI. */
+export async function saveDefaultCommunityRoomAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const aiId = String(formData.get("aiId") ?? "");
+  const title = String(formData.get("title") ?? "").trim().slice(0, 60);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 240);
+  const hidden = formData.get("hidden") === "on";
+
+  mutateDb((db) => {
+    const ai = db.ai.find((row) => row.id === aiId);
+    if (!ai) return;
+    if (!db.communityDefaultRooms) db.communityDefaultRooms = {};
+    db.communityDefaultRooms[aiId] = { title, description, hidden };
+    logAdminAction(
+      db,
+      admin,
+      "updated default room",
+      `${ai.name} community`,
+      `${hidden ? "hidden" : "live"}${title ? ` · ${title}` : ""}`,
+    );
+  });
+  revalidatePath("/community");
+  revalidatePath("/admin/community");
+  redirect("/admin/community?saved=default");
+}
+
+/** Clear every message in one AI's default room without deleting the room. */
+export async function clearCommunityRoomMessagesAction(formData: FormData) {
+  const admin = await assertAdmin("catalogue");
+  const aiId = String(formData.get("aiId") ?? "");
+  mutateDb((db) => {
+    const ai = db.ai.find((row) => row.id === aiId);
+    if (!ai) return;
+    const before = (db.communityMessages ?? []).length;
+    db.communityMessages = (db.communityMessages ?? []).filter(
+      (message) => !(message.aiId === aiId && (message.roomId ?? null) === null),
+    );
+    const removed = before - (db.communityMessages ?? []).length;
+    logAdminAction(db, admin, "cleared room", `${ai.name} community`, `${removed} messages removed`);
+  });
+  revalidatePath("/community");
+  revalidatePath("/admin/community");
+  redirect("/admin/community?saved=cleared");
+}
+
+/* ============================== polls ============================== */
+
+/** Create or update a poll. AI/app polls link an option to a listing by name. */
+export async function savePollAction(formData: FormData) {
+  const admin = await assertAdmin("homepage");
+  const id = String(formData.get("id") ?? "");
+  const question = String(formData.get("question") ?? "").trim().slice(0, 140);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 240);
+  const kindRaw = String(formData.get("kind") ?? "custom");
+  const kind: Poll["kind"] = kindRaw === "ai" || kindRaw === "app" ? kindRaw : "custom";
+  const status: Poll["status"] = String(formData.get("status") ?? "open") === "closed" ? "closed" : "open";
+  const featured = formData.get("featured") === "on";
+  const closesRaw = String(formData.get("closesAt") ?? "").trim();
+  const closesAt = closesRaw && !Number.isNaN(new Date(closesRaw).getTime()) ? new Date(closesRaw).toISOString() : null;
+  const lines = String(formData.get("options") ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
+  if (question.length < 5) redirect("/admin/polls?error=question");
+  if (lines.length < 2) redirect("/admin/polls?error=options");
+
+  let problem = "";
+  mutateDb((db) => {
+    const existing = id ? (db.polls ?? []).find((row) => row.id === id) : undefined;
+    const aiByName = new Map(db.ai.map((ai) => [ai.name.toLowerCase(), ai]));
+    const aiBySlug = new Map(db.ai.map((ai) => [ai.slug.toLowerCase(), ai]));
+    const options: PollOption[] = [];
+    const seenLabels = new Set<string>();
+    for (const line of lines) {
+      const key = line.toLowerCase();
+      if (seenLabels.has(key)) continue;
+      seenLabels.add(key);
+      const ai = kind === "ai" ? aiByName.get(key) ?? aiBySlug.get(key) : undefined;
+      const label = ai ? ai.name : line;
+      // Keep the previous option id so existing votes stay counted after an edit.
+      const previous = existing?.options.find((option) => option.label === label);
+      options.push({ id: previous?.id ?? uid("po"), label, aiId: ai?.id ?? null });
+    }
+    if (options.length < 2) {
+      problem = "options";
+      return;
+    }
+    if (!Array.isArray(db.polls)) db.polls = [];
+    if (existing) {
+      existing.question = question;
+      existing.description = description;
+      existing.kind = kind;
+      existing.options = options;
+      existing.status = status;
+      existing.featured = featured;
+      existing.closesAt = closesAt;
+      logAdminAction(db, admin, "updated poll", question, `${options.length} options · ${status}`);
+      return;
+    }
+    db.polls.unshift({
+      id: uid("poll"),
+      question,
+      description,
+      kind,
+      options,
+      status,
+      featured,
+      closesAt,
+      createdAt: new Date().toISOString(),
+      createdBy: admin.name,
+    });
+    logAdminAction(db, admin, "created poll", question, `${options.length} options`);
+  });
+
+  if (problem) redirect("/admin/polls?error=options");
+  revalidatePath("/");
+  revalidatePath("/polls");
+  revalidatePath("/admin/polls");
+  redirect("/admin/polls?saved=1");
+}
+
+export async function deletePollAction(formData: FormData) {
+  const admin = await assertAdmin("homepage");
+  const id = String(formData.get("id") ?? "");
+  mutateDb((db) => {
+    const poll = (db.polls ?? []).find((row) => row.id === id);
+    db.polls = (db.polls ?? []).filter((row) => row.id !== id);
+    db.pollVotes = (db.pollVotes ?? []).filter((row) => row.pollId !== id);
+    if (poll) logAdminAction(db, admin, "deleted poll", poll.question, "Votes removed with it");
+  });
+  revalidatePath("/");
+  revalidatePath("/polls");
+  revalidatePath("/admin/polls");
+  redirect("/admin/polls?saved=deleted");
+}
+
+/** One vote per signed-in member, on an open poll only. */
+export async function votePollAction(formData: FormData) {
+  const back = String(formData.get("back") ?? "/polls");
+  const safeBack = back.startsWith("/") ? back : "/polls";
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(safeBack)}`);
+
+  const pollId = String(formData.get("pollId") ?? "");
+  const optionId = String(formData.get("optionId") ?? "");
+  const db = readDb();
+  const poll = (db.polls ?? []).find((row) => row.id === pollId);
+  if (!poll || !pollIsOpen(poll) || !poll.options.some((option) => option.id === optionId)) {
+    redirect(safeBack);
+  }
+  if ((db.pollVotes ?? []).some((vote) => vote.pollId === pollId && vote.userId === user.id)) {
+    redirect(safeBack);
+  }
+
+  mutateDb((draft) => {
+    if (!Array.isArray(draft.pollVotes)) draft.pollVotes = [];
+    draft.pollVotes.push({
+      id: uid("pv"),
+      pollId,
+      optionId,
+      userId: user.id,
+      createdAt: new Date().toISOString(),
+    });
+  });
+  revalidatePath("/");
+  revalidatePath("/polls");
+  revalidatePath("/admin/polls");
+  redirect(safeBack);
 }

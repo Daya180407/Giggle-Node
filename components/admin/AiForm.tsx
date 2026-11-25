@@ -2,6 +2,7 @@ import { saveAiAction } from "@/app/actions";
 import LogoField from "@/components/admin/LogoField";
 import PlanFields from "@/components/admin/PlanFields";
 import { getCategories } from "@/lib/categories";
+import { catalogueLogos } from "@/lib/media";
 import { readDb } from "@/lib/store";
 import type { Ai, Platform } from "@/lib/types";
 
@@ -14,7 +15,9 @@ const PLATFORMS: { key: Platform; label: string }[] = [
 export default function AiForm({ ai, allAis }: { ai?: Ai; allAis: Ai[] }) {
   const db = readDb();
   const categories = getCategories(db);
-  const media = (db.media ?? []).map(({ id, name, url }) => ({ id, name, url }));
+  // Media library rows plus icons already used by catalogue listings, so a
+  // logo uploaded once is available everywhere.
+  const media = catalogueLogos(db);
   return (
     <form action={saveAiAction} className="space-y-3">
       {ai ? <input type="hidden" name="id" value={ai.id} /> : null}

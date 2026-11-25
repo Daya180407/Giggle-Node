@@ -1,11 +1,19 @@
 import Link from "next/link";
 import {
+  clearCommunityRoomMessagesAction,
   deleteCommunityRoomAction,
   saveCommunityRoomAction,
+  saveDefaultCommunityRoomAction,
   toggleCommunityRoomAction,
 } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
-import { communityRoomSummary, communityRoomsFor, communityTotals, roomSummaryKey } from "@/lib/community-chat";
+import {
+  communityRoomSummary,
+  communityRoomsFor,
+  communityTotals,
+  defaultRoomOverride,
+  roomSummaryKey,
+} from "@/lib/community-chat";
 import { requireAreaPage } from "@/lib/permissions";
 import { timeAgo } from "@/lib/rank";
 import { readDb } from "@/lib/store";
@@ -37,6 +45,21 @@ export default async function AdminCommunityPage({
     .filter((ai) => !ai.hidden)
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // Every AI has an implicit default room. Show the ones that have messages or
+  // an admin override first, then the rest (filtered by the same search box).
+  const defaultRooms = aiOptions
+    .filter((ai) => {
+      if (!query) return true;
+      return `${ai.name} ${ai.slug} ${ai.category}`.toLowerCase().includes(query);
+    })
+    .map((ai) => ({ ai, stats: summary.get(roomSummaryKey(ai.id, null)) ?? { count: 0, lastAt: null }, override: defaultRoomOverride(db, ai.id) }))
+    .sort(
+      (a, b) =>
+        Number(Boolean(b.override.hidden || b.override.title || b.stats.count)) -
+          Number(Boolean(a.override.hidden || a.override.title || a.stats.count)) || b.stats.count - a.stats.count,
+    )
+    .slice(0, 40);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -64,7 +87,17 @@ export default async function AdminCommunityPage({
         </div>
       </div>
 
-      {saved ? (
+      {saved === "default" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          Default room updated. The public community page reflects it immediately.
+        </div>
+      ) : null}
+      {saved === "cleared" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          Default room messages cleared. The room itself stays open.
+        </div>
+      ) : null}
+      {saved && saved !== "default" && saved !== "cleared" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
           Room created.{" "}
           <Link href={`/community/${saved}`} className="font-semibold underline">
@@ -146,6 +179,97 @@ export default async function AdminCommunityPage({
             <button className="btn btn-primary !py-2 text-xs">Create room</button>
           </div>
         </form>
+      </section>
+
+      <section className="card p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold">Default rooms (every AI has one)</h3>
+            <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-muted">
+              The automatic room at <code>/community/&lt;ai-slug&gt;</code> is now under your control: rename it, write
+              the welcome line, hide it from the public index or clear its messages. Search above to find any AI.
+            </p>
+          </div>
+          <span className="chip bg-slate-100 text-slate-600">{defaultRooms.length} shown</span>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {defaultRooms.map(({ ai, stats, override }) => (
+            <details key={ai.id} className="rounded-xl border border-line p-3">
+              <summary className="flex cursor-pointer flex-wrap items-center gap-2 text-sm">
+                <span className="min-w-0 flex-1 truncate font-semibold">{ai.name} community</span>
+                <span className="chip bg-slate-100 text-slate-600">{stats.count} messages</span>
+                {override.hidden ? (
+                  <span className="chip bg-amber-50 text-amber-700">Hidden</span>
+                ) : (
+                  <span className="chip bg-emerald-50 text-emerald-700">Live</span>
+                )}
+                {override.title ? <span className="chip bg-brand-soft text-brand">Renamed</span> : null}
+                <span className="text-xs text-brand">Manage ▾</span>
+              </summary>
+
+              <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                <form action={saveDefaultCommunityRoomAction} className="space-y-2">
+                  <input type="hidden" name="aiId" value={ai.id} />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <label className="label !text-[10px]" htmlFor={`room_title_${ai.id}`}>
+                        Room title (empty = default)
+                      </label>
+                      <input
+                        id={`room_title_${ai.id}`}
+                        name="title"
+                        defaultValue={override.title ?? ""}
+                        maxLength={60}
+                        placeholder={`${ai.name} community`}
+                        className="field !py-1.5 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="label !text-[10px]" htmlFor={`room_desc_${ai.id}`}>
+                        Welcome line
+                      </label>
+                      <input
+                        id={`room_desc_${ai.id}`}
+                        name="description"
+                        defaultValue={override.description ?? ""}
+                        maxLength={240}
+                        placeholder="What this room is for"
+                        className="field !py-1.5 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-[11px] text-slate-600">
+                      <input
+                        type="checkbox"
+                        name="hidden"
+                        defaultChecked={Boolean(override.hidden)}
+                        className="h-3.5 w-3.5 accent-amber-600"
+                      />
+                      Hide this room from the public
+                    </label>
+                    <button className="btn btn-primary !py-1 text-xs">Save room</button>
+                    <Link href={`/community/${ai.slug}`} className="btn btn-ghost !py-1 text-xs">
+                      Open ↗
+                    </Link>
+                  </div>
+                </form>
+
+                <form action={clearCommunityRoomMessagesAction}>
+                  <input type="hidden" name="aiId" value={ai.id} />
+                  <DeleteButton
+                    label="Clear messages"
+                    message={`Delete all ${stats.count} messages in ${ai.name} community? The room stays open.`}
+                  />
+                </form>
+              </div>
+            </details>
+          ))}
+          {defaultRooms.length === 0 ? (
+            <p className="py-3 text-sm text-muted">No default room matches this search.</p>
+          ) : null}
+        </div>
       </section>
 
       <form className="card flex flex-wrap items-center gap-2 p-3" action="/admin/community">

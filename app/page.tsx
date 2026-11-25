@@ -8,6 +8,8 @@ import ChampionPodium, { type ChampionCategory, type ChampionRow } from "@/compo
 import FeatureRotator from "@/components/FeatureRotator";
 import HeroSearch from "@/components/HeroSearch";
 import PaidPromo, { type PromoItem } from "@/components/PaidPromo";
+import PollCard from "@/components/PollCard";
+import { myPollVote, pollResults, trendingPolls } from "@/lib/polls";
 import { formatMoney } from "@/lib/analytics";
 import PostCard from "@/components/PostCard";
 import RankTabs, { type RankRow, type RankTab } from "@/components/RankTabs";
@@ -88,6 +90,12 @@ export default async function HomePage({
   const rising = risingAis(view, 4);
   const momentum = movers(view, 4);
   const leaders = rankedAis(view).slice(0, 3);
+  // Trending polls: pinned first, otherwise the newest open ones.
+  const homePolls = trendingPolls(db, 3).map((poll) => ({
+    poll,
+    result: pollResults(db, poll),
+    myOptionId: myPollVote(db, poll.id, user?.id)?.optionId ?? null,
+  }));
 
   const bySlug = new Map([...view.aiStats.values()].map((s) => [s.ai.slug, s]));
   const sponsorRows = activeSponsorPlacements(db);
@@ -459,6 +467,36 @@ export default async function HomePage({
             <ChampionPodium categories={champions} />
           </div>
         </section>
+
+        {/* Community polls: the three trending ones, with a link to /polls */}
+        {homePolls.length ? (
+          <section id="polls" className="mt-12">
+            <SectionHead
+              eyebrow="Community polls"
+              title="You decide"
+              subtitle="Quick AI-vs-AI polls and simple questions. One vote per member, results update live."
+              action={
+                <Link href="/polls" className="btn btn-ghost !py-2 text-xs">
+                  See all polls →
+                </Link>
+              }
+            />
+            <div className="grid gap-3 pt-1 sm:grid-cols-3">
+              {homePolls.map(({ poll, result, myOptionId }) => (
+                <PollCard
+                  key={poll.id}
+                  poll={poll}
+                  result={result}
+                  myOptionId={myOptionId}
+                  open
+                  signedIn={Boolean(user)}
+                  back="/"
+                  compact
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
 
       {/* Overall ranking — a full-bleed band, so the section has no side margins */}

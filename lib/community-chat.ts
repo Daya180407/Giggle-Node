@@ -85,17 +85,24 @@ export function allowedCommunityKinds(settings: CommunitySettings): CommunityMes
   );
 }
 
-export function defaultRoomFor(ai: Ai): RoomRef {
+/** Admin overrides saved for an AI's default room (title, description, hidden). */
+export function defaultRoomOverride(db: DB, aiId: string) {
+  return (db.communityDefaultRooms ?? {})[aiId] ?? {};
+}
+
+export function defaultRoomFor(db: DB, ai: Ai): RoomRef {
   const description = ai.description?.trim() ?? "";
+  const override = defaultRoomOverride(db, ai.id);
   return {
     key: roomSummaryKey(ai.id, null),
     aiId: ai.id,
     slug: ai.slug,
-    title: `${ai.name} community`,
-    description: description.length > 180 ? `${description.slice(0, 177)}…` : description,
+    title: override.title?.trim() || `${ai.name} community`,
+    description:
+      override.description?.trim() || (description.length > 180 ? `${description.slice(0, 177)}…` : description),
     roomId: null,
     scope: "ai",
-    hidden: false,
+    hidden: Boolean(override.hidden),
     createdAt: ai.createdAt ?? null,
   };
 }
@@ -146,7 +153,10 @@ export function findCommunityRoom(db: DB, slug: string): { ai: Ai | null; room: 
     }
   }
   const ai = db.ai.find((row) => row.slug === slug && !row.hidden);
-  return ai ? { ai, room: defaultRoomFor(ai) } : null;
+  if (!ai) return null;
+  const room = defaultRoomFor(db, ai);
+  // A hidden default room is closed to visitors, just like a hidden custom room.
+  return room.hidden ? null : { ai, room };
 }
 
 /** Room messages, oldest first, so the newest post sits at the bottom of the chat. */

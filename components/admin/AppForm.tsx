@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { saveAppAction } from "@/app/actions";
-import { AiLogo } from "@/components/ui";
+import LogoField, { type LogoMedia } from "@/components/admin/LogoField";
 import { DESKTOP_GROUPS, MOBILE_GROUPS } from "@/lib/software";
 import type { AppEntry } from "@/lib/apps/types";
 
@@ -14,13 +14,14 @@ import type { AppEntry } from "@/lib/apps/types";
 export default function AppForm({
   entry,
   ais,
+  media,
 }: {
   entry?: AppEntry | null;
   ais: { slug: string; name: string }[];
+  media: LogoMedia[];
 }) {
   const [kind, setKind] = useState<"mobile" | "desktop">(entry?.kind ?? "mobile");
   const [group, setGroup] = useState(entry?.group ?? MOBILE_GROUPS[0].key);
-  const [emoji, setEmoji] = useState(entry?.emoji ?? "📱");
   const [color, setColor] = useState(entry?.color ?? "#4F46E5");
   const [name, setName] = useState(entry?.name ?? "");
 
@@ -191,41 +192,26 @@ export default function AppForm({
       </section>
 
       <section className="card p-4">
-        <h3 className="text-sm font-bold">Icon</h3>
-        <div className="mt-3 flex flex-wrap items-end gap-3">
-          <div className="flex items-center gap-3">
-            <AiLogo logo={emoji || "📱"} color={color} size={52} rounded="rounded-xl" />
-            <div>
-              <label className="label" htmlFor="emoji">
-                Emoji / mark
-              </label>
-              <input
-                id="emoji"
-                name="emoji"
-                value={emoji}
-                onChange={(event) => setEmoji(event.target.value.slice(0, 4))}
-                className="field !w-28"
-                maxLength={4}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="label" htmlFor="color">
-              Accent colour
-            </label>
-            <input
-              id="color"
-              name="color"
-              type="color"
-              value={color}
-              onChange={(event) => setColor(event.target.value)}
-              className="field !h-10 !w-20 !p-1"
-            />
-          </div>
-          <p className="max-w-sm text-[11px] leading-relaxed text-muted">
-            Group default: {groupMeta?.label ?? group}. Upload a real icon on the app page after saving if you have
-            one.
-          </p>
+        <h3 className="text-sm font-bold">App logo</h3>
+        <p className="mt-1 text-[11px] leading-relaxed text-muted">
+          Upload a square logo, pick an icon already used in the catalogue, or keep an emoji. Group default:{" "}
+          {groupMeta?.label ?? group}.
+        </p>
+        <div className="mt-3">
+          <LogoField defaultValue={entry?.emoji ?? "📱"} media={media} name="emoji" label="App logo" />
+        </div>
+        <div className="mt-3">
+          <label className="label" htmlFor="color">
+            Accent colour
+          </label>
+          <input
+            id="color"
+            name="color"
+            type="color"
+            value={color}
+            onChange={(event) => setColor(event.target.value)}
+            className="field !h-10 !w-20 !p-1"
+          />
         </div>
       </section>
 

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { deleteMediaAction, setLogoMediaAction } from "@/app/actions";
 import AiLogo from "@/components/AiLogo";
 import MediaUploader from "@/components/admin/MediaUploader";
+import { catalogueLogos } from "@/lib/media";
 import { requireAreaPage } from "@/lib/permissions";
+import { allApps } from "@/lib/software";
 import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,8 @@ export default async function AdminMediaPage({
   const db = readDb();
   const media = db.media ?? [];
   const totalBytes = media.reduce((sum, item) => sum + item.bytes, 0);
+  const logos = catalogueLogos(db);
+  const appCount = allApps(db.customApps).length;
 
   return (
     <div className="space-y-4">
@@ -99,26 +103,45 @@ export default async function AdminMediaPage({
       <section className="card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 className="text-sm font-bold">Catalogue logos</h3>
+            <h3 className="text-sm font-bold">Catalogue logos &amp; app icons</h3>
             <p className="text-xs text-muted">
-              Every AI mark currently used across ranking cards and pages. Upload a new image and use it as the site
-              logo, or replace a tool logo from its AI edit page.
+              Every image already used by an AI listing or an app. These appear in the logo picker of new listings too,
+              so you never upload the same icon twice.
             </p>
           </div>
-          <span className="chip bg-slate-100 text-slate-600">{db.ai.length} tools</span>
+          <div className="flex flex-wrap gap-1.5 text-[11px]">
+            <span className="chip bg-slate-100 text-slate-600">{db.ai.length} AI</span>
+            <span className="chip bg-slate-100 text-slate-600">{appCount} apps</span>
+            <span className="chip bg-slate-100 text-slate-600">{logos.length} images</span>
+          </div>
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
-          {db.ai.slice(0, 32).map((ai) => (
-            <Link
-              key={ai.id}
-              href={`/ai/${ai.slug}`}
-              className="flex min-w-0 flex-col items-center gap-1 rounded-xl border border-line p-2 text-center transition hover:border-indigo-200"
-            >
-              <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={34} rounded="rounded-lg" />
-              <span className="w-full truncate text-[10px] text-slate-600">{ai.name}</span>
-            </Link>
-          ))}
-        </div>
+        {logos.length ? (
+          <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-10">
+            {logos.slice(0, 60).map((logo) => (
+              <div
+                key={logo.id}
+                className="flex min-w-0 flex-col items-center gap-1 rounded-xl border border-line p-2 text-center"
+                title={logo.name}
+              >
+                <img src={logo.url} alt={logo.name} className="h-9 w-9 rounded-lg object-contain" />
+                <span className="w-full truncate text-[10px] text-slate-600">{logo.name}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-10">
+            {db.ai.slice(0, 20).map((ai) => (
+              <Link
+                key={ai.id}
+                href={`/ai/${ai.slug}`}
+                className="flex min-w-0 flex-col items-center gap-1 rounded-xl border border-line p-2 text-center transition hover:border-indigo-200"
+              >
+                <AiLogo slug={ai.slug} logo={ai.logo} color={ai.color} size={34} rounded="rounded-lg" />
+                <span className="w-full truncate text-[10px] text-slate-600">{ai.name}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       <p className="text-[11px] leading-relaxed text-muted">

@@ -619,6 +619,21 @@ export type Prompt = {
   createdAt?: string;
 };
 
+/** A member report on a prompt they consider harmful, spammy or broken. */
+export type PromptReport = {
+  id: string;
+  promptId: string;
+  userId: string;
+  userName: string;
+  /** short reason picked in the public form */
+  reason: string;
+  note?: string;
+  status: "open" | "resolved" | "dismissed";
+  createdAt: string;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+};
+
 export type CommunityMessageKind = "text" | "image" | "voice" | "file";
 
 export type CommunityAttachment = {
@@ -976,6 +991,38 @@ export type AppearanceSettings = {
   usdRate: number;
 };
 
+/** Poll answers: an AI pick, an app pick or a plain text option. */
+export type PollOption = {
+  id: string;
+  label: string;
+  /** set for an AI-vs-AI poll so the result can link to the listing */
+  aiId?: string | null;
+};
+
+export type Poll = {
+  id: string;
+  question: string;
+  description: string;
+  /** "ai" compares tools, "app" compares apps, "custom" is any question */
+  kind: "ai" | "app" | "custom";
+  options: PollOption[];
+  status: "open" | "closed";
+  /** pinned on the homepage; trending polls are the most recent open ones */
+  featured: boolean;
+  /** optional closing date; a past date behaves like status "closed" */
+  closesAt?: string | null;
+  createdAt: string;
+  createdBy: string;
+};
+
+export type PollVote = {
+  id: string;
+  pollId: string;
+  optionId: string;
+  userId: string;
+  createdAt: string;
+};
+
 export type ChangelogEntry = {
   id: string;
   version: string;
@@ -1096,10 +1143,20 @@ export type DB = {
   sponsorRequests?: SponsorRequest[];
   /** admin-set price per sponsored slot; missing keys fall back to defaults */
   sponsorPrices?: Partial<Record<SponsorSlotKey, number>>;
+  /** category top-3 price per category slug; falls back to the top3 slot price */
+  sponsorCategoryPrices?: Record<string, number>;
+  /** admin-managed polls shown on the homepage and /polls */
+  polls?: Poll[];
+  /** one vote per member per poll */
+  pollVotes?: PollVote[];
   /** admin-managed roles and their permissions */
   roles?: RoleDefinition[];
   /** admin-created extra community rooms; default AI rooms need no row */
   communityRooms?: CommunityRoom[];
+  /** admin overrides for an AI's default room, keyed by AI id */
+  communityDefaultRooms?: Record<string, { title?: string; description?: string; hidden?: boolean }>;
+  /** member complaints about library prompts, reviewed by an admin */
+  promptReports?: PromptReport[];
   /** per-AI community messages, pruned to the admin retention window */
   communityMessages?: CommunityMessage[];
   /** room memberships; a signed-in user must join before posting */

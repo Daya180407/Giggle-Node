@@ -45,6 +45,37 @@ export default async function AdminGamificationPage({
         </div>
       ) : null}
 
+      {/* Plain-language explanation, so members know what points are for. */}
+      <section className="card border-indigo-200 bg-indigo-50/50 p-4">
+        <h3 className="text-sm font-bold text-ink">What members do with points — in simple words</h3>
+        <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-slate-700">
+          <li>
+            <strong>Points are a thank-you score.</strong> A member gets them for rating a tool and for writing a
+            review — nothing else.
+          </li>
+          <li>
+            <strong>Badges:</strong> {settings.badgeTopReviewer} points gives “Top Reviewer”, {settings.badgeExpert}{" "}
+            gives “Expert”, and a new account shows “New User” for {settings.newUserDays} days.
+          </li>
+          <li>
+            <strong>Leaderboard:</strong> the public Top Contributors page ranks members by points. A member can show
+            their position on their profile.
+          </li>
+          <li>
+            <strong>Not money:</strong> points cannot be cashed out, traded or spent — no store, no discount. They only
+            show trust and helpfulness.
+          </li>
+          <li>
+            <strong>Fair by design:</strong> points are counted from live ratings, so deleting a rating removes its
+            points too. There is no separate balance anyone can inflate.
+          </li>
+        </ul>
+        <p className="mt-2 text-[11px] text-muted">
+          If you later want points to unlock something (a badge colour, a shop coupon), that would be a new feature —
+          today they are recognition only. The public explanation lives on /contributors.
+        </p>
+      </section>
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <form action={saveGamificationAction} className="card p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">

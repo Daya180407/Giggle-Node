@@ -17,7 +17,7 @@ export default async function NewPostPage() {
         </Link>
       </div>
       <div className="card p-4">
-        <PostForm ais={db.ai} />
+        <PostForm ais={db.ai} media={(db.media ?? []).map(({ id, name, url }) => ({ id, name, url }))} />
       </div>
     </div>
   );

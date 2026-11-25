@@ -127,15 +127,15 @@ export default function SiteNav({
         {user ? (
           <div className="flex items-center gap-1.5">
             <Link
-              href={user.role === "admin" ? "/admin" : "/profile"}
+              href={user.role !== "user" ? "/admin" : "/profile"}
               className="flex items-center gap-2 rounded-full border border-line bg-white py-1 pl-1 pr-2.5 transition hover:border-indigo-200 sm:pr-3"
-              title={user.role === "admin" ? "Admin dashboard" : "Your profile"}
+              title={user.role !== "user" ? "Admin dashboard" : "Your profile"}
             >
               <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-[11px] font-bold text-white">
                 {user.avatar}
               </span>
               <span className="hidden max-w-24 truncate text-sm font-medium sm:block">
-                {user.role === "admin" ? "Admin" : user.name.split(" ")[0]}
+                {user.role !== "user" ? "Admin" : user.name.split(" ")[0]}
               </span>
             </Link>
           </div>
@@ -202,8 +202,8 @@ export default function SiteNav({
                 My List {savedCount > 0 ? `(${savedCount})` : ""}
               </Link>
               {user ? (
-                <Link href={user.role === "admin" ? "/admin" : "/profile"} className="btn btn-ghost">
-                  {user.role === "admin" ? "Admin" : "Profile"}
+                <Link href={user.role !== "user" ? "/admin" : "/profile"} className="btn btn-ghost">
+                  {user.role !== "user" ? "Admin" : "Profile"}
                 </Link>
               ) : (
                 <Link href="/login" className="btn btn-ghost">

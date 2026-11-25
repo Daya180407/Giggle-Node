@@ -1,8 +1,9 @@
 import { savePostAction } from "@/app/actions";
+import CoverImageField, { type UploadMedia } from "@/components/admin/CoverImageField";
 import { POST_TYPE_LABEL } from "@/lib/categories";
 import type { Ai, Post } from "@/lib/types";
 
-export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
+export default function PostForm({ post, ais, media }: { post?: Post; ais: Ai[]; media: UploadMedia[] }) {
   return (
     <form action={savePostAction} className="space-y-3">
       {post ? <input type="hidden" name="id" value={post.id} /> : null}
@@ -68,18 +69,15 @@ export default function PostForm({ post, ais }: { post?: Post; ais: Ai[] }) {
         </label>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <CoverImageField defaultValue={post?.coverImage ?? ""} media={media} />
+
+      <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="coverEmoji">
-            Cover emoji
+            Fallback emoji (when no featured image)
           </label>
           <input id="coverEmoji" name="coverEmoji" maxLength={4} defaultValue={post?.coverEmoji ?? "📰"} className="field" />
-        </div>
-        <div>
-          <label className="label" htmlFor="coverImage">
-            Cover image URL (optional)
-          </label>
-          <input id="coverImage" name="coverImage" defaultValue={post?.coverImage} placeholder="https://" className="field" />
+          <p className="mt-1 text-[11px] text-muted">Shown only when the featured image is empty.</p>
         </div>
         <div>
           <label className="label" htmlFor="author">

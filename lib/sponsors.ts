@@ -155,6 +155,25 @@ export function sponsorPrices(db: DB): Record<SponsorSlotKey, number> {
   return prices;
 }
 
+/**
+ * Price of the top-3 podium in one category. Categories can be priced
+ * separately (a popular niche costs more); anything not set falls back to the
+ * shared top-3 slot price, so no category ever renders without a price.
+ */
+export function sponsorCategoryPrice(db: DB, categorySlug: string): number {
+  const saved = db.sponsorCategoryPrices?.[categorySlug];
+  if (typeof saved === "number" && Number.isFinite(saved) && saved >= 0) return Math.round(saved);
+  return sponsorPrices(db).top3;
+}
+
+/** Price for a slot in a list: the category price for a category podium, else the slot price. */
+export function sponsorQuote(db: DB, slot: SponsorSlotKey, listKey: string): number {
+  if (slot === "top3" && listKey !== "all" && listKey !== "trending") {
+    return sponsorCategoryPrice(db, listKey);
+  }
+  return sponsorPrices(db)[slot] ?? 0;
+}
+
 /** True when a booking's last day (YYYY-MM-DD, inclusive) is in the past. */
 export function sponsorEnded(until?: string | null, now = Date.now()): boolean {
   if (!until) return false;

@@ -295,10 +295,14 @@ export function risingAis(view: View, limit = 6): AiStat[] {
     .slice(0, limit);
 }
 
-/** Manual champion for a category, or the featured tool when an admin ticked one. */
+/**
+ * Category champions stay automatic: the list is the live weighted ranking, so
+ * #1 is whatever the ratings say today. An admin override, when set, only moves
+ * that one tool to the front.
+ */
 export function championFor(view: View, category: CategorySlug, overrides: Record<string, string> = {}): AiStat[] {
   const ranked = rankedAis(view, category);
-  const overrideId = overrides[category] ?? ranked.find((s) => s.ai.featured)?.ai.id;
+  const overrideId = overrides[category];
   if (!overrideId) return ranked;
   const picked = ranked.find((s) => s.ai.id === overrideId);
   if (!picked) return ranked;

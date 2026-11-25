@@ -3,7 +3,7 @@ import Link from "next/link";
 import SponsorRequestForm from "@/components/SponsorRequestForm";
 import { getCategories } from "@/lib/categories";
 import { getSiteSettings } from "@/lib/settings";
-import { money, SPONSOR_SLOTS, sponsorPrices } from "@/lib/sponsors";
+import { money, SPONSOR_SLOTS, sponsorCategoryPrice, sponsorPrices } from "@/lib/sponsors";
 import { allApps } from "@/lib/software";
 import { readDb } from "@/lib/store";
 
@@ -22,6 +22,8 @@ export default async function SponsorPage() {
   const currency = settings.appearance.currency;
   const prices = sponsorPrices(db);
   const categories = getCategories(db);
+  // Every category has its own top-3 price (fallback: the shared top-3 price).
+  const categoryPrices = Object.fromEntries(categories.map((category) => [category.slug, sponsorCategoryPrice(db, category.slug)]));
   const categoryNames = new Map(categories.map((category) => [category.slug, category.name]));
   const ais = db.ai
     .filter((ai) => !ai.hidden)
@@ -78,6 +80,31 @@ export default async function SponsorPage() {
             </div>
           ))}
         </div>
+
+        <div className="mt-4 card p-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="eyebrow">Category sponsorships</p>
+              <h3 className="display mt-1 text-base text-ink">Top-3 podium price per category</h3>
+            </div>
+            <span className="text-[11px] text-muted">30 days · all categories</span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {categories.map((category) => (
+              <div key={category.slug} className="rounded-xl border border-line bg-slate-50/60 px-2.5 py-2">
+                <p className="truncate text-[11px] font-semibold text-slate-600">
+                  {category.emoji} {category.name}
+                </p>
+                <p className="mt-0.5 text-sm font-extrabold text-ink">
+                  {money(categoryPrices[category.slug] ?? prices.top3, currency)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[10.5px] text-muted">
+            A category podium books the extra card right after that category&apos;s champion.
+          </p>
+        </div>
       </section>
 
       <section className="mt-10 grid gap-3 sm:grid-cols-3">
@@ -113,6 +140,7 @@ export default async function SponsorPage() {
             apps={apps}
             categories={categories.map((category) => ({ slug: category.slug, name: category.name }))}
             prices={prices}
+            categoryPrices={categoryPrices}
             currency={currency}
           />
         </div>

@@ -29,7 +29,7 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
       <div className="card p-4">
-        <PostForm post={post} ais={db.ai} />
+        <PostForm post={post} ais={db.ai} media={(db.media ?? []).map(({ id, name, url }) => ({ id, name, url }))} />
       </div>
     </div>
   );

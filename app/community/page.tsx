@@ -9,6 +9,7 @@ import {
   communityRoomSummary,
   communityRoomsFor,
   communityTotals,
+  defaultRoomOverride,
   KIND_LABELS,
   messagePreview,
   roomSummaryKey,
@@ -79,14 +80,17 @@ export default async function CommunityIndexPage() {
       return [{ room, ai, stats, last }];
     });
 
-  const aiRooms = rankedAis(view).map((stat) => {
-    const key = roomSummaryKey(stat.ai.id, null);
-    return {
-      stat,
-      stats: summary.get(key) ?? { count: 0, lastAt: null },
-      last: latest.get(key),
-    };
-  });
+  // An admin can hide an AI's default room; hidden rooms leave the public index.
+  const aiRooms = rankedAis(view)
+    .filter((stat) => !defaultRoomOverride(db, stat.ai.id).hidden)
+    .map((stat) => {
+      const key = roomSummaryKey(stat.ai.id, null);
+      return {
+        stat,
+        stats: summary.get(key) ?? { count: 0, lastAt: null },
+        last: latest.get(key),
+      };
+    });
 
   const allRows: ChatRow[] = [
     {
