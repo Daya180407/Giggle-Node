@@ -634,7 +634,10 @@ export async function savePromptAction(formData: FormData) {
   });
   // The library page edits prompts in place; the AI editor keeps its own flow.
   const back = String(formData.get("back") ?? "").trim();
-  redirect(back.startsWith("/admin") ? back : `/admin/ai/${aiSlug}`);
+  if (back.startsWith("/admin")) {
+    redirect(`${back}${back.includes("?") ? "&" : "?"}saved=edited`);
+  }
+  redirect(`/admin/ai/${aiSlug}`);
 }
 
 const MAX_PROMPTS_PER_DAY = 10;
@@ -4436,6 +4439,7 @@ export async function reportPromptAction(formData: FormData) {
   const user = await getCurrentUser();
   const back = String(formData.get("back") ?? "/prompts");
   const safeBack = back.startsWith("/") ? back : "/prompts";
+  const backWith = (value: string) => `${safeBack}${safeBack.includes("?") ? "&" : "?"}reported=${value}`;
   if (!user) redirect(`/login?next=${encodeURIComponent(safeBack)}`);
 
   const promptId = String(formData.get("promptId") ?? "").trim();
@@ -4443,8 +4447,8 @@ export async function reportPromptAction(formData: FormData) {
   const note = String(formData.get("note") ?? "").trim().slice(0, 500);
   const db = readDb();
   const prompt = (db.prompts ?? []).find((row) => row.id === promptId);
-  if (!prompt) redirect(`${safeBack}?reported=missing`);
-  if (!PROMPT_REPORT_REASONS.includes(reason)) redirect(`${safeBack}?reported=reason`);
+  if (!prompt) redirect(backWith("missing"));
+  if (!PROMPT_REPORT_REASONS.includes(reason)) redirect(backWith("reason"));
 
   mutateDb((draft) => {
     if (!Array.isArray(draft.promptReports)) draft.promptReports = [];
@@ -4473,7 +4477,7 @@ export async function reportPromptAction(formData: FormData) {
     });
   });
   revalidatePath("/admin/prompts");
-  redirect(`${safeBack}?reported=1`);
+  redirect(backWith("1"));
 }
 
 /**
@@ -4516,7 +4520,7 @@ export async function reviewPromptReportAction(formData: FormData) {
   });
   revalidatePath("/prompts");
   revalidatePath("/admin/prompts");
-  redirect(back);
+  redirect(`${back}${back.includes("?") ? "&" : "?"}saved=report`);
 }
 
 /* ================== default community rooms (admin) ================== */

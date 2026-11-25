@@ -30,7 +30,9 @@ export default function AiLogo({
   const [failed, setFailed] = useState(false);
   const raw = (logo ?? "").trim();
   const kind = logoKind(raw);
-  const imageSrc = src ?? (kind === "image" ? raw : kind === "emoji" && slug ? `/logos/${slug}.png` : undefined);
+  // A logo saved in the database wins over the conventional file path: uploads
+  // are stored as data URLs and custom apps have no /app-icons file.
+  const imageSrc = kind === "image" ? raw : src ?? (kind === "emoji" && slug ? `/logos/${slug}.png` : undefined);
   const showImage = Boolean(imageSrc) && !failed;
   const showSvg = !showImage && kind === "svg";
   const pad = Math.max(3, Math.round(size * 0.13));
@@ -62,7 +64,7 @@ export default function AiLogo({
       ) : showSvg ? (
         <span className="block h-full w-full" aria-hidden dangerouslySetInnerHTML={{ __html: raw }} />
       ) : (
-        <span aria-hidden>{raw}</span>
+        <span aria-hidden>{kind === "emoji" ? raw : "🤖"}</span>
       )}
     </span>
   );

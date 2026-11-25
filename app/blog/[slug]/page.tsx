@@ -104,9 +104,17 @@ export default async function PostPage({ params }: Props) {
         <h1 className="mt-3 text-2xl font-extrabold leading-tight sm:text-4xl">{post.title}</h1>
         <p className="mt-2 text-base text-slate-600">{post.excerpt}</p>
 
-        <div className="mt-4 grid h-40 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-400 to-sky-400 text-6xl sm:h-56">
-          <span aria-hidden>{post.coverEmoji || "📰"}</span>
-        </div>
+        {post.coverImage ? (
+          <img
+            src={post.coverImage}
+            alt={post.title}
+            className="mt-4 h-40 w-full rounded-2xl object-cover sm:h-56"
+          />
+        ) : (
+          <div className="mt-4 grid h-40 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-400 to-sky-400 text-6xl sm:h-56">
+            <span aria-hidden>{post.coverEmoji || "📰"}</span>
+          </div>
+        )}
 
         <div className="mt-6 flex items-center justify-between">
           <span className="text-xs text-muted">GiggleNode Editorial</span>
@@ -187,8 +195,12 @@ export default async function PostPage({ params }: Props) {
       {nextPost ? (
         <section className="mt-8">
           <Link href={`/blog/${nextPost.slug}`} className="card card-hover flex items-center gap-4 p-4">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-indigo-50 text-2xl">
-              {nextPost.coverEmoji}
+            <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-indigo-50 text-2xl">
+              {nextPost.coverImage ? (
+                <img src={nextPost.coverImage} alt="" className="h-full w-full object-cover" />
+              ) : (
+                nextPost.coverEmoji
+              )}
             </span>
             <div className="min-w-0">
               <p className="text-xs text-muted">Next post</p>

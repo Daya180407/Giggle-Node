@@ -8,13 +8,23 @@ export default function PostCard({ post, featured = false }: { post: Post; featu
     <article className={`card card-hover group flex h-full flex-col overflow-hidden ${featured ? "sm:flex-row" : ""}`}>
       <Link
         href={`/blog/${post.slug}`}
-        className={`relative grid place-items-center bg-gradient-to-br from-indigo-500 via-indigo-400 to-sky-400 text-5xl ${
+        className={`relative grid place-items-center overflow-hidden bg-gradient-to-br from-indigo-500 via-indigo-400 to-sky-400 text-5xl ${
           featured ? "sm:w-2/5 min-h-40" : "h-32"
         }`}
         aria-hidden
         tabIndex={-1}
       >
-        <span className="drop-shadow-sm">{post.coverEmoji || "📰"}</span>
+        {post.coverImage ? (
+          <img
+            src={post.coverImage}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <span className="drop-shadow-sm">{post.coverEmoji || "📰"}</span>
+        )}
         <span className="absolute left-2 top-2 chip bg-white/90 text-slate-700">
           {POST_TYPE_LABEL[post.type] ?? "Post"}
         </span>
