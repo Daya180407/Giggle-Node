@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 import SignupForm from "@/components/SignupForm";
 import { getCurrentUser } from "@/lib/auth";
+import { googleReady } from "@/lib/google-auth";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
 
@@ -18,6 +20,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   const user = await getCurrentUser();
   if (user) redirect("/profile");
   const settings = getSiteSettings(readDb());
+  const googleOn = settings.allowSignups && googleReady(settings);
 
   return (
     <div className="mx-auto max-w-md px-4 py-12 sm:py-16">
@@ -31,7 +34,19 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         </p>
         <div className="mt-5">
           {settings.allowSignups ? (
-            <SignupForm next={next} />
+            <>
+              {googleOn ? (
+                <>
+                  <GoogleSignInButton next={next} />
+                  <div className="my-4 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    <span className="h-px flex-1 bg-line" />
+                    or sign up with email
+                    <span className="h-px flex-1 bg-line" />
+                  </div>
+                </>
+              ) : null}
+              <SignupForm next={next} />
+            </>
           ) : (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
               <p className="font-semibold">Signups are paused</p>

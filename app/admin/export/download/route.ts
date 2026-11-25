@@ -17,7 +17,12 @@ export async function GET() {
   // Owner logins are separate accounts; their hashes never leave the server.
   const safeOwners = (db.ownerAccounts ?? []).map(({ passwordHash, ...safe }) => safe);
   const settings = getSiteSettings(db);
-  const safeSettings = { ...settings, aiSearch: { ...settings.aiSearch, apiKey: "" } };
+  // Provider keys and the Google OAuth secret never leave the server in a backup.
+  const safeSettings = {
+    ...settings,
+    aiSearch: { ...settings.aiSearch, apiKey: "" },
+    security: { ...settings.security, googleClientSecret: "" },
+  };
   const payload = {
     exportedAt: new Date().toISOString(),
     exportedBy: user.email,

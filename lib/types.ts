@@ -747,6 +747,8 @@ export type User = {
   /** trusted reviewer badge */
   verified?: boolean;
   passwordHash?: string;
+  /** Google account id ("sub") once the user signed in with Google */
+  googleId?: string;
   resetTokenHash?: string;
   resetTokenExpiresAt?: string;
   /** false = signed up but the email link was never opened; missing = verified (legacy accounts) */
@@ -931,6 +933,10 @@ export type SecuritySettings = {
   /** hide the review, or hold the whole rating for moderation */
   badWordAction: "hide" | "pending";
   googleLogin: boolean;
+  /** OAuth 2.0 client ID from Google Cloud Console; public, sent to Google */
+  googleClientId: string;
+  /** OAuth 2.0 client secret; server-side only, never rendered back to a page */
+  googleClientSecret: string;
   emailLogin: boolean;
 };
 

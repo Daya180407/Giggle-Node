@@ -103,6 +103,8 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     badWords: [],
     badWordAction: "pending",
     googleLogin: false,
+    googleClientId: "",
+    googleClientSecret: "",
     emailLogin: true,
   },
   appearance: {

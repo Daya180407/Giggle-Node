@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 import LoginForm from "@/components/LoginForm";
 import { getCurrentUser } from "@/lib/auth";
+import { GOOGLE_ERRORS, googleReady } from "@/lib/google-auth";
 import { isStaffRole, resolveRoles } from "@/lib/roles";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
@@ -19,9 +21,9 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; reset?: string; verify?: string }>;
+  searchParams: Promise<{ next?: string; reset?: string; verify?: string; error?: string }>;
 }) {
-  const { next = "/", reset, verify } = await searchParams;
+  const { next = "/", reset, verify, error } = await searchParams;
   const user = await getCurrentUser();
   if (user) {
     const db = readDb();
@@ -31,6 +33,8 @@ export default async function LoginPage({
     redirect(target.startsWith("/admin") && !staff ? "/" : target);
   }
   const settings = getSiteSettings(readDb());
+  const googleOn = googleReady(settings);
+  const googleError = error ? GOOGLE_ERRORS[error] : undefined;
 
   return (
     <div className="mx-auto max-w-md px-4 py-12 sm:py-16">
@@ -47,6 +51,10 @@ export default async function LoginPage({
           </p>
         ) : null}
 
+        {googleError ? (
+          <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm leading-relaxed text-rose-700">{googleError}</p>
+        ) : null}
+
         {verify ? (
           <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-800">
             That verification link is invalid or has expired.{" "}
@@ -58,9 +66,19 @@ export default async function LoginPage({
         ) : null}
 
         <div className="mt-5">
+          {googleOn ? (
+            <>
+              <GoogleSignInButton next={next} />
+              <div className="my-4 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <span className="h-px flex-1 bg-line" />
+                or use email
+                <span className="h-px flex-1 bg-line" />
+              </div>
+            </>
+          ) : null}
           {settings.security.emailLogin ? (
             <LoginForm next={next} />
-          ) : (
+          ) : googleOn ? null : (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
               Email and password login is currently turned off by the administrator. Please contact{" "}
               <a href={`mailto:${settings.supportEmail}`} className="font-semibold underline">

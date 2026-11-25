@@ -3348,12 +3348,21 @@ export async function saveSecurityAction(formData: FormData) {
   const words = normalizeWordList([String(formData.get("badWords") ?? "")]);
   const threshold = Number(formData.get("ipRatingThreshold") ?? 100);
   const badWordAction = formData.get("badWordAction") === "hide" ? "hide" : "pending";
-  const googleLogin = formData.get("googleLogin") === "on";
+  // Google credentials live in settings because the owner manages them from this page.
+  // A blank secret field keeps the stored one, so the value is never rendered back.
+  const googleClientId = String(formData.get("googleClientId") ?? "").trim().slice(0, 300);
+  const googleSecretInput = String(formData.get("googleClientSecret") ?? "").trim().slice(0, 300);
+  const clearGoogleSecret = formData.get("clearGoogleSecret") === "on";
   // Email login can be paused, but the login page warns before anyone locks themselves out.
   const emailLogin = formData.get("emailLogin") === "on";
 
   mutateDb((db) => {
     const settings = getSiteSettings(db);
+    const googleClientSecret = clearGoogleSecret
+      ? ""
+      : googleSecretInput || settings.security.googleClientSecret;
+    // Google sign-in only stays on with both halves of the OAuth client present.
+    const googleLogin = formData.get("googleLogin") === "on" && Boolean(googleClientId) && Boolean(googleClientSecret);
     db.settings = {
       ...settings,
       security: {
@@ -3364,6 +3373,8 @@ export async function saveSecurityAction(formData: FormData) {
         badWords: words,
         badWordAction,
         googleLogin,
+        googleClientId,
+        googleClientSecret,
         emailLogin,
       },
       updatedAt: new Date().toISOString(),
@@ -3374,7 +3385,7 @@ export async function saveSecurityAction(formData: FormData) {
       admin,
       "updated",
       "Spam & security",
-      `${blocked.length} blocked IPs · ${words.length} bad words · bad word action ${badWordAction}`,
+      `${blocked.length} blocked IPs · ${words.length} bad words · bad word action ${badWordAction} · Google sign-in ${googleLogin ? "on" : "off"}`,
     );
   });
   redirect("/admin/security?saved=1");

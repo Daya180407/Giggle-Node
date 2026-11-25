@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { blockIpAction, saveSecurityAction, unblockIpAction } from "@/app/actions";
 import { requestIp } from "@/lib/auth";
+import { googleCallbackUrl } from "@/lib/google-auth";
 import { requireAreaPage } from "@/lib/permissions";
 import { getSiteSettings } from "@/lib/settings";
 import { readDb } from "@/lib/store";
@@ -16,6 +17,7 @@ export default async function AdminSecurityPage({
   const { saved, error } = await searchParams;
   const db = readDb();
   const security = getSiteSettings(db).security;
+  const callbackUrl = await googleCallbackUrl();
   const currentIp = await requestIp();
   const dayAgo = Date.now() - 86400000;
   const recent = new Map<string, number>();
@@ -162,15 +164,73 @@ export default async function AdminSecurityPage({
               <span>
                 <span className="block font-semibold">Google sign-in</span>
                 <span className="text-[11px] text-muted">
-                  Stored preference. Google OAuth is not configured in this build, so email login stays available.
+                  Shows “Continue with Google” on login and signup. Needs a client ID and secret below.
                 </span>
               </span>
             </label>
           </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="googleClientId">
+                Google OAuth client ID
+              </label>
+              <input
+                id="googleClientId"
+                name="googleClientId"
+                defaultValue={security.googleClientId}
+                className="field"
+                placeholder="1234567890-abc123.apps.googleusercontent.com"
+                maxLength={300}
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="googleClientSecret">
+                Google OAuth client secret
+              </label>
+              <input
+                id="googleClientSecret"
+                name="googleClientSecret"
+                type="password"
+                defaultValue=""
+                className="field"
+                placeholder={security.googleClientSecret ? "Saved — leave blank to keep it" : "GOCSPX-…"}
+                maxLength={300}
+                autoComplete="new-password"
+              />
+              {security.googleClientSecret ? (
+                <label className="mt-1.5 flex items-center gap-2 text-[11px] text-muted">
+                  <input type="checkbox" name="clearGoogleSecret" className="h-3.5 w-3.5 accent-rose-600" />
+                  Remove the stored secret
+                </label>
+              ) : null}
+            </div>
+            <div className="sm:col-span-2">
+              <span className="label">Authorised redirect URI — add this in Google Cloud Console</span>
+              <code className="block select-all break-all rounded-lg border border-line bg-slate-50 px-3 py-2 text-[11px] text-slate-700">
+                {callbackUrl}
+              </code>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-line bg-slate-50/70 p-3 text-[11px] leading-relaxed text-slate-600">
+            <p className="font-semibold text-slate-700">How to connect Google</p>
+            <p className="mt-1">
+              Google Cloud Console → APIs &amp; Services → Credentials → Create credentials → OAuth client ID →
+              <strong> Web application</strong>. Add the redirect URI above under “Authorised redirect URIs”, then paste
+              the client ID and secret here and tick “Google sign-in”. Save — the button appears immediately.
+            </p>
+            <p className="mt-1 text-muted">
+              Every host needs its URI registered (production, preview and localhost). The secret is kept server-side and
+              is never rendered back; an empty field keeps the saved value. Sign-in is only enabled while both the ID and
+              secret are present.
+            </p>
+          </div>
           <p className="mt-2 text-[11px] leading-relaxed text-muted">
-            Google sign-in needs OAuth client credentials and a callback route, which this build does not have. Treat
-            that toggle as a stored preference. If you switch email login off, new sign-ins are blocked until you turn it
-            back on — existing admin sessions keep working.
+            If you switch email login off, new email sign-ins are blocked until you turn it back on — existing admin
+            sessions keep working. Google accounts with a verified email are treated as email-verified on this site.
           </p>
         </section>
 
