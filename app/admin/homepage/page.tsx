@@ -78,6 +78,77 @@ export default async function AdminHomepagePage({
         <section className="card p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
+              <h3 className="text-sm font-bold">Paid promotions shelf</h3>
+              <p className="text-xs text-muted">
+                The “Promoted · Paid AI picks worth upgrading to” block on the homepage. Leave every card on Automatic
+                for the top 3 paid tools by score.
+              </p>
+            </div>
+            <span className="chip bg-slate-100 text-slate-500">
+              {settings.promoAiIds.length ? `${settings.promoAiIds.length} manual` : "Automatic"}
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {[0, 1, 2].map((slot) => (
+              <div key={slot}>
+                <label className="label" htmlFor={`promoPick${slot}`}>
+                  Card {slot + 1}
+                </label>
+                <select
+                  id={`promoPick${slot}`}
+                  name="promoPick"
+                  defaultValue={settings.promoAiIds[slot] ?? ""}
+                  className="field"
+                >
+                  <option value="">Automatic</option>
+                  {tools.map((s) => (
+                    <option key={s.ai.id} value={s.ai.id}>
+                      {s.ai.name} — {s.ai.priceType} ({s.score.toFixed(1)}★)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="promoHeading">
+                Section heading
+              </label>
+              <input
+                id="promoHeading"
+                name="promoHeading"
+                defaultValue={settings.promoHeading}
+                maxLength={80}
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="promoSubtitle">
+                Section subtitle
+              </label>
+              <input
+                id="promoSubtitle"
+                name="promoSubtitle"
+                defaultValue={settings.promoSubtitle}
+                maxLength={200}
+                className="field"
+              />
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted">
+            Once any card has a tool, only picked tools appear — empty “Automatic” cards are skipped and the order follows
+            Card 1 → 3. Show or hide the whole block with “Show paid promotions” in{" "}
+            <Link href="/admin/settings" className="font-semibold text-brand">
+              Site Settings
+            </Link>
+            .
+          </p>
+        </section>
+
+        <section className="card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
               <h3 className="text-sm font-bold">Compare page defaults</h3>
               <p className="text-xs text-muted">These tools appear in the compare table when /compare opens.</p>
             </div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import AiLogo from "@/components/AiLogo";
 import { PriceBadge, Stars } from "@/components/ui";
 import { formatVotes } from "@/lib/format";
+import type { PriceType } from "@/lib/types";
 
 export type PromoItem = {
   slug: string;
@@ -10,6 +11,7 @@ export type PromoItem = {
   color: string;
   score: number;
   votes: number;
+  price: PriceType;
   planPrice: number;
   /** formatted by the homepage using the site currency setting */
   priceLabel?: string;
@@ -22,7 +24,15 @@ export type PromoItem = {
  * Clearly labelled paid placements. The ranking formula never reads this list,
  * so promoted tools still have to earn their score from real ratings.
  */
-export default function PaidPromo({ items }: { items: PromoItem[] }) {
+export default function PaidPromo({
+  items,
+  heading = "Paid AI picks worth upgrading to",
+  subtitle = "Tools with real paid plans, promoted by their makers. Placement is labelled and never changes the leaderboard score.",
+}: {
+  items: PromoItem[];
+  heading?: string;
+  subtitle?: string;
+}) {
   if (!items.length) return null;
 
   return (
@@ -35,11 +45,8 @@ export default function PaidPromo({ items }: { items: PromoItem[] }) {
           <span className="chip border border-amber-300/30 bg-amber-300/10 text-amber-200">
             <span aria-hidden>◆</span> Promoted
           </span>
-          <h2 className="display mt-2 text-xl text-white sm:text-2xl">Paid AI picks worth upgrading to</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-300 sm:text-sm">
-            Tools with real paid plans, promoted by their makers. Placement is labelled and never changes the
-            leaderboard score.
-          </p>
+          <h2 className="display mt-2 text-xl text-white sm:text-2xl">{heading}</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-300 sm:text-sm">{subtitle}</p>
         </div>
         <span className="chip border border-white/15 bg-white/5 text-slate-300">Ad · paid placement</span>
       </div>
@@ -73,7 +80,7 @@ export default function PaidPromo({ items }: { items: PromoItem[] }) {
               <Stars value={item.score} size={15} />
               <span className="text-xs font-bold text-white">{item.score.toFixed(1)}</span>
               <span className="text-[11px] text-slate-400">({formatVotes(item.votes)})</span>
-              <PriceBadge price="paid" />
+              <PriceBadge price={item.price} />
             </div>
 
             <div className="mt-auto flex items-end justify-between gap-2 border-t border-white/10 pt-3">

@@ -100,23 +100,33 @@ export default async function HomePage({
   const bySlug = new Map([...view.aiStats.values()].map((s) => [s.ai.slug, s]));
   const sponsorRows = activeSponsorPlacements(db);
 
-  const paidPicks: PromoItem[] = [...view.aiStats.values()]
-    .filter((s) => !s.ai.hidden && s.ai.priceType === "paid")
-    .sort((a, b) => b.score - a.score || b.votes - a.votes)
-    .slice(0, 3)
-    .map((s) => ({
-      slug: s.ai.slug,
-      name: s.ai.name,
-      logo: s.ai.logo,
-      color: s.ai.color,
-      score: s.score,
-      votes: s.votes,
-      planPrice: s.ai.planPrice,
-      priceLabel: formatMoney(s.ai, settings.appearance),
-      category: categoryName(s.ai.category),
-      bestFor: s.ai.bestFor.join(" · "),
-      website: s.ai.website,
-    }));
+  // Paid shelf: admin picks (in their saved order) win; otherwise the top 3 paid tools by score.
+  const promoPool = [...view.aiStats.values()];
+  const manualPicks = settings.promoAiIds.slice(0, 3).flatMap((id) => {
+    const stat = promoPool.find((s) => s.ai.id === id);
+    return stat && !stat.ai.hidden ? [stat] : [];
+  });
+  const promoSource = manualPicks.length
+    ? manualPicks
+    : promoPool
+        .filter((s) => !s.ai.hidden && s.ai.priceType === "paid")
+        .sort((a, b) => b.score - a.score || b.votes - a.votes)
+        .slice(0, 3);
+
+  const paidPicks: PromoItem[] = promoSource.map((s) => ({
+    slug: s.ai.slug,
+    name: s.ai.name,
+    logo: s.ai.logo,
+    color: s.ai.color,
+    score: s.score,
+    votes: s.votes,
+    price: s.ai.priceType,
+    planPrice: s.ai.planPrice,
+    priceLabel: formatMoney(s.ai, settings.appearance),
+    category: categoryName(s.ai.category),
+    bestFor: s.ai.bestFor.join(" · "),
+    website: s.ai.website,
+  }));
 
   const hiddenApps = new Set(settings.hiddenAppSlugs ?? []);
   const appItems = allApps(db.customApps)
@@ -557,7 +567,7 @@ export default async function HomePage({
       {/* Paid promotions */}
       {settings.showPromotions ? (
         <section id="promotions" className="pt-14 lg:pt-16">
-          <PaidPromo items={paidPicks} />
+          <PaidPromo items={paidPicks} heading={settings.promoHeading} subtitle={settings.promoSubtitle} />
         </section>
       ) : null}
 

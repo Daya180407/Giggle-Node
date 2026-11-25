@@ -1046,6 +1046,10 @@ export type SiteSettings = {
   allowSignups: boolean;
   allowRatings: boolean;
   showPromotions: boolean;
+  /** admin-picked tools for the homepage "Paid AI picks" shelf (AI ids, order kept); empty = automatic paid picks */
+  promoAiIds: string[];
+  promoHeading: string;
+  promoSubtitle: string;
   /** new reviews wait for moderator approval before they are public */
   requireReviewApproval: boolean;
   hiddenAppSlugs: string[];

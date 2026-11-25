@@ -2647,6 +2647,13 @@ export async function saveHomepageAction(formData: FormData) {
       .map(String)
       .filter((id) => knownAi.has(id))
       .slice(0, 3);
+    const promoPicks = formData
+      .getAll("promoPick")
+      .map(String)
+      .filter((id, index, list) => knownAi.has(id) && list.indexOf(id) === index)
+      .slice(0, 3);
+    const promoHeading = String(formData.get("promoHeading") ?? "").trim().slice(0, 80);
+    const promoSubtitle = String(formData.get("promoSubtitle") ?? "").trim().slice(0, 200);
     const champions: Record<string, string> = {};
     for (const [key, value] of formData.entries()) {
       if (!key.startsWith("champion_")) continue;
@@ -2662,6 +2669,9 @@ export async function saveHomepageAction(formData: FormData) {
       ...settings,
       trendingAiIds: trending,
       compareAiIds: compare,
+      promoAiIds: promoPicks,
+      promoHeading: promoHeading || settings.promoHeading,
+      promoSubtitle: promoSubtitle || settings.promoSubtitle,
       championOverrides: champions,
       quizQuestions,
       updatedAt: new Date().toISOString(),
@@ -2672,7 +2682,7 @@ export async function saveHomepageAction(formData: FormData) {
       admin,
       "updated",
       "Homepage controls",
-      `${trending.length} manual trending · ${compare.length} compare picks · ${Object.keys(champions).length} champions`,
+      `${trending.length} manual trending · ${compare.length} compare picks · ${promoPicks.length} paid shelf picks · ${Object.keys(champions).length} champions`,
     );
   });
   revalidatePath("/");
