@@ -6,6 +6,7 @@ dist/
 next-env.d.ts
 .env
 .env.local
+.vercel-env.local
 data/db.json
 .DS_Store
 /freebuff-sites-build/
