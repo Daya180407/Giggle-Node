@@ -48,6 +48,9 @@ export async function POST(request: Request) {
   });
 
   if (!created.ok) {
+    // A rejected key pair is an admin problem, not a random glitch: say so instead of
+    // letting the buyer retry against credentials the gateway will never accept.
+    const keyRejected = created.status === 401 || created.status === 403;
     mutateDb((draft) => {
       const current = getSiteSettings(draft);
       draft.settings = {
@@ -55,7 +58,16 @@ export async function POST(request: Request) {
         payments: { ...current.payments, lastError: created.error.slice(0, 240) },
       };
     });
-    return NextResponse.json({ ok: false, error: "Razorpay could not create the order. Please try again." }, { status: 502 });
+    return NextResponse.json(
+      {
+        ok: false,
+        reason: keyRejected ? "gateway_auth" : "gateway",
+        error: keyRejected
+          ? "Razorpay rejected the saved API keys, so the payment cannot start. The site admin needs to check the key id and secret in the Payments panel."
+          : "Razorpay could not create the order. Please try again in a moment.",
+      },
+      { status: 502 },
+    );
   }
 
   mutateDb((draft) => {

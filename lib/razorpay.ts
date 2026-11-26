@@ -32,7 +32,7 @@ export type RazorpayPayment = {
   error_reason?: string | null;
 };
 
-type Result<T> = { ok: true; data: T } | { ok: false; error: string };
+type Result<T> = { ok: true; data: T } | { ok: false; error: string; status?: number };
 
 function authHeader(settings: PaymentSettings): string {
   return `Basic ${btoa(`${settings.razorpayKeyId.trim()}:${settings.razorpayKeySecret.trim()}`)}`;
@@ -55,7 +55,7 @@ async function call<T>(settings: PaymentSettings, path: string, init?: RequestIn
     });
     const text = await response.text();
     if (!response.ok) {
-      return { ok: false, error: `Razorpay ${response.status}: ${text.slice(0, 240)}` };
+      return { ok: false, error: `Razorpay ${response.status}: ${text.slice(0, 240)}`, status: response.status };
     }
     return { ok: true, data: JSON.parse(text) as T };
   } catch (error) {
