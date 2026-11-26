@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { canRetryPayment, paymentMethodLabel } from "@/lib/payments";
 import { getSiteSettings } from "@/lib/settings";
-import { readDb } from "@/lib/store";
+import { refreshDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export default async function PaymentFailedPage({
   searchParams: Promise<{ id?: string; reason?: string }>;
 }) {
   const { id, reason = "" } = await searchParams;
-  const db = readDb();
+  const db = await refreshDb(0);
   const payment = (db.payments ?? []).find((row) => row.id === id);
   if (!payment) notFound();
   const settings = getSiteSettings(db);

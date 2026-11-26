@@ -5,7 +5,7 @@ import CheckoutPay from "@/components/CheckoutPay";
 import { requestCountry } from "@/lib/payment-flow";
 import { paymentModes, publicPaymentConfig, upiAllowed } from "@/lib/payments";
 import { getSiteSettings } from "@/lib/settings";
-import { readDb } from "@/lib/store";
+import { refreshDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,8 @@ function money(amount: number, currency: string): string {
 
 export default async function CheckoutPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const db = readDb();
+  // A brand-new order lives in another serverless instance's cache until re-read.
+  const db = await refreshDb(0);
   const payment = (db.payments ?? []).find((row) => row.id === id);
   if (!payment) notFound();
   if (payment.status === "paid") redirect(`/payment/success?id=${encodeURIComponent(payment.id)}`);

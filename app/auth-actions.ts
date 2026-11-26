@@ -12,6 +12,15 @@ import {
 } from "@/lib/auth";
 import { hashPassword, randomToken, sha256Hex } from "@/lib/crypto";
 import { deliverEmails, mailerConfigured } from "@/lib/mailer";
+
+/**
+ * Showing a verification, reset or login link on screen is a local convenience
+ * for testing without a mail provider. A production host must never do it: a
+ * printed reset link would let anyone take over any account by typing its email.
+ */
+function showFallbackLink() {
+  return !mailerConfigured() && process.env.NODE_ENV !== "production";
+}
 import { queueEmail, renderTemplate } from "@/lib/notify";
 import { getSiteSettings } from "@/lib/settings";
 import { flushPendingWrites, mutateDb, readDb, refreshDb, uid } from "@/lib/store";
@@ -240,10 +249,7 @@ export async function magicLinkAction(_prev: AuthState, formData: FormData): Pro
           }
         });
       }
-    } else if (process.env.NODE_ENV !== "production") {
-      // Local/dev only: without a mail provider the link is shown once so the flow
-      // stays testable. A production host must never print a login link, otherwise
-      // anyone could sign in as any account by typing its email address.
+    } else if (showFallbackLink()) {
       magicLink = `/login/magic/${token}?next=${encodeURIComponent(next)}`;
     }
   }
@@ -311,10 +317,10 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
   revalidatePath("/");
   return {
     ok: true,
-    message: mailerConfigured()
-      ? `Almost done — open the verification link we emailed to ${created.email} to finish creating your account.`
-      : `Almost done — open the verification link below to finish creating ${created.email}.`,
-    verifyLink: mailerConfigured() ? undefined : `/verify-email/${token}?next=${encodeURIComponent(next)}`,
+    message: showFallbackLink()
+      ? `Almost done — open the verification link below to finish creating ${created.email}.`
+      : `Almost done — open the verification link we emailed to ${created.email} to finish creating your account.`,
+    verifyLink: showFallbackLink() ? `/verify-email/${token}?next=${encodeURIComponent(next)}` : undefined,
   };
 }
 
@@ -335,7 +341,7 @@ export async function resendVerificationAction(_prev: AuthState, formData: FormD
   if (user) {
     const token = await issueVerifyLink(user);
     await sendVerifyMail(user, token, "/profile");
-    verifyLink = mailerConfigured() ? undefined : `/verify-email/${token}?next=%2Fprofile`;
+    verifyLink = showFallbackLink() ? `/verify-email/${token}?next=%2Fprofile` : undefined;
   }
   mutateDb((d) => {
     d.authEvents.push({ ip, at: new Date().toISOString(), kind: "verify" });
@@ -380,7 +386,7 @@ export async function forgotPasswordAction(_prev: AuthState, formData: FormData)
     await flushPendingWrites();
     // Never hand the token back to the browser once real email delivery exists:
     // that would let anyone reset any account by typing its email address.
-    resetLink = mailerConfigured() ? undefined : `/reset-password/${token}`;
+    resetLink = showFallbackLink() ? `/reset-password/${token}` : undefined;
   } else {
     mutateDb((d) => {
       d.authEvents.push({ ip, at: new Date().toISOString(), kind: "reset" });

@@ -3,7 +3,7 @@ import { canRetryPayment, onlinePaymentsEnabled } from "@/lib/payments";
 import { requestCountry } from "@/lib/payment-flow";
 import { createRazorpayOrder } from "@/lib/razorpay";
 import { getSiteSettings } from "@/lib/settings";
-import { mutateDb, readDb } from "@/lib/store";
+import { mutateDb, refreshDb } from "@/lib/store";
 import { slotMeta } from "@/lib/sponsors";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const paymentId = String(body.paymentId ?? "");
   if (!paymentId) return NextResponse.json({ ok: false, error: "Missing order." }, { status: 400 });
 
-  const db = readDb();
+  const db = await refreshDb(0);
   const settings = getSiteSettings(db);
   if (!onlinePaymentsEnabled(settings.payments)) {
     return NextResponse.json({ ok: false, error: "Online payment is turned off." }, { status: 409 });

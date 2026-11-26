@@ -3,7 +3,7 @@ import { completePayment, failPayment } from "@/lib/payment-flow";
 import { onlinePaymentsEnabled, paymentMethodFromRazorpay, verifyRazorpaySignature } from "@/lib/payments";
 import { fetchRazorpayPayment } from "@/lib/razorpay";
 import { getSiteSettings } from "@/lib/settings";
-import { readDb } from "@/lib/store";
+import { refreshDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Incomplete payment response." }, { status: 400 });
   }
 
-  const db = readDb();
+  const db = await refreshDb(0);
   const settings = getSiteSettings(db);
   const payment = (db.payments ?? []).find((row) => row.id === paymentId);
   if (!payment) return NextResponse.json({ ok: false, error: "That order no longer exists." }, { status: 404 });

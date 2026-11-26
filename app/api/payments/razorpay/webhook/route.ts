@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { completePayment, failPayment } from "@/lib/payment-flow";
 import { paymentMethodFromRazorpay, verifyWebhookSignature } from "@/lib/payments";
 import { getSiteSettings } from "@/lib/settings";
-import { readDb } from "@/lib/store";
+import { readDb, refreshDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const raw = await request.text();
   const signature = request.headers.get("x-razorpay-signature");
-  const settings = getSiteSettings(readDb()).payments;
+  const settings = getSiteSettings(await refreshDb(0)).payments;
 
   if (!settings.razorpayWebhookSecret) {
     return NextResponse.json({ ok: false, error: "Webhook secret is not configured." }, { status: 503 });

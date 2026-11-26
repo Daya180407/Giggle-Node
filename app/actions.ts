@@ -40,7 +40,7 @@ import { PAGE_SLUGS } from "@/lib/pages";
 import { ALL_AREAS, canAccess, isStaffRole, resolveRoles, type AdminArea } from "@/lib/roles";
 import { AI_SEARCH_PROMPT, DEFAULT_SITE_SETTINGS, getSiteSettings } from "@/lib/settings";
 import { classifyWithProvider, providerHasKey } from "@/lib/ai-search";
-import { flushPendingWrites, mutateDb, readDb, uid } from "@/lib/store";
+import { flushPendingWrites, mutateDb, readDb, refreshDb, uid } from "@/lib/store";
 import { buildView, rankedAis } from "@/lib/rank";
 import type {
   AiSearchProvider,
@@ -2296,7 +2296,8 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
   if (!SPONSOR_SLOT_KEY_SET.has(slot)) return { ok: false, error: "Please choose where you want to appear." };
   if (message.length < 15) return { ok: false, error: "Please tell us a little about the listing (at least 15 characters)." };
 
-  const db = readDb();
+  // Another instance may have just saved a price or a request; read the latest document.
+  const db = await refreshDb(2000);
   const target = sponsoredTarget(db, String(formData.get("target") ?? ""));
   if (!target) return { ok: false, error: "Please choose the AI, app or software you want to promote." };
   const listKey = sponsoredListKey(db, target.targetType, String(formData.get("listKey") ?? ""));
@@ -2377,6 +2378,8 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
       audience: "staff",
     });
   });
+  // The checkout link is opened immediately, so the order must be durable first.
+  await flushPendingWrites();
   revalidatePath("/admin/sponsors");
   return {
     ok: true,
@@ -2483,6 +2486,8 @@ export async function testRazorpayKeysAction() {
 export async function markPaymentPaidAction(formData: FormData) {
   const admin = await assertAdmin("payments");
   const id = String(formData.get("id") ?? "");
+  // The order may have been created by another serverless instance.
+  await refreshDb(0);
   const payment = (readDb().payments ?? []).find((row) => row.id === id);
   if (!payment) redirect("/admin/payments?error=missing");
 

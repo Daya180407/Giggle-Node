@@ -13,7 +13,7 @@ import {
   razorpayConfigured,
 } from "@/lib/payments";
 import { getSiteSettings } from "@/lib/settings";
-import { readDb } from "@/lib/store";
+import { refreshDb } from "@/lib/store";
 import type { PaymentStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +46,7 @@ export default async function AdminPaymentsPage({
 }) {
   await requireAreaPage("payments");
   const { saved, paid, error } = await searchParams;
-  const db = readDb();
+  const db = await refreshDb(2000);
   const settings = getSiteSettings(db);
   const payments = settings.payments;
   const totals = paymentTotals(db.payments ?? []);
