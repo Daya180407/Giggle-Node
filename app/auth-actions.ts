@@ -240,8 +240,10 @@ export async function magicLinkAction(_prev: AuthState, formData: FormData): Pro
           }
         });
       }
-    } else {
-      // Without a mail provider the link is shown once, so the flow still works.
+    } else if (process.env.NODE_ENV !== "production") {
+      // Local/dev only: without a mail provider the link is shown once so the flow
+      // stays testable. A production host must never print a login link, otherwise
+      // anyone could sign in as any account by typing its email address.
       magicLink = `/login/magic/${token}?next=${encodeURIComponent(next)}`;
     }
   }

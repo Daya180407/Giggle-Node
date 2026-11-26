@@ -2356,17 +2356,19 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
       createdAt: new Date().toISOString(),
       reviewedAt: null,
       reviewedBy: null,
-      ...(online ? { paymentStatus: "unpaid" as const } : {}),
+      paymentStatus: "unpaid" as const,
     };
     draft.sponsorRequests.unshift(request);
-    if (online) {
-      const payment = openPaymentForRequest(draft, request, {
-        id: paymentId,
-        site: getSiteSettings(draft).siteName,
-        country,
-      });
-      createdPaymentId = payment?.id ?? null;
-    }
+    // Every request gets a payable order, so the advertiser always has a checkout
+    // page with its reference — Razorpay when the admin enabled it, manual details
+    // otherwise. The admin can mark a manual order paid from the ledger.
+    const payment = openPaymentForRequest(draft, request, {
+      id: paymentId,
+      site: getSiteSettings(draft).siteName,
+      country,
+      provider: online ? "razorpay" : "manual",
+    });
+    createdPaymentId = payment?.id ?? null;
     pushNotification(draft, {
       title: `Sponsorship request: ${company}`,
       body: `${contactName} wants ${target.targetName} at ${slot} — quoted ${money(price, getSiteSettings(draft).appearance.currency)}.`,
@@ -2380,7 +2382,7 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
     ok: true,
     message: online
       ? `Request saved. Quoted price: ${money(price, getSiteSettings(db).appearance.currency)} for 30 days. Pay online to book the placement — a payment slip is emailed to you.`
-      : `Request sent. Quoted price: ${money(price, getSiteSettings(db).appearance.currency)} for 30 days. Our team will contact you with the payment details — nothing is charged automatically.`,
+      : `Request saved. Quoted price: ${money(price, getSiteSettings(db).appearance.currency)} for 30 days. Open the checkout page for the UPI/bank details and your reference — nothing is charged automatically.`,
     payUrl: createdPaymentId ? `/checkout/${createdPaymentId}` : undefined,
   };
 }

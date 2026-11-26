@@ -86,7 +86,7 @@ export default function SponsorRequestForm({
         <p className="mt-2 text-sm leading-relaxed text-emerald-800">{state.message}</p>
         {state.payUrl ? (
           <a href={state.payUrl} className="btn btn-primary mt-3 w-full !py-2.5 text-xs sm:w-auto">
-            Pay now to book the placement →
+            Open the checkout page →
           </a>
         ) : (
           <p className="mt-2 text-xs text-emerald-700">

@@ -41,7 +41,7 @@ export function sponsorPaymentDescription(
 export function openPaymentForRequest(
   db: DB,
   request: SponsorRequest,
-  input: { id: string; site: string; country?: string },
+  input: { id: string; site: string; country?: string; provider: "razorpay" | "manual" },
 ): Payment | null {
   if (!Array.isArray(db.payments)) db.payments = [];
   const existing = db.payments.find(
@@ -49,6 +49,9 @@ export function openPaymentForRequest(
   );
   if (existing) {
     existing.amount = request.price;
+    // A request taken while Razorpay was off is a manual order; if the admin turns
+    // the gateway on before it is paid, the same reference can be paid online.
+    existing.provider = input.provider;
     existing.updatedAt = new Date().toISOString();
     existing.description = sponsorPaymentDescription(db, request);
     return existing;
@@ -61,7 +64,7 @@ export function openPaymentForRequest(
   const row: Payment = {
     id: input.id,
     reference: `GN-${String(db.paymentSequence).padStart(6, "0")}`,
-    provider: "razorpay",
+    provider: input.provider,
     purpose: "sponsor",
     sponsorRequestId: request.id,
     description: sponsorPaymentDescription(db, request),
