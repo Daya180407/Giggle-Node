@@ -67,12 +67,9 @@ export function activeLogo(appearance: AppearanceSettings): string {
 
 export function formatMoney(
   value: { planPrice: number; planPriceInr?: number; priceType?: string },
-  appearance: AppearanceSettings,
+  _appearance?: AppearanceSettings,
 ): string {
   if (value.priceType === "free") return "Free";
-  if (appearance.currency === "USD") return `$${value.planPrice}/mo`;
-  const inr = value.planPriceInr && value.planPriceInr > 0
-    ? value.planPriceInr
-    : Math.round(value.planPrice * (appearance.usdRate || 88));
-  return `₹${inr.toLocaleString("en-IN")}/mo`;
+  // Site prices are always shown in US dollars, whatever the saved setting says.
+  return `$${value.planPrice}/mo`;
 }

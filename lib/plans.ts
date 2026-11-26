@@ -2,15 +2,9 @@ import { formatUsd, getApiPricing } from "./api-pricing";
 import type { AppEntry } from "./apps/types";
 import type { Ai, AppearanceSettings, DB, SubscriptionPlan } from "./types";
 
-export function formatPlanPrice(plan: SubscriptionPlan, appearance: AppearanceSettings): string {
+export function formatPlanPrice(plan: SubscriptionPlan, _appearance?: AppearanceSettings): string {
   if (plan.priceMonthly <= 0) return "Free";
-  if (appearance.currency === "INR") {
-    const inr =
-      plan.priceInr && plan.priceInr > 0
-        ? plan.priceInr
-        : Math.round(plan.priceMonthly * (appearance.usdRate > 0 ? appearance.usdRate : 88));
-    return `₹${inr.toLocaleString("en-IN")}/mo`;
-  }
+  // The catalogue is priced in USD everywhere; rupee prices are legacy data only.
   const usd = plan.priceMonthly;
   return `$${usd % 1 === 0 ? usd.toFixed(0) : usd.toFixed(2)}/mo`;
 }

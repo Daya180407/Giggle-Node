@@ -20,21 +20,15 @@ export default function CostCalculator({
   unitLabel,
   defaultQty,
   options,
-  currency = "USD",
-  usdRate = 88,
 }: {
   categoryLabel: string;
   unitLabel: string;
   defaultQty: number;
   options: CostOption[];
-  currency?: "INR" | "USD";
-  usdRate?: number;
 }) {
   const [qty, setQty] = useState(defaultQty);
-  const money = (usd: number) =>
-    currency === "INR"
-      ? `₹${Math.round(usd * (usdRate || 88)).toLocaleString("en-IN")}`
-      : `$${usd.toFixed(usd < 100 ? 2 : 0)}`;
+  // Prices are always shown in US dollars.
+  const money = (usd: number) => `$${usd.toFixed(usd < 100 ? 2 : 0)}`;
 
   const rows = options
     .map((o) => {
@@ -51,7 +45,7 @@ export default function CostCalculator({
           <h3 className="display text-base text-ink">Cost calculator</h3>
           <p className="text-xs text-muted">Estimate your monthly {categoryLabel.toLowerCase()} AI spend.</p>
         </div>
-        <span className="chip bg-slate-100 text-slate-600">{currency}</span>
+        <span className="chip bg-slate-100 text-slate-600">USD</span>
       </div>
 
       <label className="label mt-4" htmlFor="qty">

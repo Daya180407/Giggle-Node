@@ -1,11 +1,14 @@
 import Link from "next/link";
 import {
   deleteSponsorPlacementAction,
+  renewSponsorPlacementAction,
   reviewSponsorRequestAction,
   saveSponsorPricesAction,
   saveSponsorshipAction,
   setBoostAction,
   setSponsoredAction,
+  setSponsorsEnabledAction,
+  toggleAllSponsorPlacementsAction,
   toggleSponsorPlacementAction,
 } from "@/app/actions";
 import DeleteButton from "@/components/admin/DeleteButton";
@@ -35,6 +38,8 @@ const SAVED: Record<string, string> = {
   rates: "Slot prices saved. The public sponsor form now quotes these prices.",
   placement: "Sponsored placement saved.",
   request: "Sponsorship request updated.",
+  master: "Sponsor system switch saved.",
+  bulk: "Every placement was updated in one go.",
 };
 
 const ERRORS: Record<string, string> = {
@@ -106,6 +111,64 @@ export default async function AdminSponsorsPage({
           {ERRORS[error] ?? "That placement could not be saved."}
         </div>
       ) : null}
+
+      {/* Master control */}
+      <section className="card border-slate-200 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold">Sponsor system control</h3>
+            <p className="mt-0.5 max-w-2xl text-[11px] leading-relaxed text-muted">
+              One master switch for every paid list row and sponsored chat card. Pausing keeps all bookings, counters
+              and advertiser reports — it only stops them rendering. Use the bulk buttons for a quick freeze during an
+              audit or a campaign review.
+            </p>
+          </div>
+          <span
+            className={`chip ${
+              settings.sponsorsEnabled ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
+            }`}
+          >
+            {settings.sponsorsEnabled ? "Paid placements live" : "All paid placements hidden"}
+          </span>
+        </div>
+
+        <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <form
+            action={setSponsorsEnabledAction}
+            className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-slate-50/60 p-2.5"
+          >
+            <label className="flex flex-1 cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                name="enabled"
+                defaultChecked={settings.sponsorsEnabled}
+                className="mt-0.5 h-4 w-4 accent-indigo-600"
+              />
+              <span>
+                <span className="block text-[12.5px] font-semibold text-ink">Show sponsor placements on the site</span>
+                <span className="mt-0.5 block text-[10.5px] leading-relaxed text-muted">
+                  Off = no paid row inside lists, no sponsored chat card, and no trending paid card.
+                </span>
+              </span>
+            </label>
+            <button className="btn btn-primary !py-1.5 text-xs">Save switch</button>
+          </form>
+
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-slate-50/60 p-2.5">
+            <span className="text-[11px] text-muted">
+              {liveCount} live · {placements.filter((row) => !row.active).length} paused
+            </span>
+            <form action={toggleAllSponsorPlacementsAction}>
+              <input type="hidden" name="state" value="pause" />
+              <button className="btn btn-ghost !px-2 !py-1.5 text-xs">Pause all</button>
+            </form>
+            <form action={toggleAllSponsorPlacementsAction}>
+              <input type="hidden" name="state" value="resume" />
+              <button className="btn btn-ghost !px-2 !py-1.5 text-xs">Resume all</button>
+            </form>
+          </div>
+        </div>
+      </section>
 
       {/* Revenue summary */}
       <section className="card p-4">
@@ -359,6 +422,19 @@ export default async function AdminSponsorsPage({
                     {placement.note ? ` · ${placement.note}` : ""}
                   </p>
                 </div>
+                <form action={renewSponsorPlacementAction} className="flex items-center gap-1">
+                  <input type="hidden" name="id" value={placement.id} />
+                  <input
+                    name="days"
+                    type="number"
+                    min={1}
+                    max={3650}
+                    defaultValue={30}
+                    aria-label={`Days to renew ${placement.targetName}`}
+                    className="field !w-16 !py-1 text-xs"
+                  />
+                  <button className="btn btn-ghost !px-2 !py-1 text-xs">Renew</button>
+                </form>
                 <form action={toggleSponsorPlacementAction}>
                   <input type="hidden" name="id" value={placement.id} />
                   <button className="btn btn-ghost !px-2 !py-1 text-xs">

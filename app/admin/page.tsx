@@ -58,7 +58,7 @@ const CONTROL_GROUPS: {
     items: [
       { href: "/admin/search-ai", label: "AI Search", hint: "Provider, limits, cache", icon: "✨", area: "search" },
       { href: "/admin/security", label: "Spam & Security", hint: "IP blocks and bad words", icon: "🛡️", area: "security" },
-      { href: "/admin/appearance", label: "Theme & Currency", hint: "Dark mode, ₹/$, logos", icon: "🎨", area: "settings" },
+      { href: "/admin/appearance", label: "Theme & Currency", hint: "Dark mode, $ prices, logos", icon: "🎨", area: "settings" },
       { href: "/admin/settings", label: "Site Settings", hint: "Site-wide options", icon: "⚙️", area: "settings" },
       { href: "/admin/activity", label: "Audit Log", hint: "Every admin action", icon: "🕘", area: "settings" },
       { href: "/admin/export", label: "Backup / Export", hint: "Backup, restore, CSV", icon: "⬇", area: "settings" },

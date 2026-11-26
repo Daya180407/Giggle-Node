@@ -35,13 +35,14 @@ export default async function AdminAppearancePage({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">System</p>
-          <h2 className="display mt-1 text-2xl text-ink">Language, currency & theme</h2>
+          <h2 className="display mt-1 text-2xl text-ink">Theme, prices & logo</h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-            Prices, theme, accent colour and the site logo. Language itself is controlled in Settings → Site identity.
+            Site prices are always shown in US dollars. Theme, accent colour and the site logo are controlled here;
+            language lives in Settings → Site identity.
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5 text-[11px]">
-          <span className="chip bg-slate-100 text-slate-600">{appearance.currency}</span>
+          <span className="chip bg-slate-100 text-slate-600">USD $</span>
           <span className="chip bg-slate-100 text-slate-600">{appearance.theme} theme</span>
           <Link href="/admin/settings" className="btn btn-ghost !py-1.5 text-[11px]">
             Site identity →
@@ -63,37 +64,17 @@ export default async function AdminAppearancePage({
 
       <form action={saveAppearanceAction} className="space-y-4">
         <section className="card p-4 sm:p-5">
-          <h3 className="text-sm font-bold">Currency</h3>
-          <p className="text-xs text-muted">Applied to starting-plan prices on AI, compare and search cards.</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <label className="label" htmlFor="currency">
-                Show prices in
-              </label>
-              <select id="currency" name="currency" defaultValue={appearance.currency} className="field !py-2 text-xs">
-                <option value="INR">Rupees (₹)</option>
-                <option value="USD">US Dollars ($)</option>
-              </select>
+              <h3 className="text-sm font-bold">Currency</h3>
+              <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-muted">
+                Every public price — AI starting plans, plan matrix, value board, compare and search cards — is shown in
+                US dollars. Payment amounts (Razorpay / manual transfers) still use the currency saved in the payments
+                panel, because that is what the buyer is actually charged.
+              </p>
             </div>
-            <div>
-              <label className="label" htmlFor="usdRate">
-                ₹ per $ (used when a tool has no rupee price)
-              </label>
-              <input
-                id="usdRate"
-                name="usdRate"
-                type="number"
-                min={1}
-                max={500}
-                step="0.01"
-                defaultValue={appearance.usdRate}
-                className="field !py-2 text-xs"
-              />
-            </div>
+            <span className="chip bg-emerald-50 text-emerald-700">$ USD · locked</span>
           </div>
-          <p className="mt-2 text-[11px] text-muted">
-            Rupee prices use each tool&apos;s stored ₹ plan when present, otherwise the USD plan × this rate.
-          </p>
         </section>
 
         <section className="card p-4 sm:p-5">

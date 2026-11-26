@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import AdSlot from "@/components/AdSlot";
 import AdTrackerView from "@/components/AdTrackerView";
 import AiCard from "@/components/AiCard";
@@ -9,14 +10,22 @@ import FeatureRotator from "@/components/FeatureRotator";
 import HeroSearch from "@/components/HeroSearch";
 import PaidPromo, { type PromoItem } from "@/components/PaidPromo";
 import PollCard from "@/components/PollCard";
-import { myPollVote, pollResults, trendingPolls } from "@/lib/polls";
+import {
+  guestVoted,
+  myPollVote,
+  parseGuestVotes,
+  POLL_VOTE_COOKIE,
+  pollResults,
+  trendingPolls,
+} from "@/lib/polls";
 import { formatMoney } from "@/lib/analytics";
 import PostCard from "@/components/PostCard";
 import RankTabs, { type RankRow, type RankTab } from "@/components/RankTabs";
 import { SectionHead } from "@/components/ui";
 import { movers } from "@/lib/insight";
 import { USE_CASES } from "@/lib/usecases";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, requestIp } from "@/lib/auth";
+import { hashIp } from "@/lib/guard";
 import { categoryName, getCategories } from "@/lib/categories";
 import { communityTotals } from "@/lib/community-chat";
 import { getSiteSettings } from "@/lib/settings";
@@ -60,8 +69,11 @@ export default async function HomePage({
   searchParams: Promise<{ pricingReport?: string }>;
 }) {
   const { pricingReport } = await searchParams;
-  const [db, user] = await Promise.all([readDb(), getCurrentUser()]);
+  const [db, user, cookieStore] = await Promise.all([readDb(), getCurrentUser(), cookies()]);
   const settings = getSiteSettings(db);
+  // Guests vote once per network; the cookie only remembers which option they picked.
+  const guestCookieVotes = user ? {} : parseGuestVotes(cookieStore.get(POLL_VOTE_COOKIE)?.value);
+  const guestIpHash = user ? null : await hashIp(await requestIp());
   const view = buildView(db);
   const saved = new Set(user ? db.bookmarks.filter((b) => b.userId === user.id).map((b) => b.aiId) : []);
   const categories = getCategories(db);
@@ -70,8 +82,9 @@ export default async function HomePage({
     .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
     .slice(0, 6);
   const trending = trendingAis(view, 4, settings.trendingAiIds);
+  const sponsoring = settings.sponsorsEnabled;
   // The trending grid also carries one paid card, placed right after #1.
-  const trendingPlacement = placementsFor(db, "ai", "trending")[0];
+  const trendingPlacement = sponsoring ? placementsFor(db, "ai", "trending")[0] : undefined;
   const trendingSponsorStat = trendingPlacement ? view.aiStats.get(trendingPlacement.targetId) : undefined;
   const trendingRows = trending.map((s, i) => ({
     stat: s,
@@ -94,24 +107,20 @@ export default async function HomePage({
   const homePolls = trendingPolls(db, 3).map((poll) => ({
     poll,
     result: pollResults(db, poll),
-    myOptionId: myPollVote(db, poll.id, user?.id)?.optionId ?? null,
+    myOptionId: user ? (myPollVote(db, poll.id, user.id)?.optionId ?? null) : (guestCookieVotes[poll.id] ?? null),
+    ipVoted: user ? false : guestVoted(db, poll.id, guestIpHash),
   }));
 
   const bySlug = new Map([...view.aiStats.values()].map((s) => [s.ai.slug, s]));
-  const sponsorRows = activeSponsorPlacements(db);
+  const sponsorRows = sponsoring ? activeSponsorPlacements(db) : [];
 
-  // Paid shelf: admin picks (in their saved order) win; otherwise the top 3 paid tools by score.
+  // Paid shelf: only the tools an admin picked. No automatic/demo fill — an
+  // empty list hides the section instead of promoting tools nobody paid for.
   const promoPool = [...view.aiStats.values()];
-  const manualPicks = settings.promoAiIds.slice(0, 3).flatMap((id) => {
+  const promoSource = settings.promoAiIds.slice(0, 3).flatMap((id) => {
     const stat = promoPool.find((s) => s.ai.id === id);
     return stat && !stat.ai.hidden ? [stat] : [];
   });
-  const promoSource = manualPicks.length
-    ? manualPicks
-    : promoPool
-        .filter((s) => !s.ai.hidden && s.ai.priceType === "paid")
-        .sort((a, b) => b.score - a.score || b.votes - a.votes)
-        .slice(0, 3);
 
   const paidPicks: PromoItem[] = promoSource.map((s) => ({
     slug: s.ai.slug,
@@ -404,7 +413,7 @@ export default async function HomePage({
                 icon: "💸",
                 title: "Best value",
                 body: "Live score divided by the cheapest plan, with genuinely free tools kept separate.",
-                meta: "Score per rupee",
+                meta: "Score per dollar",
               },
             ].map((card, i) => (
               <Link key={card.href} href={card.href} className={`board-card group bg-white ${card.cls}`}>
@@ -484,7 +493,7 @@ export default async function HomePage({
             <SectionHead
               eyebrow="Community polls"
               title="You decide"
-              subtitle="Quick AI-vs-AI polls and simple questions. One vote per member, results update live."
+              subtitle="Quick AI-vs-AI polls and simple questions. Vote without an account — one vote per person (guests once per network)."
               action={
                 <Link href="/polls" className="btn btn-ghost !py-2 text-xs">
                   See all polls →
@@ -492,12 +501,13 @@ export default async function HomePage({
               }
             />
             <div className="grid gap-3 pt-1 sm:grid-cols-3">
-              {homePolls.map(({ poll, result, myOptionId }) => (
+              {homePolls.map(({ poll, result, myOptionId, ipVoted }) => (
                 <PollCard
                   key={poll.id}
                   poll={poll}
                   result={result}
                   myOptionId={myOptionId}
+                  ipVoted={ipVoted}
                   open
                   signedIn={Boolean(user)}
                   back="/"
@@ -527,7 +537,7 @@ export default async function HomePage({
       </section>
 
       {/* Paid promotions */}
-      {settings.showPromotions ? (
+      {settings.showPromotions && paidPicks.length ? (
         <section id="promotions" className="pt-10 lg:pt-12">
           <PaidPromo items={paidPicks} heading={settings.promoHeading} subtitle={settings.promoSubtitle} />
         </section>

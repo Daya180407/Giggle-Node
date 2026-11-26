@@ -114,7 +114,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     magicLink: true,
   },
   appearance: {
-    currency: "INR",
+    currency: "USD",
     theme: "light",
     accent: "indigo",
     logoImage: "",
@@ -123,6 +123,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     usdRate: 88,
   },
   payments: DEFAULT_PAYMENT_SETTINGS,
+  sponsorsEnabled: true,
   socials: [],
   menu: [],
   changelogEnabled: true,

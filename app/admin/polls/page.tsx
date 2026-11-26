@@ -169,7 +169,7 @@ export default async function AdminPollsPage({
               Homepage today: {trending.length ? trending.map((poll) => poll.question).join(" · ") : "no open polls yet"}
             </p>
           </div>
-          <span className="chip bg-slate-100 text-slate-600">One vote per member</span>
+          <span className="chip bg-slate-100 text-slate-600">One vote per member or network</span>
         </div>
         <div className="mt-3">
           <PollForm poll={editing} />

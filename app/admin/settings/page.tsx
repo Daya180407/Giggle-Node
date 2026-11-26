@@ -44,7 +44,7 @@ export default async function AdminSettingsPage({
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {[
-            { href: "/admin/appearance", label: "Theme & Currency", hint: "Dark mode, ₹/$, logo", icon: "🎨" },
+            { href: "/admin/appearance", label: "Theme & Prices", hint: "Dark mode, $ prices, logo", icon: "🎨" },
             { href: "/admin/search-ai", label: "AI Search", hint: "Provider, limits, cache", icon: "✨" },
             { href: "/admin/notifications", label: "Notifications & Email", hint: "Bell, templates, Top 5", icon: "🔔" },
             { href: "/admin/payments", label: "Payments & Checkout", hint: "Razorpay keys, UPI, manual", icon: "💳" },

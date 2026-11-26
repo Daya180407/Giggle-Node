@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { logAdminAction } from "@/lib/admin-log";
 import { allApps, APP_ENTRIES, appGroupMeta } from "@/lib/software";
@@ -27,7 +28,7 @@ import { CATEGORIES, getCategories, slugifyCategory } from "@/lib/categories";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
 import { parseCsv } from "@/lib/csv";
 import { criteriaOverall, readCriteria } from "@/lib/criteria";
-import { findBadWord, isBlockedIp, normalizeIpList, normalizeWordList } from "@/lib/guard";
+import { findBadWord, hashIp, isBlockedIp, normalizeIpList, normalizeWordList } from "@/lib/guard";
 import { deliverEmails, mailerConfigured } from "@/lib/mailer";
 import { pushNotification, queueEmail, renderTemplate } from "@/lib/notify";
 import { normalizeAiLogo } from "@/lib/logo";
@@ -35,7 +36,7 @@ import { completePayment, openPaymentForRequest, requestCountry } from "@/lib/pa
 import { DEFAULT_PAYMENT_SETTINGS, onlinePaymentsEnabled, razorpayConfigured } from "@/lib/payments";
 import { checkRazorpayKeys } from "@/lib/razorpay";
 import { money, SPONSOR_SLOTS, SPONSOR_SLOT_KEYS, sponsorPrices, sponsorQuote } from "@/lib/sponsors";
-import { pollIsOpen } from "@/lib/polls";
+import { parseGuestVotes, POLL_VOTE_COOKIE, pollIsOpen, serializeGuestVotes } from "@/lib/polls";
 import { PAGE_SLUGS } from "@/lib/pages";
 import { ALL_AREAS, canAccess, isStaffRole, resolveRoles, type AdminArea } from "@/lib/roles";
 import { AI_SEARCH_PROMPT, DEFAULT_SITE_SETTINGS, getSiteSettings } from "@/lib/settings";
@@ -1391,6 +1392,29 @@ export async function deleteChatAdAction(formData: FormData) {
   redirect("/admin/ads?saved=campaign");
 }
 
+/** Adds more bought views to a running campaign and switches it back on. */
+export async function topUpChatAdAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const id = String(formData.get("id") ?? "");
+  const views = Math.min(CHAT_AD_MAX_VIEWS, Math.max(CHAT_AD_MIN_VIEWS, Math.round(Number(formData.get("views") ?? 0) || 0)));
+  mutateDb((db) => {
+    const ad = (db.chatAds ?? []).find((row) => row.id === id);
+    if (!ad) return;
+    ad.viewsPurchased = Math.min(CHAT_AD_MAX_VIEWS, ad.viewsPurchased + views);
+    ad.active = true;
+    logAdminAction(
+      db,
+      admin,
+      "chat ad views added",
+      ad.name,
+      `+${views.toLocaleString("en-IN")} views → ${ad.viewsPurchased.toLocaleString("en-IN")} bought`,
+    );
+  });
+  revalidatePath("/admin/ads");
+  revalidatePath("/community");
+  redirect("/admin/ads?saved=campaign");
+}
+
 export async function savePostAction(formData: FormData) {
   const admin = await assertAdmin("posts");
   const id = String(formData.get("id") ?? "");
@@ -2281,6 +2305,86 @@ export async function deleteSponsorPlacementAction(formData: FormData) {
   redirect("/admin/sponsors?saved=placement");
 }
 
+/** Site-wide kill switch: hides every paid list row and sponsored chat card. */
+export async function setSponsorsEnabledAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const enabled = formData.get("enabled") === "on";
+  mutateDb((db) => {
+    const settings = getSiteSettings(db);
+    db.settings = {
+      ...settings,
+      sponsorsEnabled: enabled,
+      updatedAt: new Date().toISOString(),
+      updatedBy: admin.name,
+    };
+    logAdminAction(
+      db,
+      admin,
+      enabled ? "sponsors enabled" : "sponsors paused",
+      "Sponsor system",
+      enabled ? "Every live placement and chat card can render again" : "All paid placements and chat cards hidden site-wide",
+    );
+  });
+  revalidatePath("/");
+  revalidatePath("/community");
+  revalidatePath("/admin/sponsors");
+  revalidatePath("/admin/ads");
+  redirect("/admin/sponsors?saved=master");
+}
+
+/** Pause or resume every list placement in one click. */
+export async function toggleAllSponsorPlacementsAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const pause = String(formData.get("state") ?? "" ) === "pause";
+  let changed = 0;
+  mutateDb((db) => {
+    for (const placement of db.sponsorPlacements ?? []) {
+      if (placement.active === pause) {
+        placement.active = !pause;
+        changed += 1;
+      }
+    }
+    logAdminAction(
+      db,
+      admin,
+      pause ? "all sponsor placements paused" : "all sponsor placements resumed",
+      "Bulk placement control",
+      `${changed} placement${changed === 1 ? "" : "s"} changed`,
+    );
+  });
+  revalidatePath("/");
+  revalidatePath("/category/all");
+  revalidatePath("/admin/sponsors");
+  redirect("/admin/sponsors?saved=bulk");
+}
+
+/** Extends one booking (default 30 days from today or the current end date). */
+export async function renewSponsorPlacementAction(formData: FormData) {
+  const admin = await assertAdmin("sponsors");
+  const id = String(formData.get("id") ?? "");
+  const days = Math.min(3650, Math.max(1, Math.round(Number(formData.get("days") ?? 30) || 30)));
+  const amountInput = Number(formData.get("amount"));
+  mutateDb((db) => {
+    const placement = (db.sponsorPlacements ?? []).find((row) => row.id === id);
+    if (!placement) return;
+    const currentEnd = placement.until ? new Date(`${placement.until}T23:59:59`).getTime() : 0;
+    const from = Math.max(Date.now(), Number.isFinite(currentEnd) ? currentEnd : 0);
+    placement.until = new Date(from + days * 86400000).toISOString().slice(0, 10);
+    placement.active = true;
+    if (Number.isFinite(amountInput) && amountInput > 0) placement.amount = Math.min(100000000, Math.round(amountInput));
+    logAdminAction(
+      db,
+      admin,
+      "sponsor placement renewed",
+      `${placement.targetName} · ${placement.slot}`,
+      `+${days} days → till ${placement.until} · ${money(placement.amount)}`,
+    );
+  });
+  revalidatePath("/");
+  revalidatePath("/admin/sponsors");
+  redirect("/admin/sponsors?saved=placement");
+}
+
 /** Public advertiser request from /sponsor. The price is always read server-side. */
 export async function submitSponsorRequestAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const company = String(formData.get("company") ?? "").trim().slice(0, 90);
@@ -2815,6 +2919,7 @@ export async function saveHomepageAction(formData: FormData) {
       .map(String)
       .filter((id, index, list) => knownAi.has(id) && list.indexOf(id) === index)
       .slice(0, 3);
+    const showPromotions = formData.get("showPromotions") === "on";
     const promoHeading = String(formData.get("promoHeading") ?? "").trim().slice(0, 80);
     const promoSubtitle = String(formData.get("promoSubtitle") ?? "").trim().slice(0, 200);
     const champions: Record<string, string> = {};
@@ -2832,6 +2937,7 @@ export async function saveHomepageAction(formData: FormData) {
       ...settings,
       trendingAiIds: trending,
       compareAiIds: compare,
+      showPromotions,
       promoAiIds: promoPicks,
       promoHeading: promoHeading || settings.promoHeading,
       promoSubtitle: promoSubtitle || settings.promoSubtitle,
@@ -2845,7 +2951,7 @@ export async function saveHomepageAction(formData: FormData) {
       admin,
       "updated",
       "Homepage controls",
-      `${trending.length} manual trending · ${compare.length} compare picks · ${promoPicks.length} paid shelf picks · ${Object.keys(champions).length} champions`,
+      `${trending.length} manual trending · ${compare.length} compare picks · promo shelf ${showPromotions ? "on" : "off"} with ${promoPicks.length} picks · ${Object.keys(champions).length} champions`,
     );
   });
   revalidatePath("/");
@@ -3770,7 +3876,8 @@ export async function deleteChangelogAction(formData: FormData) {
 
 export async function saveAppearanceAction(formData: FormData) {
   const admin = await assertAdmin("settings");
-  const currency = String(formData.get("currency") ?? "INR") === "USD" ? "USD" : "INR";
+  // Site prices are fixed to US dollars; the field is no longer editable.
+  const currency = "USD" as const;
   const theme = String(formData.get("theme") ?? "light") === "dark" ? "dark" : "light";
   const accentRaw = String(formData.get("accent") ?? "indigo");
   const accent = (["indigo", "cyan", "emerald", "rose", "amber"] as const).includes(
@@ -3778,7 +3885,6 @@ export async function saveAppearanceAction(formData: FormData) {
   )
     ? (accentRaw as "indigo" | "cyan" | "emerald" | "rose" | "amber")
     : "indigo";
-  const usdRate = Number(formData.get("usdRate") ?? 88);
   const logoImage = String(formData.get("logoImage") ?? "").trim();
   const festiveLogo = String(formData.get("festiveLogo") ?? "").trim();
   const validUrl = (value: string) =>
@@ -3794,7 +3900,6 @@ export async function saveAppearanceAction(formData: FormData) {
         currency,
         theme,
         accent,
-        usdRate: Number.isFinite(usdRate) ? Math.min(500, Math.max(1, usdRate)) : 88,
         logoImage: logoImage.slice(0, 900000),
         festiveLogo: festiveLogo.slice(0, 900000),
         festiveLogoUntil: String(formData.get("festiveLogoUntil") ?? "").trim() || null,
@@ -4837,12 +4942,15 @@ export async function deletePollAction(formData: FormData) {
   redirect("/admin/polls?saved=deleted");
 }
 
-/** One vote per signed-in member, on an open poll only. */
+/**
+ * One vote per signed-in member, and one vote per network for guests. Guests
+ * never need an account; the hashed IP enforces the limit server-side.
+ */
 export async function votePollAction(formData: FormData) {
   const back = String(formData.get("back") ?? "/polls");
   const safeBack = back.startsWith("/") ? back : "/polls";
-  const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(safeBack)}`);
+  const [user, ip] = await Promise.all([getCurrentUser(), requestIp()]);
+  const ipHash = await hashIp(ip);
 
   const pollId = String(formData.get("pollId") ?? "");
   const optionId = String(formData.get("optionId") ?? "");
@@ -4851,9 +4959,10 @@ export async function votePollAction(formData: FormData) {
   if (!poll || !pollIsOpen(poll) || !poll.options.some((option) => option.id === optionId)) {
     redirect(safeBack);
   }
-  if ((db.pollVotes ?? []).some((vote) => vote.pollId === pollId && vote.userId === user.id)) {
-    redirect(safeBack);
-  }
+  const already = (db.pollVotes ?? []).some((vote) =>
+    vote.pollId === pollId && (user ? vote.userId === user.id : !vote.userId && vote.ipHash === ipHash),
+  );
+  if (already) redirect(safeBack);
 
   mutateDb((draft) => {
     if (!Array.isArray(draft.pollVotes)) draft.pollVotes = [];
@@ -4861,10 +4970,24 @@ export async function votePollAction(formData: FormData) {
       id: uid("pv"),
       pollId,
       optionId,
-      userId: user.id,
+      userId: user?.id ?? null,
+      ipHash: user ? null : ipHash,
       createdAt: new Date().toISOString(),
     });
   });
+
+  // A guest gets a small cookie so the card can show which option they picked.
+  if (!user) {
+    const store = await cookies();
+    const votes = parseGuestVotes(store.get(POLL_VOTE_COOKIE)?.value);
+    votes[pollId] = optionId;
+    store.set(POLL_VOTE_COOKIE, serializeGuestVotes(votes), {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+  }
+
   revalidatePath("/");
   revalidatePath("/polls");
   revalidatePath("/admin/polls");

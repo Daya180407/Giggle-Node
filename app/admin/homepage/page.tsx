@@ -80,14 +80,29 @@ export default async function AdminHomepagePage({
             <div>
               <h3 className="text-sm font-bold">Paid promotions shelf</h3>
               <p className="text-xs text-muted">
-                The “Promoted · Paid AI picks worth upgrading to” block on the homepage. Leave every card on Automatic
-                for the top 3 paid tools by score.
+                The “Promoted · Paid AI picks worth upgrading to” block on the homepage. Only the tools you pick here
+                appear — there are no automatic or demo listings. No picks = the section is not rendered.
               </p>
             </div>
-            <span className="chip bg-slate-100 text-slate-500">
-              {settings.promoAiIds.length ? `${settings.promoAiIds.length} manual` : "Automatic"}
+            <span className={`chip ${settings.showPromotions ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+              {settings.showPromotions ? "Section on" : "Section hidden"}
             </span>
           </div>
+          <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-line bg-slate-50/60 p-3">
+            <input
+              type="checkbox"
+              name="showPromotions"
+              defaultChecked={settings.showPromotions}
+              className="mt-0.5 h-4 w-4 accent-indigo-600"
+            />
+            <span>
+              <span className="block text-sm font-semibold">Show the paid promotions shelf</span>
+              <span className="mt-0.5 block text-[11px] leading-relaxed text-muted">
+                Turn this off to remove the whole block from the homepage instantly. Picked tools are kept, so turning it
+                back on restores the shelf.
+              </span>
+            </span>
+          </label>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             {[0, 1, 2].map((slot) => (
               <div key={slot}>
@@ -100,7 +115,7 @@ export default async function AdminHomepagePage({
                   defaultValue={settings.promoAiIds[slot] ?? ""}
                   className="field"
                 >
-                  <option value="">Automatic</option>
+                  <option value="">— None —</option>
                   {tools.map((s) => (
                     <option key={s.ai.id} value={s.ai.id}>
                       {s.ai.name} — {s.ai.priceType} ({s.score.toFixed(1)}★)
@@ -137,12 +152,8 @@ export default async function AdminHomepagePage({
             </div>
           </div>
           <p className="mt-2 text-[11px] leading-relaxed text-muted">
-            Once any card has a tool, only picked tools appear — empty “Automatic” cards are skipped and the order follows
-            Card 1 → 3. Show or hide the whole block with “Show paid promotions” in{" "}
-            <Link href="/admin/settings" className="font-semibold text-brand">
-              Site Settings
-            </Link>
-            .
+            Cards filled left to right; empty cards are skipped. The section only shows these picks — nothing is
+            auto-filled. If every card is “None”, the block disappears even when the switch is on.
           </p>
         </section>
 

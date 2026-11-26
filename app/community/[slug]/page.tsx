@@ -108,7 +108,7 @@ export default async function CommunityRoomPage({ params, searchParams }: Props)
   const back = `/community/${room.slug}`;
   // Paid chat campaigns share the slot with AdSense/house ads. A live campaign
   // wins the slot; when its bought views run out it disappears automatically.
-  const sponsoredAds = community.adsEnabled ? liveChatAds(db) : [];
+  const sponsoredAds = community.adsEnabled && settings.sponsorsEnabled ? liveChatAds(db) : [];
   let chatAdSlot = 0;
 
   const adsReady = settings.adsEnabled && /^ca-pub-\d{16}$/.test(settings.adsClientId);

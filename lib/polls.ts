@@ -24,6 +24,36 @@ export function pollVotesFor(db: DB, pollId: string) {
   return (db.pollVotes ?? []).filter((vote) => vote.pollId === pollId);
 }
 
+/** Cookie listing the polls a guest has voted in, so the card can show "your vote". */
+export const POLL_VOTE_COOKIE = "gn_poll_votes";
+
+/** `pollId.optionId|pollId.optionId`; malformed entries are ignored. */
+export function parseGuestVotes(raw: string | null | undefined): Record<string, string> {
+  const votes: Record<string, string> = {};
+  if (!raw) return votes;
+  for (const part of raw.slice(0, 3000).split("|")) {
+    const [pollId, optionId] = part.split(".");
+    if (pollId && optionId) votes[pollId] = optionId;
+  }
+  return votes;
+}
+
+/** Keeps the eight most recent guest votes; the cookie stays small. */
+export function serializeGuestVotes(votes: Record<string, string>): string {
+  return Object.entries(votes)
+    .slice(-8)
+    .map(([pollId, optionId]) => `${pollId}.${optionId}`)
+    .join("|");
+}
+
+/** True when this network has already voted in the poll as a guest. */
+export function guestVoted(db: DB, pollId: string, ipHash: string | null | undefined): boolean {
+  if (!ipHash) return false;
+  return (db.pollVotes ?? []).some(
+    (vote) => vote.pollId === pollId && !vote.userId && vote.ipHash === ipHash,
+  );
+}
+
 export function myPollVote(db: DB, pollId: string, userId: string | null | undefined) {
   if (!userId) return null;
   return (db.pollVotes ?? []).find((vote) => vote.pollId === pollId && vote.userId === userId) ?? null;
@@ -57,7 +87,7 @@ export function pollResults(db: DB, poll: Poll): PollResult {
   const leader = [...options].sort((a, b) => b.votes - a.votes)[0];
   return {
     total,
-    voters: new Set(votes.map((vote) => vote.userId)).size,
+    voters: new Set(votes.map((vote) => vote.userId ?? vote.ipHash ?? vote.id)).size,
     options,
     leaderId: leader && leader.votes > 0 ? leader.id : null,
   };
@@ -107,7 +137,7 @@ export function pollInsight(db: DB, poll: Poll, now = Date.now()): PollInsight {
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
       .slice(0, 8)
       .map((vote) => ({
-        userName: users.get(vote.userId)?.name ?? "Member",
+        userName: vote.userId ? (users.get(vote.userId)?.name ?? "Member") : "Guest voter",
         optionLabel: labels.get(vote.optionId) ?? "—",
         createdAt: vote.createdAt,
       })),

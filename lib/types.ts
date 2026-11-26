@@ -1095,7 +1095,10 @@ export type PollVote = {
   id: string;
   pollId: string;
   optionId: string;
-  userId: string;
+  /** null for a guest vote; guests are limited by ipHash instead */
+  userId: string | null;
+  /** hashed IP of a guest voter, so one network gets one vote per poll */
+  ipHash?: string | null;
   createdAt: string;
 };
 
@@ -1122,7 +1125,7 @@ export type SiteSettings = {
   allowSignups: boolean;
   allowRatings: boolean;
   showPromotions: boolean;
-  /** admin-picked tools for the homepage "Paid AI picks" shelf (AI ids, order kept); empty = automatic paid picks */
+  /** admin-picked tools for the homepage "Paid AI picks" shelf (AI ids, order kept); empty = the shelf stays hidden */
   promoAiIds: string[];
   promoHeading: string;
   promoSubtitle: string;
@@ -1152,6 +1155,8 @@ export type SiteSettings = {
   appearance: AppearanceSettings;
   /** Razorpay / manual payment controls */
   payments: PaymentSettings;
+  /** master switch for every paid placement and sponsored chat card */
+  sponsorsEnabled: boolean;
   socials: SocialLink[];
   menu: MenuItem[];
   changelogEnabled: boolean;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { deleteChatAdAction, saveChatAdCpmAction, toggleChatAdAction } from "@/app/actions";
+import { deleteChatAdAction, saveChatAdCpmAction, toggleChatAdAction, topUpChatAdAction } from "@/app/actions";
 import ChatAdForm from "@/components/admin/ChatAdForm";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { AiLogo } from "@/components/ui";
@@ -114,6 +114,16 @@ export default async function AdminAdsPage({
       {error ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
           {ERRORS[error] ?? "That campaign could not be saved."}
+        </div>
+      ) : null}
+
+      {!settings.sponsorsEnabled ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-900">
+          The sponsor system is paused, so every chat campaign is hidden on the site.{" "}
+          <Link href="/admin/sponsors" className="font-semibold underline">
+            Open the master switch
+          </Link>
+          .
         </div>
       ) : null}
 
@@ -292,7 +302,21 @@ export default async function AdminAdsPage({
                   <Link href={chatAdReportPath(ad.reportToken)} className="font-semibold text-brand hover:underline">
                     Advertiser report ↗
                   </Link>
-                  <form action={toggleChatAdAction} className="ml-auto">
+                  <form action={topUpChatAdAction} className="ml-auto flex items-center gap-1">
+                    <input type="hidden" name="id" value={ad.id} />
+                    <input
+                      name="views"
+                      type="number"
+                      min={100}
+                      max={5000000}
+                      step={100}
+                      defaultValue={5000}
+                      aria-label={`Views to add to ${ad.name}`}
+                      className="field !w-20 !py-1 text-xs"
+                    />
+                    <button className="btn btn-ghost !px-2 !py-1 text-xs">Add views</button>
+                  </form>
+                  <form action={toggleChatAdAction}>
                     <input type="hidden" name="id" value={ad.id} />
                     <button className="btn btn-ghost !px-2 !py-1 text-xs" disabled={ad.viewsServed >= ad.viewsPurchased}>
                       {ad.active ? "Pause" : "Resume"}

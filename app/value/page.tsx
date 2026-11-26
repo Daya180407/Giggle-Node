@@ -19,11 +19,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/value" },
 };
 
-function money(usd: number, appearance: AppearanceSettings): string {
-  if (appearance.currency === "INR") {
-    const inr = Math.round(usd * (appearance.usdRate > 0 ? appearance.usdRate : 88));
-    return `₹${inr.toLocaleString("en-IN")}/mo`;
-  }
+function money(usd: number, _appearance?: AppearanceSettings): string {
+  // Prices are always shown in US dollars.
   return `$${usd % 1 === 0 ? usd.toFixed(0) : usd.toFixed(2)}/mo`;
 }
 
@@ -85,7 +82,7 @@ export default async function ValuePage() {
               <h1 className="display mt-4 text-[clamp(2.1rem,4.6vw,3.4rem)] leading-[1.04] text-white">
                 The most rating
                 <br />
-                <span className="hero-gradient">per rupee.</span>
+                <span className="hero-gradient">per dollar.</span>
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-400">
                 A high score is not a bargain if the plan costs more than the job is worth. This board divides the live
@@ -189,8 +186,8 @@ export default async function ValuePage() {
               ))}
             </ol>
             <p className="border-t border-line bg-slate-50/40 px-4 py-2.5 text-[11px] leading-relaxed text-muted">
-              Plans are monthly list prices converted at the site rate. Annual discounts, usage limits and taxes are not
-              modelled — this is a shortlist, not a quote.
+              Plans are monthly list prices in US dollars. Annual discounts, usage limits and taxes are not modelled —
+              this is a shortlist, not a quote.
             </p>
           </div>
         </div>

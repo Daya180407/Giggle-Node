@@ -4,8 +4,9 @@ import { POLL_KIND_LABEL, type PollResult } from "@/lib/polls";
 import type { Poll } from "@/lib/types";
 
 /**
- * One poll card, shared by the homepage strip and the /polls page. Guests see
- * the live results with a log-in link; signed-in members get one vote each.
+ * One poll card, shared by the homepage strip and the /polls page. Anyone can
+ * vote: members get one vote per account, guests one vote per network. Results
+ * are visible to everyone.
  */
 export default function PollCard({
   poll,
@@ -13,6 +14,7 @@ export default function PollCard({
   myOptionId,
   open,
   signedIn,
+  ipVoted = false,
   back,
   compact = false,
 }: {
@@ -21,10 +23,13 @@ export default function PollCard({
   myOptionId: string | null;
   open: boolean;
   signedIn: boolean;
+  /** this network already voted as a guest */
+  ipVoted?: boolean;
   back: string;
   compact?: boolean;
 }) {
   const voted = Boolean(myOptionId);
+  const blocked = voted || ipVoted;
 
   return (
     <article className={`card flex h-full flex-col ${compact ? "p-4" : "p-5"}`}>
@@ -44,7 +49,7 @@ export default function PollCard({
         <p className="mt-1 text-[11.5px] leading-relaxed text-muted">{poll.description}</p>
       ) : null}
 
-      {open && signedIn && !voted ? (
+      {open && !blocked ? (
         <form action={votePollAction} className="mt-3 space-y-1.5">
           <input type="hidden" name="pollId" value={poll.id} />
           <input type="hidden" name="back" value={back} />
@@ -89,12 +94,18 @@ export default function PollCard({
       )}
 
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-3 text-[10.5px] text-muted">
-        {open && !signedIn ? (
+        {open && voted ? <span>Thanks for voting — one vote per person.</span> : null}
+        {open && ipVoted && !voted ? <span>This network has already voted in this poll.</span> : null}
+        {open && !blocked ? (
+          <span>
+            {signedIn ? "One vote per account." : "No login needed — one vote per network."}
+          </span>
+        ) : null}
+        {open && !signedIn && !blocked ? (
           <Link href={`/login?next=${encodeURIComponent(back)}`} className="font-semibold text-brand hover:underline">
-            Log in to vote
+            Log in instead
           </Link>
         ) : null}
-        {open && signedIn && voted ? <span>Thanks for voting — one vote per member.</span> : null}
         {!open ? <span>Voting closed. Results stay visible.</span> : null}
         {poll.closesAt && open ? <span className="ml-auto">Closes {poll.closesAt.slice(0, 10)}</span> : null}
       </div>

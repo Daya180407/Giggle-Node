@@ -38,7 +38,7 @@ export default async function CategoryPage({ params }: Props) {
   const settings = getSiteSettings(db);
   const stats = rankedAis(view, slug === "all" ? "all" : (slug as CategorySlug));
   // Paid rows for this exact list. Top-three podium bookings stay on the home page.
-  const sponsors = placementsFor(db, "ai", slug === "all" ? "all" : slug)
+  const sponsors = (settings.sponsorsEnabled ? placementsFor(db, "ai", slug === "all" ? "all" : slug) : [])
     .filter((placement) => placement.slot !== "top3")
     .flatMap((placement) => {
       const stat = stats.find((s) => s.ai.id === placement.targetId);
@@ -142,8 +142,6 @@ export default async function CategoryPage({ params }: Props) {
             unitLabel={cat?.unit.label ?? "tasks / month"}
             defaultQty={cat?.unit.defaultQty ?? 50}
             options={calcOptions}
-            currency={settings.appearance.currency}
-            usdRate={settings.appearance.usdRate}
           />
           <div className="card p-5">
             <h3 className="display text-base text-ink">About this category</h3>
