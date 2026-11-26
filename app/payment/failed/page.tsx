@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { canRetryPayment, paymentMethodLabel } from "@/lib/payments";
 import { getSiteSettings } from "@/lib/settings";
 import { refreshDb } from "@/lib/store";
@@ -29,6 +29,9 @@ export default async function PaymentFailedPage({
   const db = await refreshDb(0);
   const payment = (db.payments ?? []).find((row) => row.id === id);
   if (!payment) notFound();
+  // A paid order must never show the failure page: an old or copied link would
+  // tell a customer who already paid that the payment did not go through.
+  if (payment.status === "paid") redirect(`/payment/success?id=${encodeURIComponent(payment.id)}`);
   const settings = getSiteSettings(db);
   const detail = REASONS[reason] ?? payment.failureReason ?? REASONS.verification;
   const retry = canRetryPayment(payment);
