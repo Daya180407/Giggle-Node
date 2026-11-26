@@ -40,13 +40,14 @@ export default async function AdminSettingsPage({
             <h3 className="text-sm font-bold">All settings & controls</h3>
             <p className="text-xs text-muted">Every configuration area, one tap away.</p>
           </div>
-          <span className="chip bg-brand-soft text-brand">10 areas</span>
+          <span className="chip bg-brand-soft text-brand">11 areas</span>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {[
             { href: "/admin/appearance", label: "Theme & Currency", hint: "Dark mode, ₹/$, logo", icon: "🎨" },
             { href: "/admin/search-ai", label: "AI Search", hint: "Provider, limits, cache", icon: "✨" },
             { href: "/admin/notifications", label: "Notifications & Email", hint: "Bell, templates, Top 5", icon: "🔔" },
+            { href: "/admin/payments", label: "Payments & Checkout", hint: "Razorpay keys, UPI, manual", icon: "💳" },
             { href: "/admin/security", label: "Spam & Security", hint: "IP blocks, bad words, login", icon: "🛡️" },
             { href: "/admin/pages", label: "Pages & Menu", hint: "Legal copy, nav, socials", icon: "📄" },
             { href: "/admin/media", label: "Media Library", hint: "Images and logos", icon: "🖼️" },

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import LoginForm from "@/components/LoginForm";
+import MagicLinkForm from "@/components/MagicLinkForm";
 import { getCurrentUser } from "@/lib/auth";
 import { GOOGLE_ERRORS, googleReady } from "@/lib/google-auth";
 import { isStaffRole, resolveRoles } from "@/lib/roles";
@@ -21,9 +22,9 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; reset?: string; verify?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; reset?: string; verify?: string; error?: string; magic?: string }>;
 }) {
-  const { next = "/", reset, verify, error } = await searchParams;
+  const { next = "/", reset, verify, error, magic } = await searchParams;
   const user = await getCurrentUser();
   if (user) {
     const db = readDb();
@@ -65,6 +66,12 @@ export default async function LoginPage({
           </p>
         ) : null}
 
+        {magic === "invalid" ? (
+          <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-800">
+            That login link is invalid, already used or expired. Request a fresh one below.
+          </p>
+        ) : null}
+
         <div className="mt-5">
           {googleOn ? (
             <>
@@ -78,7 +85,7 @@ export default async function LoginPage({
           ) : null}
           {settings.security.emailLogin ? (
             <LoginForm next={next} />
-          ) : googleOn ? null : (
+          ) : googleOn || settings.security.magicLink ? null : (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
               Email and password login is currently turned off by the administrator. Please contact{" "}
               <a href={`mailto:${settings.supportEmail}`} className="font-semibold underline">
@@ -89,6 +96,15 @@ export default async function LoginPage({
           )}
         </div>
 
+        {settings.security.magicLink ? (
+          <div className="mt-5 border-t border-line pt-4">
+            <p className="mb-2 text-[11px] leading-relaxed text-muted">
+              No password needed — we email a single-use login link from our own server. No Google or other account
+              provider is involved.
+            </p>
+            <MagicLinkForm next={next} />
+          </div>
+        ) : null}
 
         <p className="mt-3 text-center text-xs text-muted">
           Waiting for a verification email?{" "}

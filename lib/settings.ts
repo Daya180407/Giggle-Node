@@ -1,3 +1,4 @@
+import { DEFAULT_PAYMENT_SETTINGS } from "./payments";
 import type { DB, SiteSettings } from "./types";
 
 export const AI_SEARCH_PROMPT =
@@ -110,6 +111,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     googleClientId: "",
     googleClientSecret: "",
     emailLogin: true,
+    magicLink: true,
   },
   appearance: {
     currency: "INR",
@@ -120,6 +122,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     festiveLogoUntil: null,
     usdRate: 88,
   },
+  payments: DEFAULT_PAYMENT_SETTINGS,
   socials: [],
   menu: [],
   changelogEnabled: true,
@@ -160,6 +163,7 @@ export function getSiteSettings(db: DB): SiteSettings {
       badWords: saved.security?.badWords ?? [],
     },
     appearance: { ...DEFAULT_SITE_SETTINGS.appearance, ...(saved.appearance ?? {}) },
+    payments: { ...DEFAULT_PAYMENT_SETTINGS, ...(saved.payments ?? {}) },
     community: { ...DEFAULT_SITE_SETTINGS.community, ...(saved.community ?? {}) },
     quizQuestions: DEFAULT_SITE_SETTINGS.quizQuestions.map(
       (q) => saved.quizQuestions?.find((saved) => saved.id === q.id) ?? q,

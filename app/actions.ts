@@ -31,6 +31,9 @@ import { findBadWord, isBlockedIp, normalizeIpList, normalizeWordList } from "@/
 import { deliverEmails, mailerConfigured } from "@/lib/mailer";
 import { pushNotification, queueEmail, renderTemplate } from "@/lib/notify";
 import { normalizeAiLogo } from "@/lib/logo";
+import { completePayment, openPaymentForRequest, requestCountry } from "@/lib/payment-flow";
+import { DEFAULT_PAYMENT_SETTINGS, onlinePaymentsEnabled, razorpayConfigured } from "@/lib/payments";
+import { checkRazorpayKeys } from "@/lib/razorpay";
 import { money, SPONSOR_SLOTS, SPONSOR_SLOT_KEYS, sponsorPrices, sponsorQuote } from "@/lib/sponsors";
 import { pollIsOpen } from "@/lib/polls";
 import { PAGE_SLUGS } from "@/lib/pages";
@@ -61,7 +64,7 @@ import type {
   UserRole,
 } from "@/lib/types";
 
-export type ActionState = { ok: boolean; error?: string; message?: string };
+export type ActionState = { ok: boolean; error?: string; message?: string; payUrl?: string };
 
 const MAX_RATINGS_PER_DAY = 20;
 const EDIT_LOCK_MS = 24 * 60 * 60 * 1000;
@@ -2313,6 +2316,7 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
 
   // Top-3 podium quotes the price of that category when the admin set one.
   const price = sponsorQuote(db, slot, listKey);
+  const online = onlinePaymentsEnabled(getSiteSettings(db).payments);
   const duplicate = (db.sponsorRequests ?? []).find(
     (row) =>
       row.status === "pending" &&
@@ -2321,12 +2325,23 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
       row.slot === slot,
   );
   if (duplicate) {
-    return { ok: true, message: "We already have this request. Our team will contact you with the payment details." };
+    const openPayment = (db.payments ?? []).find(
+      (payment) => payment.sponsorRequestId === duplicate.id && payment.status !== "paid",
+    );
+    return {
+      ok: true,
+      message: "We already have this request. Our team will contact you with the payment details.",
+      payUrl: openPayment ? `/checkout/${openPayment.id}` : undefined,
+    };
   }
+
+  const country = await requestCountry();
+  const paymentId = uid("pay");
+  let createdPaymentId: string | null = null;
 
   mutateDb((draft) => {
     if (!Array.isArray(draft.sponsorRequests)) draft.sponsorRequests = [];
-    draft.sponsorRequests.unshift({
+    const request = {
       id: uid("spr"),
       company,
       contactName,
@@ -2337,11 +2352,21 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
       slot,
       price,
       message,
-      status: "pending",
+      status: "pending" as const,
       createdAt: new Date().toISOString(),
       reviewedAt: null,
       reviewedBy: null,
-    });
+      ...(online ? { paymentStatus: "unpaid" as const } : {}),
+    };
+    draft.sponsorRequests.unshift(request);
+    if (online) {
+      const payment = openPaymentForRequest(draft, request, {
+        id: paymentId,
+        site: getSiteSettings(draft).siteName,
+        country,
+      });
+      createdPaymentId = payment?.id ?? null;
+    }
     pushNotification(draft, {
       title: `Sponsorship request: ${company}`,
       body: `${contactName} wants ${target.targetName} at ${slot} — quoted ${money(price, getSiteSettings(draft).appearance.currency)}.`,
@@ -2353,8 +2378,122 @@ export async function submitSponsorRequestAction(_prev: ActionState, formData: F
   revalidatePath("/admin/sponsors");
   return {
     ok: true,
-    message: `Request sent. Quoted price: ${money(price, getSiteSettings(db).appearance.currency)} for 30 days. Our team will contact you with the payment details — nothing is charged automatically.`,
+    message: online
+      ? `Request saved. Quoted price: ${money(price, getSiteSettings(db).appearance.currency)} for 30 days. Pay online to book the placement — a payment slip is emailed to you.`
+      : `Request sent. Quoted price: ${money(price, getSiteSettings(db).appearance.currency)} for 30 days. Our team will contact you with the payment details — nothing is charged automatically.`,
+    payUrl: createdPaymentId ? `/checkout/${createdPaymentId}` : undefined,
   };
+}
+
+/* --------------------------- payment controls --------------------------- */
+
+/** Admin panel: turn Razorpay on/off, store keys and edit the manual instructions. */
+export async function savePaymentSettingsAction(formData: FormData) {
+  const admin = await assertAdmin("payments");
+  const current = getSiteSettings(readDb()).payments;
+  const keyId = String(formData.get("razorpayKeyId") ?? "").trim().slice(0, 80);
+  const secretInput = String(formData.get("razorpayKeySecret") ?? "").trim().slice(0, 200);
+  const webhookInput = String(formData.get("razorpayWebhookSecret") ?? "").trim().slice(0, 200);
+  const clearSecret = formData.get("clearRazorpaySecret") === "on";
+  const clearWebhook = formData.get("clearWebhookSecret") === "on";
+
+  if (keyId && !/^rzp_(test|live)_[A-Za-z0-9]+$/.test(keyId)) redirect("/admin/payments?error=keyid");
+
+  const keySecret = clearSecret ? "" : secretInput || current.razorpayKeySecret;
+  const webhookSecret = clearWebhook ? "" : webhookInput || current.razorpayWebhookSecret;
+  const razorpayEnabled = formData.get("razorpayEnabled") === "on";
+  if (razorpayEnabled && (!keyId || !keySecret)) redirect("/admin/payments?error=keys");
+
+  const manualEnabled = formData.get("manualEnabled") === "on";
+  if (!razorpayEnabled && !manualEnabled) redirect("/admin/payments?error=methods");
+
+  const currency: "INR" | "USD" = String(formData.get("currency") ?? "INR") === "USD" ? "USD" : "INR";
+
+  mutateDb((db) => {
+    const settings = getSiteSettings(db);
+    db.settings = {
+      ...settings,
+      payments: {
+        ...DEFAULT_PAYMENT_SETTINGS,
+        ...settings.payments,
+        razorpayEnabled,
+        manualEnabled,
+        razorpayKeyId: keyId,
+        razorpayKeySecret: keySecret,
+        razorpayWebhookSecret: webhookSecret,
+        upiIndiaOnly: formData.get("upiIndiaOnly") === "on",
+        autoBookPaid: formData.get("autoBookPaid") === "on",
+        manualUpiId: String(formData.get("manualUpiId") ?? "").trim().slice(0, 120),
+        manualUpiName: String(formData.get("manualUpiName") ?? "").trim().slice(0, 120),
+        manualBank: String(formData.get("manualBank") ?? "").trim().slice(0, 500),
+        manualNote: String(formData.get("manualNote") ?? "").trim().slice(0, 400),
+        currency,
+        lastError: null,
+      },
+      updatedAt: new Date().toISOString(),
+      updatedBy: admin.name,
+    };
+    logAdminAction(
+      db,
+      admin,
+      "updated",
+      "Payments & checkout",
+      `Razorpay ${razorpayEnabled ? "on" : "off"}${razorpayEnabled ? ` (${keyId.startsWith("rzp_live") ? "live" : "test"} key)` : ""} · manual ${manualEnabled ? "on" : "off"} · UPI ${formData.get("upiIndiaOnly") === "on" ? "India only" : "all countries"} · auto-book ${formData.get("autoBookPaid") === "on" ? "on" : "off"}`,
+    );
+  });
+  revalidatePath("/admin/payments");
+  revalidatePath("/sponsor");
+  redirect("/admin/payments?saved=1");
+}
+
+/** Admin panel: verify the saved keys against Razorpay without taking a payment. */
+export async function testRazorpayKeysAction() {
+  const admin = await assertAdmin("payments");
+  const settings = getSiteSettings(readDb()).payments;
+  const result = razorpayConfigured(settings)
+    ? await checkRazorpayKeys(settings)
+    : { ok: false, error: "Save a key id and key secret first." };
+  mutateDb((db) => {
+    const current = getSiteSettings(db);
+    db.settings = {
+      ...current,
+      payments: {
+        ...current.payments,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: result.ok ? null : (result.error ?? "Key check failed").slice(0, 240),
+      },
+      updatedAt: new Date().toISOString(),
+      updatedBy: admin.name,
+    };
+    logAdminAction(
+      db,
+      admin,
+      result.ok ? "payment keys verified" : "payment key check failed",
+      "Razorpay",
+      result.ok ? "Razorpay accepted the saved keys" : (result.error ?? "Unknown error").slice(0, 200),
+    );
+  });
+  revalidatePath("/admin/payments");
+  redirect(result.ok ? "/admin/payments?saved=test" : "/admin/payments?error=test");
+}
+
+/** Admin panel: a manual transfer/bank payment arrived — mark the order paid. */
+export async function markPaymentPaidAction(formData: FormData) {
+  const admin = await assertAdmin("payments");
+  const id = String(formData.get("id") ?? "");
+  const payment = (readDb().payments ?? []).find((row) => row.id === id);
+  if (!payment) redirect("/admin/payments?error=missing");
+
+  const result = await completePayment(id, { method: "manual" });
+  if (!result.ok) redirect("/admin/payments?error=missing");
+
+  mutateDb((db) => {
+    logAdminAction(db, admin, "payment marked paid", payment.reference, `${money(payment.amount, payment.currency)} · ${payment.customerEmail}`);
+  });
+  revalidatePath("/admin/payments");
+  revalidatePath("/admin/sponsors");
+  revalidatePath("/");
+  redirect("/admin/payments?paid=1");
 }
 
 export async function reviewSponsorRequestAction(formData: FormData) {
@@ -2374,23 +2513,40 @@ export async function reviewSponsorRequestAction(formData: FormData) {
 
     if (decision === "approve") {
       if (!Array.isArray(db.sponsorPlacements)) db.sponsorPlacements = [];
-      db.sponsorPlacements.unshift({
-        id: uid("sp"),
-        targetType: request.targetType,
-        targetId: request.targetId,
-        targetName: request.targetName,
-        targetSlug: request.targetSlug,
-        listKey: request.listKey,
-        slot: request.slot,
-        amount: request.price,
-        until: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-        active: true,
-        note: `Approved request · ${request.company}`,
-        views: 0,
-        clicks: 0,
-        reportToken: uid("sprpt"),
-        createdAt: new Date().toISOString(),
-      });
+      const until = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+      // An online-paid booking is created the moment Razorpay confirms the money;
+      // approving the request then refreshes that row instead of adding a second one.
+      const booked = db.sponsorPlacements.find(
+        (row) =>
+          row.targetType === request.targetType &&
+          row.targetId === request.targetId &&
+          row.listKey === request.listKey &&
+          row.slot === request.slot,
+      );
+      if (booked) {
+        booked.active = true;
+        booked.until = until;
+        booked.amount = request.price;
+        booked.note = `Approved request · ${request.company}${request.paymentStatus === "paid" ? " · paid online" : ""}`;
+      } else {
+        db.sponsorPlacements.unshift({
+          id: uid("sp"),
+          targetType: request.targetType,
+          targetId: request.targetId,
+          targetName: request.targetName,
+          targetSlug: request.targetSlug,
+          listKey: request.listKey,
+          slot: request.slot,
+          amount: request.price,
+          until,
+          active: true,
+          note: `Approved request · ${request.company}`,
+          views: 0,
+          clicks: 0,
+          reportToken: uid("sprpt"),
+          createdAt: new Date().toISOString(),
+        });
+      }
     }
     logAdminAction(
       db,
@@ -3418,6 +3574,7 @@ export async function saveSecurityAction(formData: FormData) {
         googleClientId,
         googleClientSecret,
         emailLogin,
+        magicLink: formData.get("magicLink") === "on",
       },
       updatedAt: new Date().toISOString(),
       updatedBy: admin.name,

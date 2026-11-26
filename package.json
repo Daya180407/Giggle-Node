@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:payments": "rm -rf .test-build && tsc scripts/payments.test.ts --outDir .test-build --module commonjs --moduleResolution node --target es2022 --strict --skipLibCheck --esModuleInterop --types node && node --test .test-build/scripts/payments.test.js"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "1.20.12",

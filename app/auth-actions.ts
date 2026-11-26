@@ -24,6 +24,8 @@ export type AuthState = {
   resetLink?: string;
   /** only when email delivery is not configured, so the flow stays testable */
   verifyLink?: string;
+  /** one-time login link, shown on screen only when mail delivery is not configured */
+  magicLink?: string;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -37,6 +39,9 @@ const EVENT_TTL_MS = 24 * 60 * 60 * 1000;
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const VERIFY_WINDOW_MS = 60 * 60 * 1000;
 const VERIFY_MAX_REQUESTS = 3;
+const MAGIC_TTL_MS = 20 * 60 * 1000;
+const MAGIC_WINDOW_MS = 15 * 60 * 1000;
+const MAGIC_MAX_REQUESTS = 5;
 
 /** Only same-origin relative paths, so `//evil.com` cannot be used as an open redirect. */
 function safeNext(value: string): string {
@@ -156,6 +161,96 @@ export async function loginAction(_prev: AuthState, formData: FormData): Promise
   await startSession(user.id);
   revalidatePath("/");
   redirect(next);
+}
+
+/* ----------------------------- magic link ----------------------------- */
+
+/**
+ * Passwordless login generated and checked entirely on this server: a one-time
+ * token is hashed into the account, mailed as a link, and consumed on open.
+ * No OAuth provider is involved.
+ */
+export async function magicLinkAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
+  const next = safeNext(String(formData.get("next") ?? "/"));
+  if (!EMAIL_RE.test(email)) return { ok: false, error: "Please enter a valid email address." };
+
+  const db = await refreshDb();
+  const settings = getSiteSettings(db);
+  if (!settings.security.magicLink) {
+    return { ok: false, error: "One-time login links are turned off by the administrator." };
+  }
+
+  const ip = await requestIp();
+  if (countEvents(db, "login", ip, MAGIC_WINDOW_MS) >= MAGIC_MAX_REQUESTS) {
+    return { ok: false, error: "Too many login attempts. Please try again in 15 minutes." };
+  }
+
+  const user = db.users.find((row) => row.email.toLowerCase() === email && !row.banned);
+  let magicLink: string | undefined;
+
+  if (user) {
+    const token = randomToken();
+    const tokenHash = await sha256Hex(token);
+    const expiresAt = new Date(Date.now() + MAGIC_TTL_MS).toISOString();
+    mutateDb((d) => {
+      const target = d.users.find((row) => row.id === user.id);
+      if (target) {
+        target.loginTokenHash = tokenHash;
+        target.loginTokenExpiresAt = expiresAt;
+      }
+      d.authEvents.push({ ip, at: new Date().toISOString(), kind: "login" });
+      pruneAuthEvents(d);
+    });
+
+    const link = `${await siteOrigin()}/login/magic/${token}?next=${encodeURIComponent(next)}`;
+    mutateDb((d) => {
+      const current = getSiteSettings(d);
+      queueEmail(d, current.email, {
+        to: user.email,
+        kind: "magic-link",
+        subject: renderTemplate("Your one-time login link for {{site}}", { site: current.siteName }),
+        body: renderTemplate(
+          `Hi {{name}},\n\nOpen this link to sign in to {{site}}:\n\n${link}\n\nThe link works once and expires in 20 minutes. If you did not ask for it, ignore this email — your account is unchanged.\n\n— The {{site}} team`,
+          { name: user.name, site: current.siteName },
+        ),
+        force: true,
+      });
+    });
+    await flushPendingWrites();
+
+    if (mailerConfigured()) {
+      const queued = (readDb().emailOutbox ?? []).filter(
+        (message) =>
+          message.status === "queued" && message.kind === "magic-link" && message.to.toLowerCase() === user.email.toLowerCase(),
+      );
+      if (queued.length) {
+        const results = await deliverEmails(queued);
+        mutateDb((d) => {
+          for (const result of results) {
+            const row = d.emailOutbox?.find((message) => message.id === result.id);
+            if (!row) continue;
+            if (result.ok) {
+              row.status = "sent";
+              row.sentAt = new Date().toISOString();
+            } else {
+              row.status = "failed";
+              row.error = (result.error ?? "Delivery failed").slice(0, 220);
+            }
+          }
+        });
+      }
+    } else {
+      // Without a mail provider the link is shown once, so the flow still works.
+      magicLink = `/login/magic/${token}?next=${encodeURIComponent(next)}`;
+    }
+  }
+
+  return {
+    ok: true,
+    message: "If that email has an account, a one-time login link is on its way (valid for 20 minutes).",
+    magicLink,
+  };
 }
 
 /* ------------------------------- signup ------------------------------- */

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import SponsorRequestForm from "@/components/SponsorRequestForm";
 import { getCategories } from "@/lib/categories";
+import { onlinePaymentsEnabled } from "@/lib/payments";
 import { getSiteSettings } from "@/lib/settings";
 import { money, SPONSOR_SLOTS, sponsorCategoryPrice, sponsorPrices } from "@/lib/sponsors";
 import { allApps } from "@/lib/software";
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
 export default async function SponsorPage() {
   const db = readDb();
   const settings = getSiteSettings(db);
+  const online = onlinePaymentsEnabled(settings.payments);
   const currency = settings.appearance.currency;
   const prices = sponsorPrices(db);
   const categories = getCategories(db);
@@ -50,7 +52,9 @@ export default async function SponsorPage() {
         <div className="mt-4 flex flex-wrap justify-center gap-2 text-[11px]">
           <span className="chip bg-emerald-50 text-emerald-700">Always labelled</span>
           <span className="chip bg-slate-100 text-slate-600">Ratings &amp; rank untouched</span>
-          <span className="chip bg-slate-100 text-slate-600">Manual invoice · UPI / bank</span>
+          <span className="chip bg-slate-100 text-slate-600">
+            {online ? "Secure UPI / card checkout" : "Manual invoice · UPI / bank"}
+          </span>
         </div>
       </header>
 
@@ -117,12 +121,14 @@ export default async function SponsorPage() {
           {
             step: "02",
             title: "We confirm and invoice",
-            body: "Our team checks availability for that slot, then sends the invoice. Payment is a manual transfer — UPI or bank.",
+            body: online
+              ? "We check availability, then you pay on the secure checkout — UPI from India, card or netbanking from anywhere."
+              : "Our team checks availability for that slot, then sends the invoice. Payment is a manual transfer — UPI or bank.",
           },
           {
             step: "03",
             title: "Your row goes live",
-            body: "After the payment is confirmed an admin approves the request. The row shows for the booked days with a Sponsored tag.",
+            body: "The moment the payment is confirmed the row is booked and a payment slip is emailed to you. It carries a Sponsored tag.",
           },
         ].map((item) => (
           <div key={item.step} className="card p-4">

@@ -526,53 +526,15 @@ export default async function HomePage({
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 sm:pt-14">
-        {/* New boards */}
-        <section className="grid gap-3 lg:grid-cols-2">
-          <Link
-            href="/arena"
-            className="lab-panel group relative overflow-hidden p-5 transition hover:-translate-y-0.5 hover:border-indigo-200"
-          >
-            <span
-              aria-hidden
-              className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-200/40 blur-2xl transition group-hover:bg-indigo-300/50"
-            />
-            <p className="eyebrow relative">Community signal</p>
-            <h2 className="display relative mt-2 text-xl text-ink">Vote blind. See what actually wins.</h2>
-            <p className="relative mt-1.5 max-w-md text-[13px] leading-relaxed text-slate-600">
-              Two tools, no logos and no scores until you pick. Arena wins stay separate from the weighted
-              leaderboard, so a popular favourite never quietly rewrites the ranking.
-            </p>
-            <span className="relative mt-3 inline-flex text-xs font-semibold text-brand">Enter the arena →</span>
-          </Link>
-          <Link
-            href="/value"
-            className="lab-panel group relative overflow-hidden p-5 transition hover:-translate-y-0.5 hover:border-emerald-200"
-          >
-            <span
-              aria-hidden
-              className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-200/40 blur-2xl transition group-hover:bg-emerald-300/50"
-            />
-            <p className="eyebrow relative">Money board</p>
-            <h2 className="display relative mt-2 text-xl text-ink">The most rating per rupee.</h2>
-            <p className="relative mt-1.5 max-w-md text-[13px] leading-relaxed text-slate-600">
-              A 4.9★ tool at $30 is not better value than a 4.8★ tool at $10. The value board divides the live score by
-              the cheapest monthly plan and lists free tools on their own shelf.
-            </p>
-            <span className="relative mt-3 inline-flex text-xs font-semibold text-brand">Open the value board →</span>
-          </Link>
-        </section>
-      </div>
-
       {/* Paid promotions */}
       {settings.showPromotions ? (
-        <section id="promotions" className="pt-14 lg:pt-16">
+        <section id="promotions" className="pt-10 lg:pt-12">
           <PaidPromo items={paidPicks} heading={settings.promoHeading} subtitle={settings.promoSubtitle} />
         </section>
       ) : null}
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="space-y-14 pt-14 lg:space-y-16 lg:pt-16">
+        <div className="space-y-10 pt-10 lg:space-y-12 lg:pt-12">
 
         {/* Trending */}
         <section>
@@ -601,16 +563,16 @@ export default async function HomePage({
           </div>
         </section>
 
-        {/* Momentum */}
-        {momentum.length ? (
+        {/* Momentum + fresh arrivals, one shelf */}
+        {momentum.length || rising.length ? (
           <section>
             <SectionHead
               eyebrow="This week"
-              title="Rank movers"
-              subtitle="Real ratings from the last seven days, not a paid push. When the week is quiet, recent drift takes the shelf instead."
+              title="Movers & new arrivals"
+              subtitle="Real ratings from the last seven days, plus recently launched tools earning strong scores without a big vote count yet."
               action={
                 <Link href="/ranking" className="text-sm font-semibold text-brand transition hover:text-brand-dark">
-                  Why they moved →
+                  All boards →
                 </Link>
               }
             />
@@ -622,6 +584,9 @@ export default async function HomePage({
                   saved={saved.has(row.stat.ai.id)}
                   badge={row.votes7 > 0 ? `${row.votes7} new this week` : "recent drift"}
                 />
+              ))}
+              {rising.map((s) => (
+                <AiCard key={s.ai.id} stat={s} saved={saved.has(s.ai.id)} badge="New & rising" />
               ))}
             </div>
           </section>
@@ -648,22 +613,6 @@ export default async function HomePage({
           />
         </section>
 
-        {/* New & rising */}
-        {rising.length ? (
-          <section>
-            <SectionHead
-              eyebrow="Fresh picks"
-              title="New & rising"
-              subtitle="Recently launched tools earning strong ratings without a big vote count yet."
-            />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {rising.map((s) => (
-                <AiCard key={s.ai.id} stat={s} saved={saved.has(s.ai.id)} />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
         {/* Guides */}
         <section>
           <SectionHead
@@ -687,7 +636,7 @@ export default async function HomePage({
       </div>
 
       {/* Finder CTA */}
-      <section className="relative pt-14 lg:pt-16">
+      <section className="relative pt-10 lg:pt-12">
           <div className="dark-panel relative overflow-hidden rounded-none p-6 sm:p-10">
             <div className="aurora opacity-40" aria-hidden />
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -716,7 +665,7 @@ export default async function HomePage({
           </div>
         </section>
 
-      <div className="mx-auto max-w-7xl px-4 pb-6 pt-14 sm:px-6 lg:pt-16">
+      <div className="mx-auto max-w-7xl px-4 pb-6 pt-10 sm:px-6 lg:pt-12">
         {/* Categories */}
         <section>
           <SectionHead

@@ -157,6 +157,20 @@ export default async function AdminSecurityPage({
             <label className="flex items-start gap-2 rounded-xl border border-line bg-slate-50/60 p-3 text-xs">
               <input
                 type="checkbox"
+                name="magicLink"
+                defaultChecked={security.magicLink}
+                className="mt-0.5 h-4 w-4 accent-indigo-600"
+              />
+              <span>
+                <span className="block font-semibold">One-time email login link</span>
+                <span className="text-[11px] text-muted">
+                  Passwordless login built into this server — a single-use link, no third-party provider.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 rounded-xl border border-line bg-slate-50/60 p-3 text-xs">
+              <input
+                type="checkbox"
                 name="googleLogin"
                 defaultChecked={security.googleLogin}
                 className="mt-0.5 h-4 w-4 accent-indigo-600"
@@ -230,7 +244,8 @@ export default async function AdminSecurityPage({
           </div>
           <p className="mt-2 text-[11px] leading-relaxed text-muted">
             If you switch email login off, new email sign-ins are blocked until you turn it back on — existing admin
-            sessions keep working. Google accounts with a verified email are treated as email-verified on this site.
+            sessions keep working. One-time links and Google accounts with a verified email are treated as
+            email-verified on this site, so the site keeps a working sign-in path even when passwords are paused.
           </p>
         </section>
 

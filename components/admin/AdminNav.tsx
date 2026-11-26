@@ -44,6 +44,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/admin/homepage", label: "Homepage & Quiz", icon: "🏠", area: "homepage" },
       { href: "/admin/polls", label: "Polls & Insights", icon: "📊", area: "homepage" },
       { href: "/admin/sponsors", label: "Sponsors & Ads", icon: "💼", area: "sponsors" },
+      { href: "/admin/payments", label: "Payments & Checkout", icon: "💳", area: "payments" },
       { href: "/admin/ads", label: "Chat Ads & Insights", icon: "📣", area: "sponsors" },
       { href: "/admin/pricing", label: "Pricing Reports", icon: "💰", area: "catalogue" },
       { href: "/admin/notifications", label: "Notifications & Email", icon: "🔔", area: "notifications" },

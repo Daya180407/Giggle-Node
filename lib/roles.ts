@@ -22,6 +22,7 @@ export const ALL_AREAS: AdminArea[] = [
   "security",
   "settings",
   "owners",
+  "payments",
 ];
 
 export const AREA_LABELS: Record<AdminArea, string> = {
@@ -43,6 +44,7 @@ export const AREA_LABELS: Record<AdminArea, string> = {
   security: "Spam & security",
   settings: "Site settings",
   owners: "AI owners",
+  payments: "Payments & checkout",
 };
 
 export const DEFAULT_ROLES: RoleDefinition[] = [

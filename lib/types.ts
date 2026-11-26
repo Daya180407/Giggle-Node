@@ -256,6 +256,76 @@ export type SponsorRequest = {
   reviewedAt: string | null;
   reviewedBy: string | null;
   note?: string;
+  /** paid online through Razorpay (manual requests stay unpaid until an admin confirms) */
+  paymentStatus?: "unpaid" | "paid";
+  paymentId?: string;
+  paidAt?: string;
+};
+
+/* ------------------------------- payments ------------------------------- */
+
+export type PaymentProvider = "razorpay" | "manual";
+
+export type PaymentStatus = "created" | "paid" | "failed" | "cancelled" | "refunded";
+
+/**
+ * Payment controls owned by the admin panel. Razorpay keys are stored here and
+ * only ever read on the server: the checkout page receives the public key id,
+ * never the secret or the webhook secret.
+ */
+export type PaymentSettings = {
+  /** Razorpay online checkout (UPI + cards) is live */
+  razorpayEnabled: boolean;
+  /** manual invoice / bank transfer flow is offered to advertisers */
+  manualEnabled: boolean;
+  razorpayKeyId: string;
+  /** server-side only, never rendered back */
+  razorpayKeySecret: string;
+  /** verifies webhook deliveries; server-side only */
+  razorpayWebhookSecret: string;
+  /** UPI is offered to Indian visitors only; cards stay available everywhere */
+  upiIndiaOnly: boolean;
+  /** create the sponsored placement as soon as Razorpay confirms the money */
+  autoBookPaid: boolean;
+  /** manual transfer details shown on the checkout page */
+  manualUpiId: string;
+  manualUpiName: string;
+  manualBank: string;
+  manualNote: string;
+  currency: "INR" | "USD";
+  lastCheckedAt: string | null;
+  lastError: string | null;
+};
+
+/** One payable order: an advertiser booking a sponsored placement. */
+export type Payment = {
+  id: string;
+  /** short human reference shown on the slip, e.g. GN-000123 */
+  reference: string;
+  provider: PaymentProvider;
+  purpose: "sponsor";
+  /** the sponsorship request this order belongs to */
+  sponsorRequestId: string;
+  description: string;
+  amount: number;
+  currency: "INR" | "USD";
+  customerName: string;
+  customerEmail: string;
+  /** ISO-2 country detected from the request headers ("" when unknown) */
+  customerCountry: string;
+  /** chosen instrument; null while the order is still open */
+  method: "upi" | "card" | "manual" | null;
+  status: PaymentStatus;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  /** set only after the signature was verified server-side */
+  verifiedAt: string | null;
+  failureReason: string | null;
+  /** payment slip mail queue status */
+  slipEmailedAt: string | null;
+  createdAt: string;
+  paidAt: string | null;
+  updatedAt: string;
 };
 
 /** Admin override for a model's API price; replaces the curated/estimated rate. */
@@ -737,7 +807,8 @@ export type AdminArea =
   | "search"
   | "security"
   | "settings"
-  | "owners";
+  | "owners"
+  | "payments";
 
 export type RoleDefinition = {
   id: string;
@@ -770,6 +841,9 @@ export type User = {
   emailVerified?: boolean;
   verifyTokenHash?: string;
   verifyTokenExpiresAt?: string;
+  /** single-use magic-link login token (hashed) */
+  loginTokenHash?: string;
+  loginTokenExpiresAt?: string;
 };
 
 export type RateEvent = { ip: string; at: string };
@@ -821,7 +895,7 @@ export type EmailMessage = {
   to: string;
   subject: string;
   body: string;
-  kind: "welcome" | "rating-thanks" | "newsletter" | "verify" | "test";
+  kind: "welcome" | "rating-thanks" | "newsletter" | "verify" | "magic-link" | "payment-slip" | "test";
   createdAt: string;
   status: "queued" | "sent" | "failed";
   error?: string;
@@ -953,6 +1027,8 @@ export type SecuritySettings = {
   /** OAuth 2.0 client secret; server-side only, never rendered back to a page */
   googleClientSecret: string;
   emailLogin: boolean;
+  /** passwordless email login handled entirely on our own server */
+  magicLink: boolean;
 };
 
 /* -------------------------------- analytics ------------------------------- */
@@ -1074,6 +1150,8 @@ export type SiteSettings = {
   gamification: GamificationSettings;
   security: SecuritySettings;
   appearance: AppearanceSettings;
+  /** Razorpay / manual payment controls */
+  payments: PaymentSettings;
   socials: SocialLink[];
   menu: MenuItem[];
   changelogEnabled: boolean;
@@ -1185,4 +1263,8 @@ export type DB = {
   ownerRequests?: OwnerRequest[];
   /** full audit trail of owner edits with before/after snapshots */
   ownerChanges?: OwnerChange[];
+  /** sponsor checkout orders (online + manual) */
+  payments?: Payment[];
+  /** running counter behind the human-readable payment reference */
+  paymentSequence?: number;
 };

@@ -84,10 +84,15 @@ export default function SponsorRequestForm({
       <div className="card border-emerald-200 bg-emerald-50/70 p-5">
         <h2 className="display text-lg text-emerald-900">Request sent ✓</h2>
         <p className="mt-2 text-sm leading-relaxed text-emerald-800">{state.message}</p>
-        <p className="mt-2 text-xs text-emerald-700">
-          Nothing was charged automatically. Your placement starts only after the payment is confirmed and the admin
-          approves the request.
-        </p>
+        {state.payUrl ? (
+          <a href={state.payUrl} className="btn btn-primary mt-3 w-full !py-2.5 text-xs sm:w-auto">
+            Pay now to book the placement →
+          </a>
+        ) : (
+          <p className="mt-2 text-xs text-emerald-700">
+            Nothing was charged automatically — continue on the checkout page, or pay the manual invoice we send you.
+          </p>
+        )}
       </div>
     );
   }
@@ -97,8 +102,8 @@ export default function SponsorRequestForm({
       <div>
         <h2 className="display text-lg text-ink">Request a sponsored placement</h2>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          Fill this in and our team will contact you on the email below with the invoice and payment details. Transfer
-          is manual — UPI or bank transfer.
+          Fill this in and continue to the secure checkout — UPI for Indian accounts, cards from anywhere. If online
+          payment is paused, our team emails the invoice for a manual UPI or bank transfer.
         </p>
       </div>
 
